@@ -7,6 +7,7 @@
         padding: 3px 8px;
         margin: 2px;
     }
+
     .stat-card {
         background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -14,6 +15,7 @@
         padding: 20px;
         margin-bottom: 15px;
     }
+
     .permission-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -63,7 +65,7 @@
                             </div>
 
                             <!-- Permission Status -->
-                            
+
 
                             <h5>🔑 Granted Permissions</h5>
                             <div class="permission-grid">
@@ -87,12 +89,12 @@
 
                         <div class="col-md-4">
                             <div class="text-center">
-                                <a href="{{ route('social.disconnect', ['provider' => 'facebook']) }}" 
-                                   class="btn btn-outline-danger btn-sm mb-3"
-                                   onclick="return confirm('Disconnect Facebook?')">
+                                <a href="{{ route('social.disconnect', ['provider' => 'facebook']) }}"
+                                    class="btn btn-outline-danger btn-sm mb-3"
+                                    onclick="return confirm('Disconnect Facebook?')">
                                     <i class="fas fa-unlink"></i> Disconnect
                                 </a>
-                                
+
                                 <div class="border rounded p-3 bg-light">
                                     <h6>📊 Connection Status</h6>
                                     <div class="text-start small">
@@ -121,12 +123,12 @@
                             <h3>Complete Facebook Integration</h3>
                             <p class="text-muted">Get automatic access to posts, pages, ads, insights, and analytics</p>
                         </div>
-                        
-                        <a href="{{ route('social.redirect', ['provider' => 'facebook']) }}" 
-                           class="btn btn-primary btn-lg px-5">
+
+                        <a href="{{ route('social.redirect', ['provider' => 'facebook']) }}"
+                            class="btn btn-primary btn-lg px-5">
                             <i class="fas fa-bolt"></i> Connect Facebook Account
                         </a>
-                        
+
                         <div class="mt-4">
                             <h6>🎯 What you'll get automatically:</h6>
                             <div class="row mt-3">
@@ -155,151 +157,142 @@
         </div>
     </div>
 
-    @if($mainAccount)
-    <!-- Analytics Dashboard -->
-    <div class="row">
-        <!-- Posts Analytics -->
-        <div class="col-md-6 mb-4">
+    @if($mainAccount && $connectedPages->count() > 0)
+    <!-- All Facebook Pages Section -->
+    <div class="row mt-4">
+        <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">📝 Posts Analytics</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        📄 All Facebook Pages ({{ $connectedPages->count() }} Pages Found)
+                        <small class="float-end">Automatically Connected from Your Facebook Account</small>
+                    </h5>
                 </div>
                 <div class="card-body">
-                    @if(isset($analytics['posts']) && count($analytics['posts']) > 0)
-                        @php
-                            $totalLikes = 0;
-                            $totalComments = 0;
-                            $totalShares = 0;
-                            foreach($analytics['posts'] as $post) {
-                                $totalLikes += $post['likes']['summary']['total_count'] ?? 0;
-                                $totalComments += $post['comments']['summary']['total_count'] ?? 0;
-                                $totalShares += $post['shares']['count'] ?? 0;
-                            }
-                        @endphp
-                        
-                        <div class="row text-center mb-3">
-                            <div class="col-4">
-                                <div class="stat-card">
-                                    <h4>{{ $totalLikes }}</h4>
-                                    <small>Total Likes</small>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="stat-card">
-                                    <h4>{{ $totalComments }}</h4>
-                                    <small>Total Comments</small>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="stat-card">
-                                    <h4>{{ $totalShares }}</h4>
-                                    <small>Total Shares</small>
-                                </div>
+                    <!-- Pages Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded bg-light">
+                                <h3 class="text-primary mb-1">{{ $connectedPages->count() }}</h3>
+                                <small class="text-muted">Total Pages</small>
                             </div>
                         </div>
-
-                        <div style="max-height: 400px; overflow-y: auto;">
-                            @foreach(array_slice($analytics['posts'], 0, 10) as $post)
-                            <div class="border-bottom pb-2 mb-2">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <p class="mb-1 small">{{ Str::limit($post['message'] ?? 'No message', 100) }}</p>
-                                        <small class="text-muted">
-                                            {{ \Carbon\Carbon::parse($post['created_time'])->format('M d, Y') }}
-                                        </small>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="badge bg-primary">👍 {{ $post['likes']['summary']['total_count'] ?? 0 }}</span>
-                                        <span class="badge bg-success">💬 {{ $post['comments']['summary']['total_count'] ?? 0 }}</span>
-                                        <span class="badge bg-info">🔄 {{ $post['shares']['count'] ?? 0 }}</span>
-                                    </div>
-                                </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded bg-light">
+                                <h3 class="text-success mb-1">{{ number_format($stats['total_page_fans']) }}</h3>
+                                <small class="text-muted">Total Page Fans</small>
                             </div>
-                            @endforeach
                         </div>
-                    @else
-                        <p class="text-muted text-center">No posts data available</p>
-                    @endif
-                </div>
-            </div>
-        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded bg-light">
+                                <h3 class="text-instagram mb-1">{{ $stats['pages_with_instagram'] }}</h3>
+                                <small class="text-muted">Pages with Instagram</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded bg-light">
+                                <h3 class="text-info mb-1">{{ $stats['total_instagram_accounts'] }}</h3>
+                                <small class="text-muted">Instagram Accounts</small>
+                            </div>
+                        </div>
+                    </div>
 
-        <!-- Connected Assets -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">🔗 Connected Assets</h5>
-                </div>
-                <div class="card-body">
-                    <!-- Pages -->
-                    @if($connectedPages->count() > 0)
-                    <h6>📄 Facebook Pages ({{ $connectedPages->count() }})</h6>
-                    <div class="mb-3">
+                    <!-- Pages Grid -->
+                    <div class="row">
                         @foreach($connectedPages as $page)
-                        <div class="border rounded p-2 mb-2">
-                            <strong>{{ $page->account_name }}</strong>
-                            <br>
-                            <small class="text-muted">ID: {{ $page->account_id }}</small>
+                        @php
+                        $pageMeta = json_decode($page->meta_data, true) ?? [];
+                        $hasInstagram = $instagramAccounts->where('parent_account_id', $page->id)->count() > 0;
+                        $instagramAccount = $hasInstagram ? $instagramAccounts->where('parent_account_id', $page->id)->first() : null;
+                        $igMeta = $instagramAccount ? json_decode($instagramAccount->meta_data, true) : [];
+                        @endphp
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 border">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 text-truncate">{{ $page->account_name }}</h6>
+                                    @if($pageMeta['verified'] ?? false)
+                                    <span class="badge bg-success" title="Verified Page">✓</span>
+                                    @endif
+                                </div>
+                                <div class="card-body">
+                                    <!-- Page Info -->
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">
+                                            <strong>Category:</strong> {{ $pageMeta['category'] ?? 'Unknown' }}
+                                        </small>
+                                        <small class="text-muted d-block">
+                                            <strong>Fans:</strong> {{ number_format($pageMeta['fan_count'] ?? 0) }}
+                                        </small>
+                                        @if($pageMeta['username'] ?? false)
+                                        <small class="text-muted d-block">
+                                            <strong>Username:</strong> {{ $pageMeta['username'] }}
+                                        </small>
+                                        @endif
+                                    </div>
+
+                                    <!-- Instagram Connection -->
+                                    @if($hasInstagram && $instagramAccount)
+                                    <div class="border-top pt-2">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fab fa-instagram text-instagram me-2"></i>
+                                            <small class="text-muted"><strong>Connected Instagram:</strong></small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            @if($igMeta['profile_picture_url'] ?? false)
+                                            <img src="{{ $igMeta['profile_picture_url'] }}" class="rounded-circle me-2" width="30" height="30" alt="Instagram">
+                                            @endif
+                                            <div class="flex-grow-1">
+                                                <small class="d-block"><strong>{{ $igMeta['username'] ?? 'N/A' }}</strong></small>
+                                                <small class="text-muted">
+                                                    {{ number_format($igMeta['followers_count'] ?? 0) }} followers •
+                                                    {{ number_format($igMeta['media_count'] ?? 0) }} posts
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @else
+                                    <div class="border-top pt-2">
+                                        <small class="text-muted"><i>No Instagram connected</i></small>
+                                    </div>
+                                    @endif
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="d-flex justify-content-between">
+                                        <a href="{{ $pageMeta['link'] ?? '#' }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt"></i> Visit
+                                        </a>
+                                        @if($hasInstagram)
+                                        <span class="badge bg-instagram align-self-center">
+                                            <i class="fab fa-instagram"></i> Connected
+                                        </span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         @endforeach
                     </div>
-                    @endif
-
-                    <!-- Instagram Accounts -->
-                    @if($instagramAccounts->count() > 0)
-                    <h6>📷 Instagram Accounts ({{ $instagramAccounts->count() }})</h6>
-                    <div class="mb-3">
-                        @foreach($instagramAccounts as $ig)
-                        <div class="border rounded p-2 mb-2">
-                            <strong>{{ $ig->account_name }}</strong>
-                            <br>
-                            <small class="text-muted">ID: {{ $ig->account_id }}</small>
-                        </div>
-                        @endforeach
-                    </div>
-                    @endif
-
-                    <!-- Ad Accounts -->
-                    @if($adAccounts->count() > 0)
-                    <h6>💰 Ad Accounts ({{ $adAccounts->count() }})</h6>
-                    <div>
-                        @foreach($adAccounts as $ad)
-                        <div class="border rounded p-2 mb-2">
-                            <strong>{{ $ad->ad_account_name }}</strong>
-                            <br>
-                            <small class="text-muted">
-                                ID: {{ $ad->ad_account_id }} | 
-                                Status: <span class="badge bg-{{ $ad->account_status == 'ACTIVE' ? 'success' : 'warning' }}">{{ $ad->account_status }}</span> |
-                                Spent: ${{ number_format($ad->amount_spent, 2) }}
-                            </small>
-                        </div>
-                        @endforeach
-                    </div>
-                    @endif
-
-                    @if($connectedPages->count() == 0 && $instagramAccounts->count() == 0 && $adAccounts->count() == 0)
-                    <p class="text-muted text-center">No additional assets connected</p>
-                    @endif
                 </div>
             </div>
         </div>
     </div>
     @endif
+
 </div>
 @endsection
 
 @push('scripts')
 <script>
-// Auto-refresh analytics every 2 minutes
-@if($mainAccount)
-setInterval(function() {
-    window.location.reload();
-}, 120000);
-@endif
+    // Auto-refresh analytics every 2 minutes
+    @if($mainAccount)
+    setInterval(function() {
+        window.location.reload();
+    }, 120000);
+    @endif
 
-// Permission test function
-function testAllPermissions() {
-    alert('🔍 Testing all permissions...\n\nThe system automatically detects and uses all available permissions.\nMissing permissions will be gracefully handled.');
-}
+    // Permission test function
+    function testAllPermissions() {
+        alert('🔍 Testing all permissions...\n\nThe system automatically detects and uses all available permissions.\nMissing permissions will be gracefully handled.');
+    }
 </script>
 @endpush

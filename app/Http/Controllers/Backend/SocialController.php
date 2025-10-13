@@ -4,21 +4,38 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 use App\Models\SocialAccount;
 use App\Models\AdAccount;
 use Exception;
-use Illuminate\Support\Facades\Http;
 
 class SocialController extends Controller
 {
+    private $facebookConfig;
+    private $googleConfig;
+
+    public function __construct()
+    {
+        $this->facebookConfig = [
+            'client_id' => config('services.facebook.client_id'),
+            'client_secret' => config('services.facebook.client_secret'),
+            'redirect_uri' => route('social.callback', 'facebook'),
+        ];
+
+        $this->googleConfig = [
+            'client_id' => config('services.google.client_id'),
+            'client_secret' => config('services.google.client_secret'),
+            'redirect_uri' => route('social.callback', 'google'),
+        ];
+    }
+
     /**
-     * Full Business Access - With Valid Permissions Only
+     * OAuth Redirect for Social Platforms
      */
     public function redirect($provider)
     {
@@ -32,59 +49,73 @@ class SocialController extends Controller
 
         try {
             if ($provider === 'facebook') {
-                return Socialite::driver('facebook')
-                    ->scopes([
-                        'email',
-                        'public_profile',
-                        'user_posts',
-                        'user_photos',
-                        'user_videos',
-                        'user_likes',
-                        'pages_show_list',
-                        'pages_read_engagement',
-                        'pages_manage_posts',
-                        'pages_read_user_content',
-                        'instagram_basic',
-                        'instagram_content_publish',
-                        'instagram_manage_insights',
-                        'ads_management',
-                        'ads_read',
-                        'business_management',
-                        'read_insights',
-                        'publish_video',
-                    ])
-                    ->with([
-                        'auth_type' => 'rerequest',
-                        'response_type' => 'code',
-                    ])
-                    ->redirect();
-            }
+                $scopes = [
+                    'email',
+                    'public_profile',
+                    'user_posts',
+                    'user_photos',
+                    'user_videos',
+                    'user_likes',
+                    'pages_show_list',
+                    'pages_read_engagement',
+                    'pages_manage_posts',
+                    'pages_read_user_content',
+                    'instagram_basic',
+                    'instagram_content_publish',
+                    'instagram_manage_insights',
+                    'ads_management',
+                    'ads_read',
+                    'business_management',
+                    'read_insights',
+                    'publish_video',
+                ];
 
-            if ($provider === 'google') {
-                return Socialite::driver('google')
-                    ->scopes([
-                        'openid',
-                        'profile',
-                        'email',
-                        'https://www.googleapis.com/auth/youtube',
-                        'https://www.googleapis.com/auth/youtube.readonly',
-                        'https://www.googleapis.com/auth/youtube.upload',
-                        'https://www.googleapis.com/auth/youtubepartner',
-                        'https://www.googleapis.com/auth/yt-analytics.readonly',
-                    ])
-                    ->with(['access_type' => 'offline', 'prompt' => 'consent'])
-                    ->redirect();
+                $params = [
+                    'client_id' => $this->facebookConfig['client_id'],
+                    'redirect_uri' => $this->facebookConfig['redirect_uri'],
+                    'scope' => implode(',', $scopes),
+                    'response_type' => 'code',
+                    'auth_type' => 'rerequest',
+                    'state' => csrf_token(),
+                ];
+
+                $url = 'https://www.facebook.com/v19.0/dialog/oauth?' . http_build_query($params);
+                return redirect($url);
+            } elseif ($provider === 'google') {
+                $scopes = [
+                    'openid',
+                    'profile',
+                    'email',
+                    'https://www.googleapis.com/auth/youtube',
+                    'https://www.googleapis.com/auth/youtube.readonly',
+                    'https://www.googleapis.com/auth/youtube.upload',
+                    'https://www.googleapis.com/auth/youtubepartner',
+                    'https://www.googleapis.com/auth/yt-analytics.readonly',
+                ];
+
+                $params = [
+                    'client_id' => $this->googleConfig['client_id'],
+                    'redirect_uri' => $this->googleConfig['redirect_uri'],
+                    'scope' => implode(' ', $scopes),
+                    'response_type' => 'code',
+                    'access_type' => 'offline',
+                    'prompt' => 'consent',
+                    'state' => csrf_token(),
+                ];
+
+                $url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($params);
+                return redirect($url);
             }
         } catch (Exception $e) {
-            Log::error('Socialite redirect error: ' . $e->getMessage());
+            Log::error('Social redirect error: ' . $e->getMessage());
             return redirect()->route('dashboard')->with('error', 'Failed to initialize OAuth.');
         }
 
-        abort(404);
+        return redirect()->route('dashboard')->with('error', 'Invalid provider.');
     }
 
     /**
-     * Handle callback with full business data extraction
+     * OAuth Callback for Social Platforms
      */
     public function callback(Request $request, $provider)
     {
@@ -96,166 +127,410 @@ class SocialController extends Controller
             return redirect()->route('dashboard')->with('error', 'Invalid provider.');
         }
 
-        try {
-            $socialUser = Socialite::driver($provider)->stateless()->user();
-            //dd($socialUser);
-        } catch (Exception $e) {
-            Log::error("Socialite callback error: " . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Authentication failed: ' . $e->getMessage());
+        // Verify CSRF token
+        if ($request->state !== csrf_token()) {
+            return redirect()->route('dashboard')->with('error', 'Invalid state parameter.');
         }
 
-        $user = Auth::user();
+        if (!$request->has('code')) {
+            return redirect()->route('dashboard')->with('error', 'Authorization code not received.');
+        }
 
         try {
-            // Save the provider token
+            if ($provider === 'facebook') {
+                return $this->handleFacebookCallback($request);
+            } elseif ($provider === 'google') {
+                return $this->handleGoogleCallback($request);
+            }
+        } catch (Exception $e) {
+            Log::error("Social callback error for {$provider}: " . $e->getMessage());
+            return redirect()->route('dashboard')->with('error', ucfirst($provider) . ' connection failed: ' . $e->getMessage());
+        }
+
+        return redirect()->route('dashboard')->with('error', 'Invalid provider.');
+    }
+
+    /**
+     * Handle Facebook OAuth Callback
+     */
+    private function handleFacebookCallback(Request $request)
+    {
+        try {
+            // Exchange code for access token
+            $tokenResponse = Http::asForm()->post('https://graph.facebook.com/v19.0/oauth/access_token', [
+                'client_id' => $this->facebookConfig['client_id'],
+                'client_secret' => $this->facebookConfig['client_secret'],
+                'redirect_uri' => $this->facebookConfig['redirect_uri'],
+                'code' => $request->code,
+            ]);
+
+            if (!$tokenResponse->successful()) {
+                $errorData = $tokenResponse->json();
+                throw new Exception($errorData['error']['message'] ?? 'Failed to get access token');
+            }
+
+            $tokenData = $tokenResponse->json();
+            $accessToken = $tokenData['access_token'];
+            $expiresIn = $tokenData['expires_in'] ?? null;
+
+            // Get user info
+            $userResponse = Http::get('https://graph.facebook.com/v19.0/me', [
+                'fields' => 'id,name,email,first_name,last_name,picture',
+                'access_token' => $accessToken,
+            ]);
+
+            if (!$userResponse->successful()) {
+                $errorData = $userResponse->json();
+                throw new Exception($errorData['error']['message'] ?? 'Failed to get user info');
+            }
+
+            $userData = $userResponse->json();
+            $user = Auth::user();
+
+            // Save social account
             $sa = SocialAccount::updateOrCreate(
                 [
                     'user_id' => $user->id,
-                    'provider' => $provider,
+                    'provider' => 'facebook',
                     'account_id' => null
                 ],
                 [
                     'access_token' => Crypt::encryptString(json_encode([
-                        'token' => $socialUser->token,
-                        'scopes' => $request->get('granted_scopes', '')
+                        'token' => $accessToken,
+                        'expires_in' => $expiresIn
                     ])),
-                    'refresh_token' => $socialUser->refreshToken ? Crypt::encryptString($socialUser->refreshToken) : null,
-                    'token_expires_at' => $socialUser->expiresIn ? Carbon::now()->addSeconds($socialUser->expiresIn) : null,
-                    'account_name' => $socialUser->name ?? 'Unknown',
-                    'account_email' => $socialUser->email ?? null,
-                    'avatar' => $socialUser->avatar ?? null,
+                    'token_expires_at' => $expiresIn ? Carbon::now()->addSeconds($expiresIn) : null,
+                    'account_name' => $userData['name'] ?? 'Unknown',
+                    'account_email' => $userData['email'] ?? null,
+                    'avatar' => $userData['picture']['data']['url'] ?? null,
                     'permission_level' => 'full',
+                    'meta_data' => json_encode($userData),
                 ]
             );
 
-            // Extract data based on provider
-            if ($provider === 'facebook') {
-                $this->extractFacebookData($socialUser->token, $user, $sa);
-            } elseif ($provider === 'google') {
-                $this->extractGoogleData($socialUser->token, $user, $sa);
-            }
+            // Extract Facebook data in background
+            dispatch(function () use ($accessToken, $user, $sa) {
+                $this->extractFacebookData($accessToken, $user, $sa);
+            });
 
             return redirect()->route('facebook.index')
-                ->with('success', '🚀 Connected successfully!')
-                ->with('info', 'All accounts and data have been synchronized.');
-
+                ->with('success', '🚀 Facebook connected successfully!')
+                ->with('info', 'All accounts and data are being synchronized in the background.');
         } catch (Exception $e) {
-            Log::error("Error saving account: " . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Failed to save account: ' . $e->getMessage());
+            Log::error("Facebook callback error: " . $e->getMessage());
+            return redirect()->route('dashboard')->with('error', 'Facebook connection failed: ' . $e->getMessage());
         }
     }
 
     /**
-     * Extract Facebook Data with Proper API Calls
+     * Handle Google OAuth Callback
      */
-    private function extractFacebookData($accessToken, $user, $socialAccount)
+    private function handleGoogleCallback(Request $request)
     {
         try {
-            $fb = new \Facebook\Facebook([
-                'app_id' => config('services.facebook.client_id'),
-                'app_secret' => config('services.facebook.client_secret'),
-                'default_graph_version' => 'v19.0',
-                'default_access_token' => $accessToken,
+            // Exchange code for access token
+            $tokenResponse = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+                'client_id' => $this->googleConfig['client_id'],
+                'client_secret' => $this->googleConfig['client_secret'],
+                'redirect_uri' => $this->googleConfig['redirect_uri'],
+                'code' => $request->code,
+                'grant_type' => 'authorization_code',
             ]);
 
-            $extractedData = [];
-            $connectedAssets = [];
+            if (!$tokenResponse->successful()) {
+                $errorData = $tokenResponse->json();
+                throw new Exception($errorData['error_description'] ?? 'Failed to get access token');
+            }
 
-            Log::info("🚀 Starting Facebook data extraction for user: " . $user->id);
+            $tokenData = $tokenResponse->json();
+            $accessToken = $tokenData['access_token'];
+            $refreshToken = $tokenData['refresh_token'] ?? null;
+            $expiresIn = $tokenData['expires_in'] ?? null;
 
-            // 1. Get User Profile
-            try {
-                $response = $fb->get('/me?fields=id,name,email,first_name,last_name,picture,cover,age_range,link,location,gender');
-                $extractedData['profile'] = $response->getGraphNode()->asArray();
+            // Get user info
+            $userResponse = Http::withToken($accessToken)
+                ->get('https://www.googleapis.com/oauth2/v1/userinfo');
+
+            if (!$userResponse->successful()) {
+                $errorData = $userResponse->json();
+                throw new Exception($errorData['error']['message'] ?? 'Failed to get user info');
+            }
+
+            $userData = $userResponse->json();
+            $user = Auth::user();
+
+            // Save social account
+            $sa = SocialAccount::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'provider' => 'google',
+                    'account_id' => null
+                ],
+                [
+                    'access_token' => Crypt::encryptString(json_encode([
+                        'token' => $accessToken,
+                        'refresh_token' => $refreshToken,
+                        'expires_in' => $expiresIn
+                    ])),
+                    'refresh_token' => $refreshToken ? Crypt::encryptString($refreshToken) : null,
+                    'token_expires_at' => $expiresIn ? Carbon::now()->addSeconds($expiresIn) : null,
+                    'account_name' => $userData['name'] ?? 'Unknown',
+                    'account_email' => $userData['email'] ?? null,
+                    'avatar' => $userData['picture'] ?? null,
+                    'permission_level' => 'full',
+                    'meta_data' => json_encode($userData),
+                ]
+            );
+
+            // Extract Google data in background
+            dispatch(function () use ($accessToken, $user, $sa) {
+                $this->extractGoogleData($accessToken, $user, $sa);
+            });
+
+            return redirect()->route('youtube.index')
+                ->with('success', '🚀 Google connected successfully!')
+                ->with('info', 'All accounts and data are being synchronized in the background.');
+        } catch (Exception $e) {
+            Log::error("Google callback error: " . $e->getMessage());
+            return redirect()->route('dashboard')->with('error', 'Google connection failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Disconnect Social Account
+     */
+    public function disconnect(Request $request, $provider, $accountId = null)
+    {
+        try {
+            $user = Auth::user();
+
+            if ($accountId) {
+                // Disconnect specific account
+                $account = SocialAccount::where('user_id', $user->id)
+                    ->where('provider', $provider)
+                    ->where('account_id', $accountId)
+                    ->firstOrFail();
+
+                $accountName = $account->account_name;
+                $account->delete();
+
+                return redirect()->back()->with('success', "{$accountName} disconnected successfully.");
+            } else {
+                // Disconnect all accounts for this provider
+                $query = SocialAccount::where('user_id', $user->id)
+                    ->where('provider', $provider);
+
+                $accountIds = $query->pluck('id');
+
+                // Delete related ad accounts
+                AdAccount::whereIn('social_account_id', $accountIds)->delete();
+
+                // Delete child accounts (pages, Instagram accounts)
+                SocialAccount::where('user_id', $user->id)
+                    ->where('parent_account_id', $accountIds)
+                    ->delete();
+
+                // Delete main accounts
+                $query->delete();
+
+                return redirect()->back()->with('success', ucfirst($provider) . ' disconnected successfully.');
+            }
+        } catch (Exception $e) {
+            Log::error("Disconnect error for {$provider}: " . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to disconnect account.');
+        }
+    }
+
+    /**
+     * Extract Facebook Data using Direct API Calls
+     */
+    /**
+ * Extract Facebook Data using Direct API Calls - Enhanced to get ALL pages
+ */
+private function extractFacebookData($accessToken, $user, $socialAccount)
+{
+    try {
+        $extractedData = [];
+        $connectedAssets = [];
+
+        Log::info("🚀 Starting Facebook data extraction for user: " . $user->id);
+
+        // 1. Get User Profile
+        try {
+            $response = Http::timeout(30)->get('https://graph.facebook.com/v19.0/me', [
+                'fields' => 'id,name,email,first_name,last_name,picture,cover,age_range,link,location,gender',
+                'access_token' => $accessToken,
+            ]);
+
+            if ($response->successful()) {
+                $extractedData['profile'] = $response->json();
                 Log::info("✅ User profile extracted");
-            } catch (\Exception $e) {
-                Log::warning("Profile extraction failed: " . $e->getMessage());
+            }
+        } catch (\Exception $e) {
+            Log::warning("Profile extraction failed: " . $e->getMessage());
+        }
+
+        // 2. Get ALL Facebook Pages with Pagination
+        try {
+            $allPages = [];
+            $nextUrl = $this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/me/accounts?fields=id,name,username,access_token,category,fan_count,cover,link,location,phone,website,emails,instagram_business_account{id,name,username,profile_picture_url,followers_count,media_count,biography,website,follows_count,ig_id}&limit=100&access_token=' . $accessToken;
+            
+            $pageCount = 0;
+            
+            // Paginate through all pages
+            while ($nextUrl && $pageCount < 500) { // Safety limit of 500 pages
+                $response = Http::timeout(60)->get($nextUrl);
+                
+                if (!$response->successful()) {
+                    Log::error("Failed to fetch pages batch: " . $response->body());
+                    break;
+                }
+
+                $data = $response->json();
+                $pages = $data['data'] ?? [];
+                $allPages = array_merge($allPages, $pages);
+                $pageCount += count($pages);
+                
+                Log::info("📄 Fetched batch of " . count($pages) . " pages. Total so far: " . count($allPages));
+                
+                // Get next page URL if exists
+                $nextUrl = $data['paging']['next'] ?? null;
+                
+                if (!$nextUrl) {
+                    break;
+                }
+                
+                // Small delay to avoid rate limiting
+                sleep(1);
             }
 
-            // 2. Get User Posts
-            try {
-                $response = $fb->get('/me/posts?fields=id,message,created_time,permalink_url,attachments,likes.summary(true),comments.summary(true),shares&limit=25');
-                $extractedData['posts'] = $response->getGraphEdge()->asArray();
-                Log::info("✅ Extracted " . count($extractedData['posts']) . " posts");
-            } catch (\Exception $e) {
-                Log::info("Posts extraction failed: " . $e->getMessage());
-            }
+            $extractedData['pages'] = $allPages;
+            Log::info("🎯 COMPLETED: Extracted " . count($allPages) . " Facebook pages in total");
 
-            // 3. Get User Photos
-            try {
-                $response = $fb->get('/me/photos?fields=id,images,created_time,link,name,album&limit=20');
-                $extractedData['photos'] = $response->getGraphEdge()->asArray();
-                Log::info("✅ Extracted " . count($extractedData['photos']) . " photos");
-            } catch (\Exception $e) {
-                Log::info("Photos extraction failed");
-            }
+            $instagramCount = 0;
 
-            // 4. Get Pages and Instagram Accounts
-            try {
-                $response = $fb->get('/me/accounts?fields=id,name,access_token,category,fan_count,cover,link,location,instagram_business_account{id,name,username,profile_picture_url,followers_count,media_count,biography}&limit=100');
-                $pages = $response->getGraphEdge()->asArray();
-                $extractedData['pages'] = $pages;
-                Log::info("✅ Extracted " . count($pages) . " pages");
+            foreach ($allPages as $page) {
+                // Save Facebook Page with detailed information
+                $pageAccount = SocialAccount::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'provider' => 'facebook',
+                        'account_id' => $page['id']
+                    ],
+                    [
+                        'account_name' => $page['name'],
+                        'account_email' => $page['emails'][0] ?? null,
+                        'access_token' => Crypt::encryptString(json_encode(['token' => $page['access_token']])),
+                        'parent_account_id' => $socialAccount->id,
+                        'meta_data' => json_encode([
+                            'username' => $page['username'] ?? null,
+                            'category' => $page['category'] ?? null,
+                            'fan_count' => $page['fan_count'] ?? 0,
+                            'cover_photo' => $page['cover']['source'] ?? null,
+                            'link' => $page['link'] ?? null,
+                            'location' => $page['location'] ?? null,
+                            'phone' => $page['phone'] ?? null,
+                            'website' => $page['website'] ?? null,
+                            'verified' => $page['is_verified'] ?? false,
+                            'emails' => $page['emails'] ?? [],
+                            'page_insights' => $this->getPageInsights($page['access_token'], $page['id'])
+                        ]),
+                        'permission_level' => 'page',
+                        'avatar' => $page['cover']['source'] ?? null,
+                    ]
+                );
 
-                foreach ($pages as $page) {
-                    // Save Facebook Page
-                    $pageAccount = SocialAccount::updateOrCreate(
+                $connectedAssets[] = [
+                    'type' => 'facebook_page',
+                    'id' => $page['id'],
+                    'name' => $page['name'],
+                    'category' => $page['category'] ?? 'Unknown',
+                    'fans' => $page['fan_count'] ?? 0,
+                    'username' => $page['username'] ?? null,
+                    'link' => $page['link'] ?? null
+                ];
+
+                // Save Instagram Account if connected
+                if (isset($page['instagram_business_account']['id'])) {
+                    $instagramCount++;
+                    $igData = $page['instagram_business_account'];
+                    
+                    $igAccount = SocialAccount::updateOrCreate(
                         [
                             'user_id' => $user->id,
-                            'provider' => 'facebook',
-                            'account_id' => $page['id']
+                            'provider' => 'instagram',
+                            'account_id' => $igData['id']
                         ],
                         [
-                            'account_name' => $page['name'],
+                            'account_name' => $igData['username'] ?? 'Instagram Account',
                             'access_token' => Crypt::encryptString(json_encode(['token' => $page['access_token']])),
                             'parent_account_id' => $socialAccount->id,
-                            'meta_data' => json_encode($page),
-                            'permission_level' => 'page',
+                            'meta_data' => json_encode([
+                                'name' => $igData['name'] ?? null,
+                                'username' => $igData['username'] ?? null,
+                                'profile_picture_url' => $igData['profile_picture_url'] ?? null,
+                                'followers_count' => $igData['followers_count'] ?? 0,
+                                'media_count' => $igData['media_count'] ?? 0,
+                                'biography' => $igData['biography'] ?? null,
+                                'website' => $igData['website'] ?? null,
+                                'follows_count' => $igData['follows_count'] ?? 0,
+                                'ig_id' => $igData['ig_id'] ?? null,
+                                'connected_facebook_page' => $page['name'],
+                                'instagram_insights' => $this->getInstagramBasicInsights($page['access_token'], $igData['id'])
+                            ]),
+                            'permission_level' => 'business',
+                            'avatar' => $igData['profile_picture_url'] ?? null,
                         ]
                     );
 
                     $connectedAssets[] = [
-                        'type' => 'facebook_page',
-                        'id' => $page['id'],
-                        'name' => $page['name']
+                        'type' => 'instagram_business',
+                        'id' => $igData['id'],
+                        'name' => $igData['username'] ?? $igData['id'],
+                        'username' => $igData['username'] ?? null,
+                        'followers' => $igData['followers_count'] ?? 0,
+                        'posts' => $igData['media_count'] ?? 0,
+                        'connected_to_page' => $page['name']
                     ];
 
-                    // Save Instagram Account if connected
-                    if (isset($page['instagram_business_account']['id'])) {
-                        $igData = $page['instagram_business_account'];
-                        $igAccount = SocialAccount::updateOrCreate(
-                            [
-                                'user_id' => $user->id,
-                                'provider' => 'instagram',
-                                'account_id' => $igData['id']
-                            ],
-                            [
-                                'account_name' => $igData['username'] ?? 'Instagram Account',
-                                'access_token' => Crypt::encryptString(json_encode(['token' => $page['access_token']])),
-                                'parent_account_id' => $socialAccount->id,
-                                'meta_data' => json_encode($igData),
-                                'permission_level' => 'business',
-                            ]
-                        );
-
-                        $connectedAssets[] = [
-                            'type' => 'instagram_business',
-                            'id' => $igData['id'],
-                            'name' => $igData['username'] ?? $igData['id']
-                        ];
-
-                        // Extract Instagram insights
-                        $this->extractInstagramInsights($page['access_token'], $igData['id'], $igAccount);
-                    }
+                    Log::info("✅ Connected Instagram: " . ($igData['username'] ?? $igData['id']));
                 }
-            } catch (\Exception $e) {
-                Log::error("Pages extraction failed: " . $e->getMessage());
             }
 
-            // 5. Get Ad Accounts
-            try {
-                $response = $fb->get('/me/adaccounts?fields=id,name,account_status,currency,amount_spent,balance,timezone&limit=50');
-                $adAccounts = $response->getGraphEdge()->asArray();
+            Log::info("🎯 Total Summary: " . count($allPages) . " Facebook pages, " . $instagramCount . " Instagram accounts connected");
+
+        } catch (\Exception $e) {
+            Log::error("Pages extraction failed: " . $e->getMessage());
+        }
+
+        // 3. Get User Posts (Optional - can be removed if not needed)
+        try {
+            $response = Http::timeout(30)->get('https://graph.facebook.com/v19.0/me/posts', [
+                'fields' => 'id,message,created_time,permalink_url,attachments,likes.summary(true),comments.summary(true),shares',
+                'limit' => 10,
+                'access_token' => $accessToken,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $extractedData['posts'] = $data['data'] ?? [];
+                Log::info("✅ Extracted " . count($extractedData['posts']) . " posts");
+            }
+        } catch (\Exception $e) {
+            Log::info("Posts extraction failed: " . $e->getMessage());
+        }
+
+        // 4. Get Ad Accounts
+        try {
+            $response = Http::timeout(30)->get('https://graph.facebook.com/v19.0/me/adaccounts', [
+                'fields' => 'id,name,account_status,currency,amount_spent,balance,timezone,business{id,name}',
+                'limit' => 100,
+                'access_token' => $accessToken,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $adAccounts = $data['data'] ?? [];
                 $extractedData['ad_accounts'] = $adAccounts;
                 Log::info("✅ Extracted " . count($adAccounts) . " ad accounts");
 
@@ -280,87 +555,64 @@ class SocialController extends Controller
                     $connectedAssets[] = [
                         'type' => 'ad_account',
                         'id' => $adAccount['id'],
-                        'name' => $adAccount['name']
+                        'name' => $adAccount['name'],
+                        'status' => $adAccount['account_status'] ?? 'unknown',
+                        'spent' => $adAccount['amount_spent'] ?? 0
                     ];
                 }
-            } catch (\Exception $e) {
-                Log::error("Ad accounts extraction failed: " . $e->getMessage());
             }
-
-            // 6. Get Business Accounts
-            try {
-                $response = $fb->get('/me/businesses?fields=id,name,vertical,timezone,created_time,owned_pages{id,name}&limit=20');
-                $businesses = $response->getGraphEdge()->asArray();
-                $extractedData['businesses'] = $businesses;
-                Log::info("✅ Extracted " . count($businesses) . " businesses");
-            } catch (\Exception $e) {
-                Log::info("Businesses extraction failed: " . $e->getMessage());
-            }
-
-            // Update main account
-            $socialAccount->update([
-                'meta_data' => json_encode($extractedData),
-                'connected_assets' => json_encode($connectedAssets),
-                'asset_count' => count($connectedAssets),
-                'last_synced_at' => now(),
-            ]);
-
-            Log::info("🎯 Facebook data extraction completed. Assets: " . count($connectedAssets));
-
-        } catch (Exception $e) {
-            Log::error('Facebook data extraction error: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error("Ad accounts extraction failed: " . $e->getMessage());
         }
-    }
 
-    /**
-     * Extract Instagram Insights
-     */
-    private function extractInstagramInsights($pageAccessToken, $instagramId, $igAccount)
+        // Update main account with comprehensive data
+        $socialAccount->update([
+            'meta_data' => json_encode($extractedData),
+            'connected_assets' => json_encode($connectedAssets),
+            'asset_count' => count($connectedAssets),
+            'last_synced_at' => now(),
+            'granted_permissions' => json_encode([
+                'pages_access' => count($allPages ?? []) > 0,
+                'instagram_access' => $instagramCount > 0,
+                'ads_access' => count($adAccounts ?? []) > 0,
+                'total_pages' => count($allPages ?? []),
+                'total_instagram_accounts' => $instagramCount
+            ]),
+        ]);
+
+        Log::info("🎯 Facebook data extraction COMPLETED. Total Assets: " . count($connectedAssets));
+        Log::info("📊 FINAL SUMMARY:");
+        Log::info("   - Facebook Pages: " . count($allPages ?? []));
+        Log::info("   - Instagram Accounts: " . $instagramCount);
+        Log::info("   - Ad Accounts: " . count($adAccounts ?? []));
+        Log::info("   - Total Assets: " . count($connectedAssets));
+
+    } catch (Exception $e) {
+        Log::error('Facebook data extraction error: ' . $e->getMessage());
+    }
+}
+
+
+    private function getInstagramBasicInsights($pageAccessToken, $instagramId)
     {
         try {
-            $fb = new \Facebook\Facebook([
-                'app_id' => config('services.facebook.client_id'),
-                'app_secret' => config('services.facebook.client_secret'),
-                'default_graph_version' => 'v19.0',
-                'default_access_token' => $pageAccessToken,
+            $response = Http::timeout(30)->get("https://graph.facebook.com/v19.0/{$instagramId}/insights", [
+                'metric' => 'impressions,reach,engagement,profile_views,follower_count',
+                'period' => 'week',
+                'access_token' => $pageAccessToken,
             ]);
 
-            $instagramData = [];
-
-            // Get Instagram profile insights
-            try {
-                $response = $fb->get("/{$instagramId}/insights?metric=impressions,reach,engagement,profile_views,follower_count&period=day&limit=7");
-                $instagramData['insights'] = $response->getGraphEdge()->asArray();
-            } catch (\Exception $e) {
-                Log::warning("Instagram insights failed: " . $e->getMessage());
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['data'] ?? [];
             }
-
-            // Get Instagram media
-            try {
-                $response = $fb->get("/{$instagramId}/media?fields=id,caption,media_type,media_url,thumbnail_url,like_count,comments_count,timestamp,permalink&limit=12");
-                $instagramData['media'] = $response->getGraphEdge()->asArray();
-            } catch (\Exception $e) {
-                Log::warning("Instagram media failed: " . $e->getMessage());
-            }
-
-            // Update Instagram account
-            $igAccount->update([
-                'meta_data' => json_encode(array_merge(
-                    json_decode($igAccount->meta_data, true) ?? [],
-                    $instagramData
-                )),
-                'last_synced_at' => now(),
-            ]);
-
-            Log::info("✅ Instagram insights extracted for: " . $igAccount->account_name);
-
         } catch (\Exception $e) {
-            Log::warning("Instagram insights extraction failed: " . $e->getMessage());
+            Log::warning("Instagram insights failed for {$instagramId}: " . $e->getMessage());
         }
+        return [];
     }
-
     /**
-     * Extract Google Data
+     * Extract Google Data using Direct API Calls
      */
     private function extractGoogleData($accessToken, $user, $socialAccount)
     {
@@ -369,9 +621,9 @@ class SocialController extends Controller
 
             // Get Google Profile
             try {
-                $response = Http::withToken($accessToken)
+                $response = Http::timeout(30)->withToken($accessToken)
                     ->get('https://www.googleapis.com/oauth2/v1/userinfo');
-                
+
                 if ($response->successful()) {
                     $googleData['profile'] = $response->json();
                     Log::info("✅ Google profile extracted");
@@ -382,14 +634,15 @@ class SocialController extends Controller
 
             // Get YouTube Channels
             try {
-                $response = Http::withToken($accessToken)
+                $response = Http::timeout(30)->withToken($accessToken)
                     ->get('https://www.googleapis.com/youtube/v3/channels', [
                         'part' => 'snippet,statistics,contentDetails',
                         'mine' => 'true',
                     ]);
 
                 if ($response->successful()) {
-                    $googleData['youtube_channels'] = $response->json()['items'] ?? [];
+                    $data = $response->json();
+                    $googleData['youtube_channels'] = $data['items'] ?? [];
                     Log::info("✅ Extracted " . count($googleData['youtube_channels']) . " YouTube channels");
                 }
             } catch (\Exception $e) {
@@ -401,242 +654,8 @@ class SocialController extends Controller
                 'meta_data' => json_encode($googleData),
                 'last_synced_at' => now(),
             ]);
-
         } catch (Exception $e) {
             Log::error('Google data extraction error: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * API: Get Social Accounts
-     */
-    public function getAccounts(Request $request)
-    {
-        try {
-            $user = Auth::user();
-            $provider = $request->get('provider');
-
-            $query = SocialAccount::where('user_id', $user->id);
-            
-            if ($provider) {
-                $query->where('provider', $provider);
-            }
-
-            $accounts = $query->get()->map(function ($account) {
-                return [
-                    'id' => $account->id,
-                    'provider' => $account->provider,
-                    'account_name' => $account->account_name,
-                    'account_email' => $account->account_email,
-                    'permission_level' => $account->permission_level,
-                    'avatar' => $account->avatar,
-                    'asset_count' => $account->asset_count,
-                    'last_synced_at' => $account->last_synced_at,
-                    'created_at' => $account->created_at,
-                ];
-            });
-
-            return response()->json([
-                'success' => true,
-                'data' => $accounts,
-                'count' => $accounts->count()
-            ]);
-
-        } catch (Exception $e) {
-            Log::error('Get accounts API error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch accounts'
-            ], 500);
-        }
-    }
-
-    /**
-     * API: Get Account Details
-     */
-    public function getAccountDetails($id)
-    {
-        try {
-            $user = Auth::user();
-            $account = SocialAccount::where('user_id', $user->id)->findOrFail($id);
-
-            $data = [
-                'id' => $account->id,
-                'provider' => $account->provider,
-                'account_name' => $account->account_name,
-                'account_email' => $account->account_email,
-                'permission_level' => $account->permission_level,
-                'avatar' => $account->avatar,
-                'asset_count' => $account->asset_count,
-                'last_synced_at' => $account->last_synced_at,
-                'created_at' => $account->created_at,
-                'meta_data' => json_decode($account->meta_data, true) ?? [],
-                'connected_assets' => json_decode($account->connected_assets, true) ?? [],
-            ];
-
-            return response()->json([
-                'success' => true,
-                'data' => $data
-            ]);
-
-        } catch (Exception $e) {
-            Log::error('Get account details API error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Account not found'
-            ], 404);
-        }
-    }
-
-    /**
-     * API: Sync Account Data
-     */
-    public function syncAccount($id)
-    {
-        try {
-            $user = Auth::user();
-            $account = SocialAccount::where('user_id', $user->id)->findOrFail($id);
-
-            $token = $this->decryptToken($account->access_token);
-
-            if ($account->provider === 'facebook') {
-                $this->extractFacebookData($token, $user, $account);
-            } elseif ($account->provider === 'google') {
-                $this->extractGoogleData($token, $user, $account);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Account data synced successfully',
-                'last_synced_at' => $account->fresh()->last_synced_at
-            ]);
-
-        } catch (Exception $e) {
-            Log::error('Sync account API error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to sync account data'
-            ], 500);
-        }
-    }
-
-    /**
-     * API: Get Connected Assets
-     */
-    public function getConnectedAssets($accountId)
-    {
-        try {
-            $user = Auth::user();
-            $account = SocialAccount::where('user_id', $user->id)->findOrFail($accountId);
-
-            $assets = [];
-
-            if ($account->provider === 'facebook') {
-                // Get Facebook pages
-                $pages = SocialAccount::where('user_id', $user->id)
-                    ->where('provider', 'facebook')
-                    ->where('parent_account_id', $account->id)
-                    ->get();
-
-                // Get Instagram accounts
-                $instagramAccounts = SocialAccount::where('user_id', $user->id)
-                    ->where('provider', 'instagram')
-                    ->where('parent_account_id', $account->id)
-                    ->get();
-
-                // Get Ad accounts
-                $adAccounts = AdAccount::where('user_id', $user->id)
-                    ->where('social_account_id', $account->id)
-                    ->get();
-
-                $assets = [
-                    'facebook_pages' => $pages,
-                    'instagram_accounts' => $instagramAccounts,
-                    'ad_accounts' => $adAccounts,
-                ];
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $assets
-            ]);
-
-        } catch (Exception $e) {
-            Log::error('Get connected assets API error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch connected assets'
-            ], 500);
-        }
-    }
-
-    /**
-     * API: Disconnect Account
-     */
-    public function disconnectAccount(Request $request, $id)
-    {
-        try {
-            $user = Auth::user();
-            $account = SocialAccount::where('user_id', $user->id)->findOrFail($id);
-
-            // Delete connected assets
-            if ($account->provider === 'facebook') {
-                SocialAccount::where('user_id', $user->id)
-                    ->where('parent_account_id', $account->id)
-                    ->delete();
-
-                AdAccount::where('user_id', $user->id)
-                    ->where('social_account_id', $account->id)
-                    ->delete();
-            }
-
-            $account->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Account disconnected successfully'
-            ]);
-
-        } catch (Exception $e) {
-            Log::error('Disconnect account API error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to disconnect account'
-            ], 500);
-        }
-    }
-
-    /**
-     * Basic Connection Only (No Business Permissions)
-     */
-    public function redirectBasic($provider)
-    {
-        $validator = Validator::make(['provider' => $provider], [
-            'provider' => 'required|in:facebook,google'
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->route('dashboard')->with('error', 'Invalid provider.');
-        }
-
-        try {
-            if ($provider === 'facebook') {
-                return Socialite::driver('facebook')
-                    ->scopes([
-                        'email',
-                        'public_profile',
-                        'user_posts',
-                        'user_photos',
-                    ])
-                    ->with(['response_type' => 'code'])
-                    ->redirect();
-            }
-
-            return $this->redirect($provider);
-
-        } catch (Exception $e) {
-            Log::error('Socialite redirect error: ' . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Failed to initialize OAuth.');
         }
     }
 
@@ -650,7 +669,8 @@ class SocialController extends Controller
             $tokenData = json_decode($decrypted, true);
             return $tokenData['token'] ?? $decrypted;
         } catch (Exception $e) {
-            throw new Exception('Failed to decrypt token.');
+            Log::error('Token decryption error: ' . $e->getMessage());
+            throw new Exception('Failed to decrypt access token.');
         }
     }
 }
