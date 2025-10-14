@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Http;
+use App\Helpers\SocialTokenHelper;
 use App\Models\SocialAccount;
 use Exception;
 
@@ -16,182 +18,178 @@ class InstagramController extends Controller
     /**
      * Instagram Integration Page
      */
-    public function index()
+   
+    public function show($id)
     {
         try {
             $user = Auth::user();
-            
-            // Get Instagram accounts (connected via Facebook pages)
-            $instagramAccounts = SocialAccount::where('user_id', $user->id)
-                ->where('provider', 'instagram')
-                ->get();
-
-            $facebookConnected = SocialAccount::where('user_id', $user->id)
+            $mainAccount = SocialAccount::where('user_id', $user->id)
                 ->where('provider', 'facebook')
-                ->whereNull('account_id')
-                ->exists();
+                ->whereNull('parent_account_id')
+                ->first();
 
-            // Get Instagram data if accounts exist
-            $instagramData = [];
-            if ($instagramAccounts->count() > 0) {
-                $instagramData = $this->getInstagramAccountData($instagramAccounts->first());
+            if (!$mainAccount) {
+                return redirect()->back()->with('error', 'Facebook account not connected');
             }
 
-            return view('backend.pages.instagram.index', compact(
-                'instagramAccounts',
-                'facebookConnected',
-                'instagramData'
+            $token = SocialTokenHelper::getFacebookToken($mainAccount);
+
+            // Fetch Instagram account details
+            $instagram = Http::get("https://graph.facebook.com/v21.0/{$id}", [
+                'fields' => 'name,username,biography,followers_count,follows_count,media_count,profile_picture_url',
+                'access_token' => $token,
+            ])->json();
+
+            // Fetch media (posts & reels)
+            $mediaResponse = Http::get("https://graph.facebook.com/v21.0/{$id}/media", [
+                'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,insights.metric(impressions,reach,engagement,video_views)',
+                'access_token' => $token,
+                'limit' => 10
+            ])->json();
+
+            $media = $mediaResponse['data'] ?? [];
+
+            // Aggregate stats
+            $totalPosts = $instagram['media_count'] ?? count($media);
+            $totalLikes = collect($media)->sum(fn($m) => $m['like_count'] ?? 0);
+            $totalReels = collect($media)->where('media_type', 'VIDEO')->count();
+            $totalImages = collect($media)->where('media_type', 'IMAGE')->count();
+
+            return view('backend.pages.instagram.show', compact(
+                'instagram',
+                'media',
+                'totalPosts',
+                'totalReels',
+                'totalImages',
+                'totalLikes'
             ));
 
-        } catch (Exception $e) {
-            Log::error('Instagram index error: ' . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Failed to load Instagram page.');
+        } catch (\Exception $e) {
+            Log::error('Instagram fetch failed: ' . $e->getMessage());
+            return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
-    /**
-     * Get Instagram Account Data
-     */
-    public function getInstagramAccountData($account)
+    public function likesGraph($id, Request $request)
     {
         try {
-            $token = $this->decryptToken($account->access_token);
+            $user = Auth::user();
+            $mainAccount = SocialAccount::where('user_id', $user->id)
+                ->where('provider', 'facebook')
+                ->whereNull('parent_account_id')
+                ->first();
 
-            $fb = new \Facebook\Facebook([
-                'app_id' => config('services.facebook.client_id'),
-                'app_secret' => config('services.facebook.client_secret'),
-                'default_graph_version' => 'v18.0',
-            ]);
+            if (!$mainAccount) {
+                return response()->json(['error' => 'Facebook account not connected'], 400);
+            }
 
-            // Get Instagram business account info
-            $accountInfo = $fb->get("/{$account->account_id}?fields=username,profile_picture_url,biography,website,followers_count,follows_count,media_count", $token);
-            $profile = $accountInfo->getGraphNode()->asArray();
+            $token = SocialTokenHelper::getFacebookToken($mainAccount);
 
-            // Get recent media
-            $mediaResponse = $fb->get("/{$account->account_id}/media?fields=id,caption,media_type,media_url,thumbnail_url,like_count,comments_count,timestamp,permalink&limit=12", $token);
-            $media = $mediaResponse->getGraphEdge()->asArray();
+            $range = $request->get('range', 'all');
+            $days = match ($range) {
+                '1M' => 30,
+                '6M' => 180,
+                '1Y' => 365,
+                default => 90,
+            };
 
-            // Get insights for the last 7 days
-            $insightsResponse = $fb->get("/{$account->account_id}/insights?metric=impressions,reach,engagement,profile_views,follower_count&period=day", $token);
-            $insights = $insightsResponse->getGraphEdge()->asArray();
+            $mediaResponse = Http::get("https://graph.facebook.com/v21.0/{$id}/media", [
+                'fields' => 'id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count,insights.metric(impressions,reach,engagement,video_views)',
+                'access_token' => $token,
+                'limit' => 100,
+            ])->json();
 
-            return [
-                'profile' => $profile,
-                'media' => $media,
-                'insights' => $insights,
-                'total_posts' => $profile['media_count'] ?? 0,
-                'followers' => $profile['followers_count'] ?? 0
-            ];
+            $media = $mediaResponse['data'] ?? [];
 
-        } catch (\Facebook\Exceptions\FacebookResponseException $e) {
-            Log::error('Instagram API Error: ' . $e->getMessage());
-            return ['error' => 'Instagram API error: ' . $e->getMessage()];
-        } catch (Exception $e) {
-            Log::error('Instagram data fetch error: ' . $e->getMessage());
-            return ['error' => 'Failed to fetch Instagram data.'];
-        }
-    }
+            if (empty($media)) {
+                return response()->json(['dates' => [], 'likes' => [], 'comments' => [], 'views' => []]);
+            }
 
-    /**
-     * Get Instagram Posts
-     */
-    public function getPosts(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'account_id' => 'required|string'
-        ]);
+            $data = collect($media)->map(function ($m) {
+                $views = 0;
+                if(isset($m['insights']['data'])) {
+                    foreach($m['insights']['data'] as $insight) {
+                        if($insight['name'] === 'video_views') $views = $insight['values'][0]['value'] ?? 0;
+                    }
+                }
+                return [
+                    'date' => date('Y-m-d', strtotime($m['timestamp'])),
+                    'likes' => $m['like_count'] ?? 0,
+                    'comments' => $m['comments_count'] ?? 0,
+                    'views' => $views,
+                ];
+            });
 
-        if ($validator->fails()) {
-            return response()->json(['error' => 'Invalid parameters'], 400);
-        }
+            $grouped = $data->groupBy('date')->map(function ($items) {
+                return [
+                    'likes' => $items->sum('likes'),
+                    'comments' => $items->sum('comments'),
+                    'views' => $items->sum('views'),
+                ];
+            });
 
-        try {
-            $account = SocialAccount::where('user_id', Auth::id())
-                ->where('account_id', $request->account_id)
-                ->where('provider', 'instagram')
-                ->firstOrFail();
+            $sorted = $grouped->sortKeys();
 
-            $token = $this->decryptToken($account->access_token);
-
-            $fb = new \Facebook\Facebook([
-                'app_id' => config('services.facebook.client_id'),
-                'app_secret' => config('services.facebook.client_secret'),
-                'default_graph_version' => 'v18.0',
-            ]);
-
-            $limit = $request->get('limit', 20);
-            $mediaResponse = $fb->get("/{$account->account_id}/media?fields=id,caption,media_type,media_url,thumbnail_url,like_count,comments_count,timestamp,permalink,children{media_url,media_type}&limit={$limit}", $token);
-            $media = $mediaResponse->getGraphEdge()->asArray();
+            if ($range !== 'all') {
+                $cutoffDate = now()->subDays($days)->format('Y-m-d');
+                $sorted = $sorted->filter(fn($v, $date) => $date >= $cutoffDate);
+            }
 
             return response()->json([
-                'success' => true,
-                'posts' => $media
+                'dates' => $sorted->keys()->values(),
+                'likes' => $sorted->pluck('likes')->values(),
+                'comments' => $sorted->pluck('comments')->values(),
+                'views' => $sorted->pluck('views')->values(),
             ]);
 
-        } catch (Exception $e) {
-            Log::error('Instagram posts error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch posts'], 500);
+        } catch (\Exception $e) {
+            Log::error('Instagram likesGraph error: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Get Instagram Insights
-     */
-    public function getInsights(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'account_id' => 'required|string',
-            'metric' => 'nullable|string',
-            'period' => 'nullable|in:day,week,month'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['error' => 'Invalid parameters'], 400);
-        }
-
-        try {
-            $account = SocialAccount::where('user_id', Auth::id())
-                ->where('account_id', $request->account_id)
-                ->where('provider', 'instagram')
-                ->firstOrFail();
-
-            $token = $this->decryptToken($account->access_token);
-
-            $fb = new \Facebook\Facebook([
-                'app_id' => config('services.facebook.client_id'),
-                'app_secret' => config('services.facebook.client_secret'),
-                'default_graph_version' => 'v18.0',
-            ]);
-
-            $metrics = $request->metric ?? 'impressions,reach,engagement,profile_views,follower_count';
-            $period = $request->period ?? 'day';
-
-            $insightsResponse = $fb->get("/{$account->account_id}/insights?metric={$metrics}&period={$period}", $token);
-            $insights = $insightsResponse->getGraphEdge()->asArray();
-
-            return response()->json([
-                'success' => true,
-                'insights' => $insights
-            ]);
-
-        } catch (Exception $e) {
-            Log::error('Instagram insights error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch insights'], 500);
-        }
-    }
-
-    /**
-     * Decrypt token
-     */
-    private function decryptToken($encryptedToken)
+    
+    public function insights($id)
     {
         try {
-            $decrypted = Crypt::decryptString($encryptedToken);
-            $tokenData = json_decode($decrypted, true);
-            return $tokenData['token'] ?? $decrypted;
-        } catch (Exception $e) {
-            Log::error('Token decryption error: ' . $e->getMessage());
-            throw new Exception('Failed to decrypt access token.');
+            $user = Auth::user();
+
+            $mainAccount = SocialAccount::where('user_id', $user->id)
+                ->where('provider', 'facebook')
+                ->whereNull('parent_account_id')
+                ->first();
+
+            if (!$mainAccount) {
+                return response()->json(['error' => 'Facebook account not connected'], 400);
+            }
+
+            $token = SocialTokenHelper::getFacebookToken($mainAccount);
+
+            // Fetch Instagram Insights
+            $insightsResponse = Http::get("https://graph.facebook.com/v21.0/{$id}/insights", [
+                'metric' => 'profile_views,profile_links_taps,impressions,reach,website_clicks',
+                'period' => 'day',
+                'access_token' => $token,
+            ])->json();
+
+            $metrics = [];
+
+            if (isset($insightsResponse['data'])) {
+                foreach ($insightsResponse['data'] as $metric) {
+                    $name = $metric['name'];
+                    $values = $metric['values'] ?? [];
+                    foreach ($values as $v) {
+                        $metrics[$name]['dates'][] = $v['end_time'] ?? '';
+                        $metrics[$name]['values'][] = $v['value'] ?? 0;
+                    }
+                }
+            }
+
+            return response()->json($metrics);
+
+        } catch (\Exception $e) {
+            Log::error('Instagram insights fetch failed: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }

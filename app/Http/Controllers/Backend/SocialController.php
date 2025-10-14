@@ -77,9 +77,12 @@ class SocialController extends Controller
                     'response_type' => 'code',
                     'auth_type' => 'rerequest',
                     'state' => csrf_token(),
+                    'auth_nonce' => uniqid('fb_', true),
+                    'display' => 'popup',
                 ];
 
-                $url = 'https://www.facebook.com/v19.0/dialog/oauth?' . http_build_query($params);
+                $url = 'https://www.facebook.com/v24.0/dialog/oauth?' . http_build_query($params);
+                //dd($url);
                 return redirect($url);
             } elseif ($provider === 'google') {
                 $scopes = [
@@ -157,7 +160,7 @@ class SocialController extends Controller
     {
         try {
             // Exchange code for access token
-            $tokenResponse = Http::asForm()->post('https://graph.facebook.com/v19.0/oauth/access_token', [
+            $tokenResponse = Http::asForm()->post('https://graph.facebook.com/v24.0/oauth/access_token', [
                 'client_id' => $this->facebookConfig['client_id'],
                 'client_secret' => $this->facebookConfig['client_secret'],
                 'redirect_uri' => $this->facebookConfig['redirect_uri'],
@@ -174,7 +177,7 @@ class SocialController extends Controller
             $expiresIn = $tokenData['expires_in'] ?? null;
 
             // Get user info
-            $userResponse = Http::get('https://graph.facebook.com/v19.0/me', [
+            $userResponse = Http::get('https://graph.facebook.com/v24.0/me', [
                 'fields' => 'id,name,email,first_name,last_name,picture',
                 'access_token' => $accessToken,
             ]);
@@ -357,7 +360,7 @@ private function extractFacebookData($accessToken, $user, $socialAccount)
 
         // 1. Get User Profile
         try {
-            $response = Http::timeout(30)->get('https://graph.facebook.com/v19.0/me', [
+            $response = Http::timeout(30)->get('https://graph.facebook.com/v24.0/me', [
                 'fields' => 'id,name,email,first_name,last_name,picture,cover,age_range,link,location,gender',
                 'access_token' => $accessToken,
             ]);
@@ -373,7 +376,7 @@ private function extractFacebookData($accessToken, $user, $socialAccount)
         // 2. Get ALL Facebook Pages with Pagination
         try {
             $allPages = [];
-            $nextUrl = $this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/me/accounts?fields=id,name,username,access_token,category,fan_count,cover,link,location,phone,website,emails,instagram_business_account{id,name,username,profile_picture_url,followers_count,media_count,biography,website,follows_count,ig_id}&limit=100&access_token=' . $accessToken;
+            $nextUrl = 'https://graph.facebook.com/v24.0/me/accounts?fields=id,name,username,access_token,category,fan_count,cover,link,location,phone,website,emails,instagram_business_account{id,name,username,profile_picture_url,followers_count,media_count,biography,website,follows_count,ig_id}&limit=100&access_token=' . $accessToken;
             
             $pageCount = 0;
             
@@ -391,16 +394,11 @@ private function extractFacebookData($accessToken, $user, $socialAccount)
                 $allPages = array_merge($allPages, $pages);
                 $pageCount += count($pages);
                 
-                Log::info("📄 Fetched batch of " . count($pages) . " pages. Total so far: " . count($allPages));
-                
-                // Get next page URL if exists
+                Log::info("Fetched batch of " . count($pages) . " pages. Total so far: " . count($allPages));
                 $nextUrl = $data['paging']['next'] ?? null;
-                
                 if (!$nextUrl) {
                     break;
                 }
-                
-                // Small delay to avoid rate limiting
                 sleep(1);
             }
 
@@ -505,7 +503,7 @@ private function extractFacebookData($accessToken, $user, $socialAccount)
 
         // 3. Get User Posts (Optional - can be removed if not needed)
         try {
-            $response = Http::timeout(30)->get('https://graph.facebook.com/v19.0/me/posts', [
+            $response = Http::timeout(30)->get('https://graph.facebook.com/v24.0/me/posts', [
                 'fields' => 'id,message,created_time,permalink_url,attachments,likes.summary(true),comments.summary(true),shares',
                 'limit' => 10,
                 'access_token' => $accessToken,
@@ -522,7 +520,7 @@ private function extractFacebookData($accessToken, $user, $socialAccount)
 
         // 4. Get Ad Accounts
         try {
-            $response = Http::timeout(30)->get('https://graph.facebook.com/v19.0/me/adaccounts', [
+            $response = Http::timeout(30)->get('https://graph.facebook.com/v24.0/me/adaccounts', [
                 'fields' => 'id,name,account_status,currency,amount_spent,balance,timezone,business{id,name}',
                 'limit' => 100,
                 'access_token' => $accessToken,
@@ -596,7 +594,7 @@ private function extractFacebookData($accessToken, $user, $socialAccount)
     private function getInstagramBasicInsights($pageAccessToken, $instagramId)
     {
         try {
-            $response = Http::timeout(30)->get("https://graph.facebook.com/v19.0/{$instagramId}/insights", [
+            $response = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$instagramId}/insights", [
                 'metric' => 'impressions,reach,engagement,profile_views,follower_count',
                 'period' => 'week',
                 'access_token' => $pageAccessToken,
@@ -673,4 +671,24 @@ private function extractFacebookData($accessToken, $user, $socialAccount)
             throw new Exception('Failed to decrypt access token.');
         }
     }
+
+    private function getPageInsights($pageAccessToken, $pageId)
+    {
+        try {
+            $response = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
+                'metric' => 'page_impressions,page_engaged_users,page_fan_adds,page_views_total',
+                'period' => 'day',
+                'access_token' => $pageAccessToken,
+            ]);
+
+            if ($response->successful()) {
+                return $response->json()['data'] ?? [];
+            }
+        } catch (\Exception $e) {
+            Log::warning("Page insights failed for {$pageId}: " . $e->getMessage());
+        }
+
+        return [];
+    }
+
 }

@@ -16,6 +16,11 @@ use App\Http\Controllers\Backend\FacebookController;
 use App\Http\Controllers\Backend\InstagramController;
 use App\Http\Controllers\Backend\YoutubeController;
 
+
+Route::get('/privacy-policy', function () {
+    return view('privacy-policy');
+})->name('privacy.policy');
+
 Route::get('/', [LoginController::class, 'showLoginForm']);
 Route::get('login', [LoginController::class, 'showLoginForm'])->name('login.form');
 Route::post('login', [LoginController::class, 'login'])->name('login');
@@ -51,8 +56,6 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('/facebook', [FacebookController::class, 'index'])->name('facebook.index');
     Route::get('/instagram', [InstagramController::class, 'index'])->name('instagram.index');
     Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube.index');
-
-    // Social Authentication Routes
     Route::prefix('social')->name('social.')->group(function () {
         Route::get('/{provider}/redirect', [SocialController::class, 'redirect'])
             ->where('provider', 'facebook|google')
@@ -65,24 +68,23 @@ Route::group(['middleware' => ['auth']], function() {
     ->name('disconnect');
 
     });
+    Route::get('instagram/{id}', [InstagramController::class, 'show'])->name('instagram.show');
+    Route::get('/instagram/{id}/likes-graph', [InstagramController::class, 'likesGraph'])->name('instagram.likes.graph');
+
+    Route::get('instagram/{id}/insights', [InstagramController::class, 'insights'])->name('instagram.insights');
 
     // Platform Specific Data Routes
-    Route::prefix('platform')->name('platform.')->group(function () {
-        // Facebook Data
-        Route::get('/facebook/accounts', [FacebookController::class, 'getAccounts'])->name('facebook.accounts');
-        Route::get('/facebook/posts', [FacebookController::class, 'getPosts'])->name('facebook.posts');
-        Route::get('/facebook/insights', [FacebookController::class, 'getInsights'])->name('facebook.insights');
-        
-        // Instagram Data
-        Route::get('/instagram/accounts', [InstagramController::class, 'getAccounts'])->name('instagram.accounts');
-        Route::get('/instagram/posts', [InstagramController::class, 'getPosts'])->name('instagram.posts');
-        Route::get('/instagram/insights', [InstagramController::class, 'getInsights'])->name('instagram.insights');
-        
-        // YouTube Data
-        Route::get('/youtube/channels', [YoutubeController::class, 'getChannels'])->name('youtube.channels');
-        Route::get('/youtube/videos', [YoutubeController::class, 'getVideos'])->name('youtube.videos');
-        Route::get('/youtube/analytics', [YoutubeController::class, 'getAnalytics'])->name('youtube.analytics');
-    });
+    // Route::prefix('platform')->name('platform.')->group(function () {
+    //     Route::get('/facebook/accounts', [FacebookController::class, 'getAccounts'])->name('facebook.accounts');
+    //     Route::get('/facebook/posts', [FacebookController::class, 'getPosts'])->name('facebook.posts');
+    //     Route::get('/facebook/insights', [FacebookController::class, 'getInsights'])->name('facebook.insights');
+    //     Route::get('/instagram/accounts', [InstagramController::class, 'getAccounts'])->name('instagram.accounts');
+    //     Route::get('/instagram/posts', [InstagramController::class, 'getPosts'])->name('instagram.posts');
+    //     Route::get('/instagram/insights', [InstagramController::class, 'getInsights'])->name('instagram.insights');
+    //     Route::get('/youtube/channels', [YoutubeController::class, 'getChannels'])->name('youtube.channels');
+    //     Route::get('/youtube/videos', [YoutubeController::class, 'getVideos'])->name('youtube.videos');
+    //     Route::get('/youtube/analytics', [YoutubeController::class, 'getAnalytics'])->name('youtube.analytics');
+    // });
 
     // Insights & Analytics Routes
     Route::prefix('analytics')->name('analytics.')->group(function () {
