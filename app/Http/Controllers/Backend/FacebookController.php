@@ -53,7 +53,7 @@ class FacebookController extends Controller
                                 $igId = $page['instagram_business_account']['id'];
                                 $pageToken = $page['access_token'];
                                 try {
-                                    $igResponse = Http::get("https://graph.facebook.com/v21.0/{$igId}", [
+                                    $igResponse = Http::get("https://graph.facebook.com/v24.0/{$igId}", [
                                         'fields' => 'username,followers_count,profile_picture_url',
                                         'access_token' => $pageToken,
                                     ])->json();

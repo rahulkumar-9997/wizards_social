@@ -1,35 +1,5 @@
 @extends('backend.pages.layouts.master')
 @section('title', 'Instagram Dashboard')
-
-@push('styles')
-<style>
-    .profile-item img {
-        border: 2px solid #ddd;
-    }
-    .stat-card {
-        background: #fff;
-        border-radius: 0.5rem;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        text-align: center;
-        padding: 1rem;
-        transition: all 0.3s ease;
-    }
-    .stat-card:hover {
-        background: #f8f9fa;
-    }
-    .stat-card h3 {
-        font-size: 1.8rem;
-        margin: 0;
-        color: #0d6efd;
-    }
-    .stat-card p {
-        margin: 0;
-        color: #6c757d;
-        font-weight: 500;
-    }
-</style>
-@endpush
-
 @section('main-content')
 <div class="container-fluid">
     <div class="row mb-2">
@@ -42,7 +12,7 @@
                     <img src="{{ $instagram['profile_picture_url'] ?? '' }}" width="100" height="100" class="me-3" alt="Profile">
                     <div>
                         <h3 class="mb-1 fw-bold">{{ $instagram['name'] ?? '' }}</h3>
-                        <p class="text-muted mb-1">@{{ $instagram['username'] ?? '' }}</p>
+                        <p class="text-muted mb-1">{{ $instagram['username'] ?? '' }}</p>
                         <p class="mb-2">{!! nl2br(e($instagram['biography'] ?? '')) !!}</p>
                         <div class="d-flex gap-4">
                             <span><strong>{{ number_format($instagram['media_count'] ?? 0) }}</strong> posts</span>
@@ -59,7 +29,7 @@
             </div>
         </div>
     </div>
-    <div class="row mb-2">
+    <!-- <div class="row mb-2">
         <div class="col-md-6 col-xl-3">
             <div class="card">
                 <div class="card-body">
@@ -78,7 +48,7 @@
                     </div>
                 </div>
             </div>
-        </div> 
+        </div>
         <div class="col-md-6 col-xl-3">
             <div class="card">
                 <div class="card-body">
@@ -98,46 +68,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="avatar-md bg-danger rounded">
-                                <i class="bx bxs-video-plus avatar-title fs-24 text-white"></i>
-                            </div>
-                        </div>
-                        <div class="col-6 text-end">
-                            <p class="text-muted mb-0 text-truncate">Real Posts</p>
-                            <h3 class="text-dark mt-1 mb-0">
-                                {{ $totalReels }}
-                            </h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-xl-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="avatar-md bg-warning rounded">
-                                <i class="bx bxs-heart avatar-title fs-24 text-white"></i>
-                            </div>
-                        </div>
-                        <div class="col-6 text-end">
-                            <p class="text-muted mb-0 text-truncate">Total Likes</p>
-                            <h3 class="text-dark mt-1 mb-0">
-                                {{ $totalLikes }}
-                            </h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    </div> -->
     <div class="row mb-4">
         <div class="col-xxl-12">
             <div class="card">
@@ -145,54 +76,36 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="card-title mb-0">Instagram Daily Insights</h4>
                         <div>
-                            <button type="button" class="btn btn-sm btn-outline-light active filter-btn" data-filter="all">ALL</button>
+                            <button type="button" class="btn btn-sm btn-outline-light active filter-btn" data-filter="7d">Last One Week</button>
                             <button type="button" class="btn btn-sm btn-outline-light" data-filter="1M">1M</button>
                             <button type="button" class="btn btn-sm btn-outline-light" data-filter="6M">6M</button>
                             <button type="button" class="btn btn-sm btn-outline-light" data-filter="1Y">1Y</button>
                         </div>
                     </div>
-
-                    <div id="likes_graph" style="min-height: 350px;"></div>
-                </div>
-            </div>
-
-    </div>
-    <div class="row">
-        <div class="col-12 mb-3">
-            <h5 class="mb-3">Recent Posts</h5>
-        </div>
-        @forelse($media as $post)
-        <div class="col-md-4 mb-3">
-            <div class="card h-100">
-                @if(isset($post['media_url']))
-                <img src="{{ $post['media_url'] }}" class="card-img-top" alt="Media">
-                @endif
-                <div class="card-body">
-                    <p>{{ \Illuminate\Support\Str::limit($post['caption'] ?? '', 100) }}</p>
-                    <p class="mb-2">
-                        <strong>❤️ {{ $post['like_count'] ?? 0 }}</strong> &nbsp;
-                        <strong>💬 {{ $post['comments_count'] ?? 0 }}</strong>
-                    </p>
-                    <a href="{{ $post['permalink'] }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-                        View on Instagram
-                    </a>
+                    <div class="map-section">
+                        <div id="likes_graph" style="min-height: 350px;"></div>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <h5 class="mb-3">Post</h5>
+                    </div>
+                    <div id="instagram-media-table">
+                        @include('backend.pages.instagram.partials.instagram-media-table', [
+                        'media' => $paginatedMedia,
+                        'paginatedMedia' => $paginatedMedia
+                        ])
+                    </div>
                 </div>
             </div>
         </div>
-        @empty
-        <p class="text-center">No posts found.</p>
-        @endforelse
     </div>
+    @endsection
 
-</div>
-@endsection
+    @push('scripts')
+    <script>
+        $(document).ready(function() {
+    let chart;
 
-@push('scripts')
-<script>
-$(document).ready(function() {
-    var chart;
-
-    function loadGraph(range = 'all') {
+    function loadGraph(range = '7d') {
         $("#likes_graph").html('<div class="text-center p-5 text-muted">Loading graph...</div>');
 
         $.ajax({
@@ -201,48 +114,135 @@ $(document).ready(function() {
             data: { range: range },
             dataType: "json",
             success: function(data) {
-                if(chart) chart.destroy();
+                if (chart) chart.destroy();
 
-                var options = {
+                if (!data.dates || !data.dates.length) {
+                    $("#likes_graph").html('<div class="text-center p-5 text-warning">No data available for this period</div>');
+                    return;
+                }
+
+                const hasData = data.reach.some(v => v > 0) ||
+                                data.impressions.some(v => v > 0) ||
+                                data.profile_views.some(v => v > 0) ||
+                                data.engagements.some(v => v > 0);
+
+                if (!hasData) {
+                    $("#likes_graph").html(`
+                        <div class="text-center p-5 text-warning">
+                            No insights data found.<br>
+                            <small>
+                                Possible reasons:<br>
+                                - Not a Business/Creator Instagram account<br>
+                                - Insights not enabled<br>
+                                - No activity in this range
+                            </small>
+                        </div>
+                    `);
+                    return;
+                }
+
+                const options = {
                     series: [
-                        { name: "Likes", type: "area", data: data.likes },
-                        { name: "Comments", type: "line", data: data.comments },
-                        { name: "Views", type: "line", data: data.views }
+                        { name: "Reach", type: "area", data: data.reach },
+                        { name: "Impressions", type: "line", data: data.impressions },
+                        { name: "Profile Views", type: "line", data: data.profile_views },
+                        { name: "Engagements", type: "line", data: data.engagements }
                     ],
-                    chart: { height: 350, type: "line", toolbar: { show: false } },
-                    stroke: { width: [2,2,2], curve: 'smooth' },
-                    colors: ["#22c55e","#0d6efd","#f59e0b"],
-                    fill: { type: ['gradient','solid','solid'], gradient: { opacityFrom:0.5, opacityTo:0.1 } },
-                    xaxis: { categories: data.dates },
+                    chart: {
+                        height: 350,
+                        type: "line",
+                        toolbar: { show: true },
+                        animations: { enabled: true }
+                    },
+                    stroke: { width: [3, 2, 2, 2], curve: 'smooth' },
+                    colors: ["#22c55e", "#0d6efd", "#f59e0b", "#ef4444"],
+                    fill: {
+                        type: ['gradient', 'solid', 'solid', 'solid'],
+                        gradient: {
+                            shade: 'light',
+                            type: 'vertical',
+                            shadeIntensity: 0.5,
+                            gradientToColors: ['#16a34a', '#0d6efd', '#f59e0b', '#ef4444'],
+                            opacityFrom: 0.7,
+                            opacityTo: 0.2,
+                        }
+                    },
+                    xaxis: {
+                        categories: data.dates,
+                        labels: { rotate: -45, style: { fontSize: '11px' } }
+                    },
+                    yaxis: {
+                        title: { text: 'Daily Insights' },
+                        min: 0
+                    },
                     legend: { show: true, position: 'top' },
-                    tooltip: {
-                        shared: true,
-                        y: [
-                            { formatter: y => y ? y + " Likes" : y },
-                            { formatter: y => y ? y + " Comments" : y },
-                            { formatter: y => y ? y + " Views" : y },
-                        ]
-                    }
+                    tooltip: { shared: true, intersect: false },
+                    dataLabels: { enabled: false },
+                    grid: { borderColor: '#f1f1f1' }
                 };
 
+                $("#likes_graph").html('');
                 chart = new ApexCharts(document.querySelector("#likes_graph"), options);
                 chart.render();
             },
-            error: function(xhr,status,error) {
-                $("#likes_graph").html('<div class="text-center p-5 text-danger">Error loading graph</div>');
-                console.error("Error fetching Instagram stats:", error);
+            error: function(xhr, status, error) {
+                $("#likes_graph").html('<div class="text-center p-5 text-danger">Error loading graph.</div>');
+                console.error("Error fetching Instagram graph:", error, xhr.responseText);
             }
         });
     }
 
     $(".filter-btn").on("click", function() {
-        var range = $(this).data("filter");
+        const range = $(this).data("filter");
         $(".filter-btn").removeClass("active");
         $(this).addClass("active");
         loadGraph(range);
     });
 
-    $(".filter-btn[data-filter='all']").trigger("click");
+    loadGraph('7d');
 });
-</script>
-@endpush
+
+        /*Pagination */
+        // AJAX Pagination with jQuery
+        $(document).ready(function() {
+            $(document).on('click', '.pagination a', function(e) {
+                e.preventDefault();
+                const url = $(this).attr('href');
+                fetchInstagramMedia(url);
+            });
+
+            function fetchInstagramMedia(url) {
+                $('#instagram-media-table').html('<div class="text-center"><div class="spinner-border" role="status"><span class="sr-only">Loading...</span></div></div>');
+                $.ajax({
+                    url: url,
+                    type: "GET",
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(data) {
+                        if (data.success) {
+                            $('#instagram-media-table').html(data.html);
+                            window.history.pushState({}, '', url);
+                        } else {
+                            throw new Error(data.error || 'Unknown error occurred');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error:', error);
+                        let errorMessage = 'Error loading content';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage = xhr.responseJSON.error;
+                        } else {
+                            errorMessage = error;
+                        }
+                        $('#instagram-media-table').html('<div class="alert alert-danger">' + errorMessage + '</div>');
+                    }
+                });
+            }
+            $(window).on('popstate', function() {
+                fetchInstagramMedia(window.location.href);
+            });
+        });
+        /*Pagination */
+    </script>
+    @endpush
