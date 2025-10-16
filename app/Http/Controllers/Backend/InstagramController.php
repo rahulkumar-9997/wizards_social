@@ -44,7 +44,7 @@ class InstagramController extends Controller
             $page = request()->get('page', 1);
             $limit = 12; 
             $params = [
-                'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
+                'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp, like_count,comments_count',
                 'access_token' => $token,
                 'limit' => $limit,
             ];
@@ -103,115 +103,80 @@ class InstagramController extends Controller
         }
     }
 
-  public function likesGraph($id, Request $request)
-{
-    try {
-        $user = Auth::user();
+   public function metricsGraph($id, Request $request)
+    {
+        try {
+            $user = Auth::user();
 
-        $mainAccount = SocialAccount::where('user_id', $user->id)
-            ->where('provider', 'facebook')
-            ->whereNull('parent_account_id')
-            ->first();
+            $mainAccount = SocialAccount::where('user_id', $user->id)
+                ->where('provider', 'facebook')
+                ->whereNull('parent_account_id')
+                ->first();
 
-        if (!$mainAccount) {
-            return response()->json(['error' => 'Facebook account not connected'], 400);
-        }
+            if (!$mainAccount) {
+                return response()->json(['error' => 'Facebook account not connected'], 400);
+            }
+            $token = SocialTokenHelper::getFacebookToken($mainAccount);
+            $metrics = 'reach,likes,comments,views';
+            $period = $request->get('period', 'week');
+            $url = "https://graph.facebook.com/v24.0/{$id}/media";
+            $response = Http::get($url, [
+                'fields' => "timestamp,media_product_type,insights.metric({$metrics}).period({$period})",
+                'access_token' => $token,
+            ])->json();
+            if (isset($response['error'])) {
+                return response()->json(['error' => $response['error']['message']], 400);
+            }
+            $dates = [];
+            $dataSets = [
+                'reach' => [],
+                'likes' => [],
+                'comments' => [],
+                'views' => [],
+            ];
+            foreach ($response['data'] ?? [] as $media) {
+                $timestamp = $media['timestamp'] ?? null;
+                if (!$timestamp) continue;
 
-        $token = SocialTokenHelper::getFacebookToken($mainAccount);
-        $range = $request->get('range', '7d');
+                $date = Carbon::parse($timestamp)->format('Y-m-d');
+                if (!in_array($date, $dates)) $dates[] = $date;
 
-        $days = match ($range) {
-            '1M' => 30,
-            '6M' => 180,
-            '1Y' => 365,
-            default => 7,
-        };
+                $reach = $likes = $comments = $views = 0;
 
-        $since = now()->subDays($days)->startOfDay()->timestamp;
-        $until = now()->endOfDay()->timestamp;
-
-        // Metrics you want to display in graph
-        $metrics = 'reach,likes,comments,views';
-
-        // Fetch data from Instagram Graph API
-        $response = Http::get("https://graph.facebook.com/v24.0/{$id}/insights", [
-            'metric' => $metrics,
-            'metric_type' => 'total_value',
-            'period' => 'day',
-            'since' => $since,
-            'until' => $until,
-            'access_token' => $token,
-        ])->json();
-
-        // If Graph API returns error
-        if (isset($response['error'])) {
-            return response()->json(['error' => $response['error']['message']], 400);
-        }
-
-        // Initialize arrays
-        $dates = [];
-        $likes = [];
-        $comments = [];
-        $reach = [];
-        $views = [];
-
-        // Process each metric data
-        foreach ($response['data'] ?? [] as $metric) {
-            $name = $metric['name'] ?? '';
-            foreach ($metric['values'] ?? [] as $v) {
-                if (isset($v['end_time'])) {
-                    $date = Carbon::parse($v['end_time'])->subDay()->format('Y-m-d');
-                    $value = $v['value'] ?? 0;
-                    $dates[$date] = $date;
-
-                    switch ($name) {
-                        case 'likes':
-                            $likes[$date] = $value;
-                            break;
-                        case 'comments':
-                            $comments[$date] = $value;
-                            break;
-                        case 'reach':
-                            $reach[$date] = $value;
-                            break;
-                        case 'views':
-                            $views[$date] = $value;
-                            break;
+                foreach ($media['insights']['data'] ?? [] as $metric) {
+                    $value = $metric['values'][0]['value'] ?? 0;
+                    switch ($metric['name']) {
+                        case 'reach': $reach = $value; break;
+                        case 'likes': $likes = $value; break;
+                        case 'comments': $comments = $value; break;
+                        case 'views': $views = $value; break;
                     }
                 }
+
+                // Aggregate per date
+                $dataSets['reach'][$date] = ($dataSets['reach'][$date] ?? 0) + $reach;
+                $dataSets['likes'][$date] = ($dataSets['likes'][$date] ?? 0) + $likes;
+                $dataSets['comments'][$date] = ($dataSets['comments'][$date] ?? 0) + $comments;
+                $dataSets['views'][$date] = ($dataSets['views'][$date] ?? 0) + $views;
             }
+
+            sort($dates);
+
+            $final = [
+                'dates' => $dates,
+                'reach' => array_map(fn($d) => $dataSets['reach'][$d] ?? 0, $dates),
+                'likes' => array_map(fn($d) => $dataSets['likes'][$d] ?? 0, $dates),
+                'comments' => array_map(fn($d) => $dataSets['comments'][$d] ?? 0, $dates),
+                'views' => array_map(fn($d) => $dataSets['views'][$d] ?? 0, $dates),
+            ];
+
+            return response()->json($final);
+
+        } catch (\Exception $e) {
+            Log::error('Instagram metricsGraph error: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        // Generate full date range (to fill missing dates)
-        $filledDates = collect(
-            collect(range(0, $days - 1))
-                ->map(fn($i) => now()->subDays($days - 1 - $i)->format('Y-m-d'))
-        );
-
-        $result = [
-            'dates' => [],
-            'likes' => [],
-            'comments' => [],
-            'reach' => [],
-            'views' => [],
-        ];
-
-        // Fill graph data with 0 for missing days
-        foreach ($filledDates as $d) {
-            $result['dates'][] = $d;
-            $result['likes'][] = $likes[$d] ?? 0;
-            $result['comments'][] = $comments[$d] ?? 0;
-            $result['reach'][] = $reach[$d] ?? 0;
-            $result['views'][] = $views[$d] ?? 0;
-        }
-
-        return response()->json($result);
-
-    } catch (\Exception $e) {
-        Log::error('Instagram Graph Error: ' . $e->getMessage());
-        return response()->json(['error' => $e->getMessage()], 500);
     }
-}
 
 
     
