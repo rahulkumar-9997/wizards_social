@@ -104,79 +104,133 @@ class InstagramController extends Controller
     }
 
    public function metricsGraph($id, Request $request)
-    {
-        try {
-            $user = Auth::user();
+{
+    try {
+        $user = Auth::user();
 
-            $mainAccount = SocialAccount::where('user_id', $user->id)
-                ->where('provider', 'facebook')
-                ->whereNull('parent_account_id')
-                ->first();
+        $mainAccount = SocialAccount::where('user_id', $user->id)
+            ->where('provider', 'facebook')
+            ->whereNull('parent_account_id')
+            ->first();
 
-            if (!$mainAccount) {
-                return response()->json(['error' => 'Facebook account not connected'], 400);
-            }
-            $token = SocialTokenHelper::getFacebookToken($mainAccount);
-            $metrics = 'reach,likes,comments,views';
-            $period = $request->get('period', 'week');
-            $url = "https://graph.facebook.com/v24.0/{$id}/media";
-            $response = Http::get($url, [
-                'fields' => "timestamp,media_product_type,insights.metric({$metrics}).period({$period})",
-                'access_token' => $token,
-            ])->json();
-            if (isset($response['error'])) {
-                return response()->json(['error' => $response['error']['message']], 400);
-            }
-            $dates = [];
-            $dataSets = [
-                'reach' => [],
-                'likes' => [],
-                'comments' => [],
-                'views' => [],
-            ];
-            foreach ($response['data'] ?? [] as $media) {
-                $timestamp = $media['timestamp'] ?? null;
-                if (!$timestamp) continue;
-
-                $date = Carbon::parse($timestamp)->format('Y-m-d');
-                if (!in_array($date, $dates)) $dates[] = $date;
-
-                $reach = $likes = $comments = $views = 0;
-
-                foreach ($media['insights']['data'] ?? [] as $metric) {
-                    $value = $metric['values'][0]['value'] ?? 0;
-                    switch ($metric['name']) {
-                        case 'reach': $reach = $value; break;
-                        case 'likes': $likes = $value; break;
-                        case 'comments': $comments = $value; break;
-                        case 'views': $views = $value; break;
-                    }
-                }
-
-                // Aggregate per date
-                $dataSets['reach'][$date] = ($dataSets['reach'][$date] ?? 0) + $reach;
-                $dataSets['likes'][$date] = ($dataSets['likes'][$date] ?? 0) + $likes;
-                $dataSets['comments'][$date] = ($dataSets['comments'][$date] ?? 0) + $comments;
-                $dataSets['views'][$date] = ($dataSets['views'][$date] ?? 0) + $views;
-            }
-
-            sort($dates);
-
-            $final = [
-                'dates' => $dates,
-                'reach' => array_map(fn($d) => $dataSets['reach'][$d] ?? 0, $dates),
-                'likes' => array_map(fn($d) => $dataSets['likes'][$d] ?? 0, $dates),
-                'comments' => array_map(fn($d) => $dataSets['comments'][$d] ?? 0, $dates),
-                'views' => array_map(fn($d) => $dataSets['views'][$d] ?? 0, $dates),
-            ];
-
-            return response()->json($final);
-
-        } catch (\Exception $e) {
-            Log::error('Instagram metricsGraph error: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 500);
+        if (!$mainAccount) {
+            return response()->json(['error' => 'Facebook account not connected'], 400);
         }
+
+        $token = SocialTokenHelper::getFacebookToken($mainAccount);
+        $metrics = 'reach,likes,comments,views';
+        $period = $request->get('period', 'week');
+
+        // ✅ Period-based date logic
+        switch ($period) {
+            case 'day':
+                $since = now()->subDay()->toDateString();
+                $until = now()->toDateString();
+                break;
+
+            case 'week':
+                $since = now()->subDays(7)->toDateString();
+                $until = now()->toDateString();
+                break;
+
+            case 'days_28':
+                $since = now()->subDays(28)->toDateString();
+                $until = now()->toDateString();
+                break;
+
+            case 'month':
+                $since = now()->subMonth()->toDateString();
+                $until = now()->toDateString();
+                break;
+
+            case 'lifetime':
+                // No range restriction — all data
+                $since = null;
+                $until = null;
+                break;
+
+            case 'total_over_range':
+                // For demonstration, consider last 3 months
+                $since = now()->subMonths(3)->toDateString();
+                $until = now()->toDateString();
+                break;
+
+            default:
+                $since = now()->subDay()->toDateString();
+                $until = now()->toDateString();
+                break;
+        }
+
+        $url = "https://graph.facebook.com/v24.0/{$id}/media";
+
+        $params = [
+            'fields' => "timestamp,media_product_type,insights.metric({$metrics}).period({$period})",
+            'access_token' => $token,
+        ];
+
+        if ($since && $until) {
+            $params['since'] = $since;
+            $params['until'] = $until;
+        }
+
+        $response = Http::get($url, $params)->json();
+
+        if (isset($response['error'])) {
+            return response()->json(['error' => $response['error']['message']], 400);
+        }
+
+        $dates = [];
+        $dataSets = [
+            'reach' => [],
+            'likes' => [],
+            'comments' => [],
+            'views' => [],
+        ];
+
+        foreach ($response['data'] ?? [] as $media) {
+            $timestamp = $media['timestamp'] ?? null;
+            if (!$timestamp) continue;
+
+            $date = \Carbon\Carbon::parse($timestamp)->format('Y-m-d');
+            if (!in_array($date, $dates)) $dates[] = $date;
+
+            $reach = $likes = $comments = $views = 0;
+
+            foreach ($media['insights']['data'] ?? [] as $metric) {
+                $value = $metric['values'][0]['value'] ?? 0;
+                switch ($metric['name']) {
+                    case 'reach': $reach = $value; break;
+                    case 'likes': $likes = $value; break;
+                    case 'comments': $comments = $value; break;
+                    case 'views': $views = $value; break;
+                }
+            }
+
+            $dataSets['reach'][$date] = ($dataSets['reach'][$date] ?? 0) + $reach;
+            $dataSets['likes'][$date] = ($dataSets['likes'][$date] ?? 0) + $likes;
+            $dataSets['comments'][$date] = ($dataSets['comments'][$date] ?? 0) + $comments;
+            $dataSets['views'][$date] = ($dataSets['views'][$date] ?? 0) + $views;
+        }
+
+        sort($dates);
+
+        $final = [
+            'dates' => $dates,
+            'reach' => array_map(fn($d) => $dataSets['reach'][$d] ?? 0, $dates),
+            'likes' => array_map(fn($d) => $dataSets['likes'][$d] ?? 0, $dates),
+            'comments' => array_map(fn($d) => $dataSets['comments'][$d] ?? 0, $dates),
+            'views' => array_map(fn($d) => $dataSets['views'][$d] ?? 0, $dates),
+            'range' => compact('since', 'until'),
+        ];
+
+        return response()->json($final);
+
+    } catch (\Exception $e) {
+        Log::error('Instagram metricsGraph error: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
+
 
 
     
