@@ -69,7 +69,8 @@ Route::group(['middleware' => ['auth']], function() {
 
     });
     Route::get('instagram/{id}', [InstagramController::class, 'show'])->name('instagram.show');
-    Route::get('/instagram/{id}/likes-graph', [InstagramController::class, 'likesGraph'])->name('instagram.likes.graph');
+    Route::get('/instagram/{id}/metrics-graph', [InstagramController::class, 'metricsGraph'])
+    ->name('instagram.metrics.graph');
 
     Route::get('instagram/{id}/insights', [InstagramController::class, 'insights'])->name('instagram.insights');
 

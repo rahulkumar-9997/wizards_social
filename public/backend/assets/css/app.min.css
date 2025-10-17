@@ -20064,7 +20064,7 @@ button.gridjs-sort-asc, button.gridjs-sort-desc {
 }
 
 .apexcharts-tooltip.apexcharts-theme-dark * {
-  color: #ffffff !important;
+  color: #000000 !important;
 }
 
 .apexcharts-legend-series {

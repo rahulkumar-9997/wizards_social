@@ -72,14 +72,23 @@
     <div class="row mb-4">
         <div class="col-xxl-12">
             <div class="card">
+                <div class="card-header text-white">
+                    <h4 class="mb-2">
+                        Performance                       
+                    </h4>
+                     <!-- <h5>17 September 2025 - 14 October 2025</h5> -->
+                </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="card-title mb-0">Instagram Daily Insights</h4>
                         <div>
-                            <button type="button" class="btn btn-sm btn-outline-light active filter-btn" data-filter="7d">Last One Week</button>
-                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="1M">1M</button>
-                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="6M">6M</button>
-                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="1Y">1Y</button>
+                            <button type="button" class="btn btn-sm btn-outline-light active filter-btn" data-filter="week">week</button>
+                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="day">day</button>
+                            
+                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="days_28">days_28</button>
+                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="month">month</button>
+                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="lifetime">lifetime</button>
+                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="total_over_range">total_over_range</button>
                         </div>
                     </div>
                     <div class="map-section">
@@ -102,105 +111,66 @@
 
     @push('scripts')
     <script>
-        $(document).ready(function() {
+$(document).ready(function() {
+    const chartEl = $('#likes_graph')[0];
     let chart;
 
-    function loadGraph(range = '7d') {
-        $("#likes_graph").html('<div class="text-center p-5 text-muted">Loading graph...</div>');
+    // Load graph data
+    function loadGraph(period = 'week') {
+        const instagramId = "{{ $instagram['id'] ?? 0 }}";
 
-        $.ajax({
-            url: "{{ route('instagram.likes.graph', ['id' => $instagram['id'] ?? 0]) }}",
-            type: "GET",
-            data: { range: range },
-            dataType: "json",
-            success: function(data) {
-                if (chart) chart.destroy();
-
-                if (!data.dates || !data.dates.length) {
-                    $("#likes_graph").html('<div class="text-center p-5 text-warning">No data available for this period</div>');
-                    return;
-                }
-
-                const hasData = data.reach.some(v => v > 0) ||
-                                data.impressions.some(v => v > 0) ||
-                                data.profile_views.some(v => v > 0) ||
-                                data.engagements.some(v => v > 0);
-
-                if (!hasData) {
-                    $("#likes_graph").html(`
-                        <div class="text-center p-5 text-warning">
-                            No insights data found.<br>
-                            <small>
-                                Possible reasons:<br>
-                                - Not a Business/Creator Instagram account<br>
-                                - Insights not enabled<br>
-                                - No activity in this range
-                            </small>
-                        </div>
-                    `);
+        $.get(`{{ route('instagram.metrics.graph', $instagram['id'] ?? 0) }}`, { period: period })
+            .done(function(data) {
+                if (data.error) {
+                    chartEl.innerHTML = `<p class="text-danger">${data.error}</p>`;
                     return;
                 }
 
                 const options = {
+                    chart: { type: 'line', height: 350, toolbar: { show: false }, zoom: { enabled: false }, foreColor: '#ccc' },
+                    stroke: { curve: 'smooth', width: 2 },
+                    markers: { size: 3 },
+                    grid: { borderColor: '#333', strokeDashArray: 3 },
+                    xaxis: { categories: data.dates, labels: { rotate: -45, style: { fontSize: '12px' } } },
+                    yaxis: { title: { text: 'Count', style: { color: '#ccc' } }, min: 0 },
+                    legend: { position: 'top', horizontalAlign: 'right', labels: { colors: '#000000ff' } },
+                    colors: ['#3b82f6', '#10b981', '#f43f5e', '#f59e0b'],
                     series: [
-                        { name: "Reach", type: "area", data: data.reach },
-                        { name: "Impressions", type: "line", data: data.impressions },
-                        { name: "Profile Views", type: "line", data: data.profile_views },
-                        { name: "Engagements", type: "line", data: data.engagements }
+                        { name: 'Reach', data: data.reach },
+                        { name: 'Likes', data: data.likes },
+                        { name: 'Comments', data: data.comments },
+                        { name: 'Views', data: data.views }
                     ],
-                    chart: {
-                        height: 350,
-                        type: "line",
-                        toolbar: { show: true },
-                        animations: { enabled: true }
-                    },
-                    stroke: { width: [3, 2, 2, 2], curve: 'smooth' },
-                    colors: ["#22c55e", "#0d6efd", "#f59e0b", "#ef4444"],
-                    fill: {
-                        type: ['gradient', 'solid', 'solid', 'solid'],
-                        gradient: {
-                            shade: 'light',
-                            type: 'vertical',
-                            shadeIntensity: 0.5,
-                            gradientToColors: ['#16a34a', '#0d6efd', '#f59e0b', '#ef4444'],
-                            opacityFrom: 0.7,
-                            opacityTo: 0.2,
-                        }
-                    },
-                    xaxis: {
-                        categories: data.dates,
-                        labels: { rotate: -45, style: { fontSize: '11px' } }
-                    },
-                    yaxis: {
-                        title: { text: 'Daily Insights' },
-                        min: 0
-                    },
-                    legend: { show: true, position: 'top' },
-                    tooltip: { shared: true, intersect: false },
-                    dataLabels: { enabled: false },
-                    grid: { borderColor: '#f1f1f1' }
+                    tooltip: { theme: 'dark', shared: true, intersect: false },
+                    title: { text: 'Instagram Media Insights Trends', align: 'left', style: { color: '#fff', fontSize: '16px' } }
                 };
 
-                $("#likes_graph").html('');
-                chart = new ApexCharts(document.querySelector("#likes_graph"), options);
-                chart.render();
-            },
-            error: function(xhr, status, error) {
-                $("#likes_graph").html('<div class="text-center p-5 text-danger">Error loading graph.</div>');
-                console.error("Error fetching Instagram graph:", error, xhr.responseText);
-            }
-        });
+                if (chart) {
+                    chart.updateOptions(options);
+                } else {
+                    chart = new ApexCharts(chartEl, options);
+                    chart.render();
+                }
+            })
+            .fail(function(err) {
+                console.error('Error loading graph:', err);
+                chartEl.innerHTML = `<p class="text-danger">Failed to load data</p>`;
+            });
     }
 
-    $(".filter-btn").on("click", function() {
-        const range = $(this).data("filter");
-        $(".filter-btn").removeClass("active");
-        $(this).addClass("active");
-        loadGraph(range);
+    // Button click event
+    $('.btn-outline-light').on('click', function() {
+        const period = $(this).data('filter');
+        $('.btn-outline-light').removeClass('active');
+        $(this).addClass('active');
+        loadGraph(period);
     });
 
-    loadGraph('7d');
+    // Initial load
+    loadGraph('week');
 });
+
+
 
         /*Pagination */
         // AJAX Pagination with jQuery
