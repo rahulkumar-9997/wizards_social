@@ -3,7 +3,9 @@
         <tr>
             <th>#</th>
             <th>Media</th>
+            <th>Post Date</th>
             <th>Caption</th>
+            <th>Media Type</th>
             <th>Likes</th>
             <th>Comments</th>
             <th>Action</th>
@@ -12,45 +14,49 @@
     <tbody>
         @forelse($media as $index => $post)
         <tr>
-            <td>{{ ($media->currentPage() - 1) * $media->perPage() + $index + 1 }}</td>
+            <td>{{ $index + 1 }}</td>
             <td style="width:150px;">
                 @if(isset($post['media_type']))
                     @if($post['media_type'] === 'VIDEO')
-                    <video width="100" height="100" controls>
-                        <source src="{{ $post['media_url'] }}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
+                        <video width="100" height="100" controls>
+                            <source src="{{ $post['media_url'] }}" type="video/mp4">
+                        </video>
                     @else
-                    <img src="{{ $post['media_url'] }}" alt="Media" class="img-fluid" style="max-width:100px; max-height:100px;">
+                        <img src="{{ $post['media_url'] }}" alt="Media" class="img-fluid" style="max-width:100px; max-height:100px;">
                     @endif
                 @endif
             </td>
+            <td>{{ isset($post['timestamp']) ? \Carbon\Carbon::parse($post['timestamp'])->format('d-m-Y h:i A') : '-' }}</td>
             <td>{{ \Illuminate\Support\Str::limit($post['caption'] ?? '-', 40) }}</td>
+            <td>{{ $post['media_type'] ?? '-' }}</td>
             <td>❤️ {{ $post['like_count'] ?? 0 }}</td>
             <td>💬 {{ $post['comments_count'] ?? 0 }}</td>
             <td>
                 <div class="d-flex gap-1">
                     @if(isset($post['permalink']))
-                    <a href="{{ $post['permalink'] }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                        View on Instagram
-                    </a>
-                    <a href="{{ $post['permalink'] }}" target="_blank" class="btn btn-sm btn-outline-pink">
-                        View Insights
-                    </a>
+                        <a href="{{ $post['permalink'] }}" target="_blank" class="btn btn-soft-primary btn-sm">View Instagram</a>
                     @endif
+                    <a href="" class="btn btn-soft-warning btn-sm">View Insights</a>
                 </div>
             </td>
         </tr>
         @empty
         <tr>
-            <td colspan="6" class="text-center">No posts found.</td>
+            <td colspan="7" class="text-center">No posts found.</td>
         </tr>
         @endforelse
     </tbody>
 </table>
+@if(isset($paging))
+<div class="d-flex justify-content-end gap-2 mt-3 pagination">
+    @if(isset($paging['previous']))
+        <a href="{{ request()->fullUrlWithQuery(['before' => $paging['cursors']['before'] ?? null, 'after' => null]) }}"
+           class="btn btn-outline-primary btn-sm page-link">← Previous</a>
+    @endif
 
-@if($media->hasPages())
-<div class="my-pagination" id="multiple_update" style="margin-top: 20px;">
-    {{ $media->appends(request()->query())->links('vendor.pagination.bootstrap-4') }}
+    @if(isset($paging['next']))
+        <a href="{{ request()->fullUrlWithQuery(['after' => $paging['cursors']['after'] ?? null, 'before' => null]) }}"
+           class="btn btn-outline-primary btn-sm page-link">Next →</a>
+    @endif
 </div>
 @endif

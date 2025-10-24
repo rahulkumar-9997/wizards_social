@@ -54,6 +54,8 @@ Route::group(['middleware' => ['auth']], function() {
     Route::resource('permissions', PermissionsController::class);
     
     Route::get('/facebook', [FacebookController::class, 'index'])->name('facebook.index');
+    Route::get('/facebook/refresh-token', [FacebookController::class, 'refreshToken'])
+    ->name('facebook.refresh.token');
     Route::get('/instagram', [InstagramController::class, 'index'])->name('instagram.index');
     Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube.index');
     Route::prefix('social')->name('social.')->group(function () {

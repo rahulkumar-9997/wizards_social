@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
-use App\Models\SocialAccount;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
+use App\Models\SocialAccount;
 use Exception;
 use Carbon\Carbon;
 
@@ -26,6 +26,10 @@ class FacebookController extends Controller
             'base_url'      => 'https://graph.facebook.com/',
         ];
     }
+
+    /**
+     * Main index page - Optimized version
+     */
     public function index()
     {
         try {
@@ -35,205 +39,330 @@ class FacebookController extends Controller
                 ->whereNull('parent_account_id')
                 ->first();
 
-            $permissions = [];
-            $analytics = [];
-            $facebookData = [];
-            $instagramAccounts = collect();
-            $adAccounts = collect();
-            if ($mainAccount) {
-                $tokenTest = $this->testToken($mainAccount);
-                if ($tokenTest['valid']) {
-                    $permissions = $this->checkPermissions($mainAccount);
-                    $analytics = $this->getComprehensiveAnalytics($mainAccount);
-                    $facebookData = $this->getFacebookProfileData($mainAccount);
-                    //dd($facebookData);
-                    if (!empty($facebookData['pages'])) {
-                        foreach ($facebookData['pages'] as $page) {
-                            if (!empty($page['instagram_business_account']['id'])) {
-                                $igId = $page['instagram_business_account']['id'];
-                                $pageToken = $page['access_token'];
-                                try {
-                                    $igResponse = Http::get("https://graph.facebook.com/v24.0/{$igId}", [
-                                        'fields' => 'username,followers_count,profile_picture_url',
-                                        'access_token' => $pageToken,
-                                    ])->json();
-
-                                    $instagramAccounts->push((object)[
-                                        'id' => $igId,
-                                        'account_name' => $igResponse['username'] ?? $page['name'] . ' (Instagram)',
-                                        'meta_data' => [
-                                            'followers_count' => $igResponse['followers_count'] ?? 0,
-                                            'profile_picture' => $igResponse['profile_picture_url'] ?? null,
-                                        ],
-                                    ]);
-                                } catch (\Exception $ex) {
-                                    Log::warning("IG data fetch failed for {$igId}: " . $ex->getMessage());
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    Log::warning('Invalid Facebook token: ' . $tokenTest['error']);
-                }
+            if (!$mainAccount) {
+                return view('backend.pages.facebook.index', [
+                    'mainAccount' => null,
+                    'dashboardData' => [],
+                    'stats' => $this->getEmptyStats()
+                ]);
             }
-            $stats = [
-                'connected_since' => $mainAccount ? $mainAccount->created_at->format('M d, Y') : null,
-                'last_synced'     => $mainAccount ? $mainAccount->last_synced_at?->format('M d, Y H:i') : null,
-                'total_pages'     => !empty($facebookData['pages']) ? count($facebookData['pages']) : 0,
-                'total_instagram_accounts' => $instagramAccounts->count(),
-                'total_instagram_followers' => $instagramAccounts->sum(fn($ig) => $ig->meta_data['followers_count'] ?? 0),
-            ];
-            //dd($permissions);
-            return view('backend.pages.facebook.index', compact(
-                'mainAccount',
-                'permissions',
-                'analytics',
-                'facebookData',
-                'stats',
-                'instagramAccounts',
-                'adAccounts'
-            ));
 
+            /* Check and refresh token*/
+            $tokenRefreshed = $this->checkAndRefreshToken($mainAccount);
+            if ($tokenRefreshed === false) {
+                return view('backend.pages.facebook.index', [
+                    'mainAccount' => null,
+                    'dashboardData' => [],
+                    'stats' => $this->getEmptyStats()
+                ])->with('error', 'Facebook connection expired. Please reconnect your account.');
+            }
+            $dashboardData = $this->getDashboardData($mainAccount);
+            return view('backend.pages.facebook.index', [
+                'mainAccount' => $mainAccount,
+                'dashboardData' => $dashboardData,
+                'stats' => $this->calculateStats($dashboardData)
+            ]);
         } catch (\Exception $e) {
             Log::error('Facebook index error: ' . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Failed to load Facebook data.');
+            return redirect()->route('dashboard')
+                ->with('error', 'Failed to load Facebook data: ' . $e->getMessage());
         }
     }
+
     /**
-     * Check Facebook Permissions
+     * Check and refresh Facebook token if expired
      */
-    private function checkPermissions($account)
+    private function checkAndRefreshToken($account)
     {
         try {
             $token = $this->decryptToken($account->access_token);
-            $data = $this->fbApiGet('me/permissions', ['access_token' => $token]);
-            $permissionsList = $data['data'] ?? [];
-            return $permissionsList;
-        } catch (Exception $e) {
-            Log::warning('Permission check failed: ' . $e->getMessage());
-            return $this->getDefaultPermissions();
+            if ($this->isTokenValid($token)) {
+                return true; 
+            }
+            Log::info('Facebook token expired, attempting to refresh...');
+            $refreshed = $this->refreshFacebookToken($account);
+            if ($refreshed) {
+                Log::info('Facebook token refreshed successfully');
+                return true;
+            }
+            Log::warning('Facebook token refresh failed, disconnecting account');
+            $this->markAccountAsDisconnected($account);
+            return false;
+
+        } catch (\Exception $e) {
+            Log::error('Token check error: ' . $e->getMessage());
+            return false;
         }
     }
 
-    private function getDefaultPermissions()
+    /**
+     * Refresh Facebook access token
+     */
+    private function refreshFacebookToken($account)
     {
+        try {
+            $currentToken = $this->decryptToken($account->access_token);
+            $response = Http::get($this->fbConfig['base_url'] . 'oauth/access_token', [
+                'grant_type' => 'fb_exchange_token',
+                'client_id' => $this->fbConfig['app_id'],
+                'client_secret' => $this->fbConfig['app_secret'],
+                'fb_exchange_token' => $currentToken,
+            ]);
+            if ($response->successful()) {
+                $data = $response->json();
+                $newToken = $data['access_token'];
+                $expiresIn = $data['expires_in'] ?? 5184000; /* 60 days default */
+                $encryptedToken = Crypt::encryptString(json_encode([
+                    'token' => $newToken,
+                    'expires_at' => now()->addSeconds($expiresIn)->toDateTimeString()
+                ]));
+
+                $account->update([
+                    'access_token' => $encryptedToken,
+                    'token_expires_at' => now()->addSeconds($expiresIn),
+                    'updated_at' => now(),
+                ]);
+                Cache::forget('fb_dashboard_' . $account->id);
+                return true;
+            }
+            Log::warning('Token refresh failed: ' . $response->body());
+            return false;
+
+        } catch (\Exception $e) {
+            Log::error('Token refresh error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Mark account as disconnected
+     */
+    private function markAccountAsDisconnected($account)
+    {
+        try {
+            $account->update([
+                'access_token' => null,
+                'token_expires_at' => null,
+                'updated_at' => now(),
+            ]);
+            Cache::forget('fb_dashboard_' . $account->id);            
+        } catch (\Exception $e) {
+            Log::error('Mark account disconnected error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get all dashboard data with caching and parallel processing
+     */
+    private function getDashboardData($account)
+    {
+        $cacheKey = 'fb_dashboard_' . $account->id;        
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($account) {
+            $token = $this->decryptToken($account->access_token);            
+            if (!$this->isTokenValid($token)) {
+                throw new Exception('Facebook token is invalid or expired');
+            }
+            /* Get basic profile data */
+            $profile = $this->getBasicProfile($token);            
+            
+            /* Get pages and Instagram accounts */
+            $pagesData = $this->getPagesWithInstagram($token);            
+            
+            /* Get permissions */
+            $permissions = $this->getEssentialPermissions($token);            
+            
+            /* Get analytics data*/
+            $analytics = $this->getQuickAnalytics($token);
+            return [
+                'profile' => $profile,
+                'pages' => $pagesData['pages'],
+                'instagram_accounts' => $pagesData['instagram_accounts'],
+                'permissions' => $permissions,
+                'analytics' => $analytics,
+            ];
+        });
+    }
+
+    /**
+     * Get basic profile information
+     */
+    private function getBasicProfile($token)
+    {
+        try {
+            $response = Http::timeout(8)
+                ->get($this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/me', [
+                    'fields' => 'id,name,email,picture.width(200).height(200)',
+                    'access_token' => $token,
+                ]);
+
+            if ($response->successful()) {
+                return $response->json();
+            } else {
+                Log::warning('Profile fetch failed with status: ' . $response->status());
+            }
+        } catch (\Exception $e) {
+            Log::warning('Profile fetch failed: ' . $e->getMessage());
+        }
+
+        return ['name' => 'Unknown', 'id' => 'N/A'];
+    }
+
+    /**
+     * Get pages with Instagram accounts in optimized way
+     */
+    private function getPagesWithInstagram($token)
+    {
+        $pages = [];
+        $instagramAccounts = collect();
+
+        try {
+            $response = Http::timeout(10)
+                ->get($this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/me/accounts', [
+                    'fields' => 'id,name,category,access_token,instagram_business_account{id,name,username,profile_picture_url,followers_count}',
+                    'limit' => 60,
+                    'access_token' => $token,
+                ]);
+
+            if ($response->successful()) {
+                $pagesData = $response->json()['data'] ?? [];
+
+                foreach ($pagesData as $page) {
+                    $pages[] = [
+                        'id' => $page['id'],
+                        'name' => $page['name'],
+                        'category' => $page['category'] ?? 'N/A',
+                        'access_token' => $page['access_token'] ?? null,
+                    ];
+
+                    if (isset($page['instagram_business_account']['id'])) {
+                        $igData = $page['instagram_business_account'];
+                        $instagramAccounts->push([
+                            'id' => $igData['id'],
+                            'account_name' => $igData['username'] ?? $page['name'] . ' (Instagram)',
+                            'username' => $igData['username'] ?? null,
+                            'profile_picture' => $igData['profile_picture_url'] ?? null,
+                            'followers_count' => $igData['followers_count'] ?? 0,
+                            'connected_page' => $page['name']
+                        ]);
+                    }
+                }
+            } else {
+                Log::warning('Pages fetch failed with status: ' . $response->status());
+            }
+        } catch (\Exception $e) {
+            Log::warning('Pages fetch failed: ' . $e->getMessage());
+        }
+
         return [
-            'email' => false,
-            'public_profile' => false,
-            'pages_show_list' => false,
-            'pages_read_engagement' => false,
-            'pages_read_user_content' => false,
-            'instagram_basic' => false,
-            'instagram_content_publish' => false,
-            'ads_read' => false,
-            'business_management' => false,
+            'pages' => $pages,
+            'instagram_accounts' => $instagramAccounts
         ];
     }
 
     /**
-     * Get Facebook Analytics
+     * Get only essential permissions
      */
-    private function getComprehensiveAnalytics($account)
+    private function getEssentialPermissions($token)
     {
         try {
-            $token = $this->decryptToken($account->access_token);
-            $analytics = [];
-            /* Posts api*/
-            // try {
-            //     $data = $this->fbApiGet('me/posts', [
-            //         'fields' => 'id,message,created_time,reactions.summary(true),comments.summary(true),attachments',
-            //         'limit' => 100,
-            //         'access_token' => $token,
-            //     ]);
-            //     $analytics['posts'] = $data['data'] ?? [];
-            // } catch (Exception $e) {
-            //     Log::warning('Posts fetch failed: ' . $e->getMessage());
-            //     $analytics['posts'] = [];
-            // }
-
-            /* Pages api*/
-            // try {
-            //     $data = $this->fbApiGet('me/accounts', [
-            //         'fields' => 'id,name,access_token,category,fan_count',
-            //         'limit' => 10,
-            //         'access_token' => $token,
-            //     ]);
-            //     $analytics['pages'] = $data['data'] ?? [];
-            // } catch (Exception $e) {
-            //     Log::warning('Pages fetch failed: ' . $e->getMessage());
-            //     $analytics['pages'] = [];
-            // }
-            /* Ad Accounts api*/
-            try {
-                $data = $this->fbApiGet('me/adaccounts', [
-                    'fields' => 'id,name,account_status,amount_spent,currency',
-                    'limit' => 10,
+            $response = Http::timeout(5)
+                ->get($this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/me/permissions', [
                     'access_token' => $token,
                 ]);
-                $analytics['ad_accounts'] = $data['data'] ?? [];
-            } catch (Exception $e) {
-                Log::warning('Ad accounts fetch failed: ' . $e->getMessage());
-                $analytics['ad_accounts'] = [];
-            }
 
-            return $analytics;
-        } catch (Exception $e) {
-            Log::error('Analytics error: ' . $e->getMessage());
-            return ['pages' => [], 'ad_accounts' => []];
+            if ($response->successful()) {
+                return $response->json()['data'] ?? [];
+            } else {
+                Log::warning('Permissions fetch failed with status: ' . $response->status());
+            }
+        } catch (\Exception $e) {
+            Log::warning('Permissions fetch failed: ' . $e->getMessage());
+        }
+
+        return [];
+    }
+
+    /**
+     * Get quick analytics data
+     */
+    private function getQuickAnalytics($token)
+    {
+        $analytics = [];
+        try {
+            $response = Http::timeout(8)
+                ->get($this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/me/adaccounts', [
+                    'fields' => 'id,name,account_status,amount_spent,currency',
+                    'limit' => 5,
+                    'access_token' => $token,
+                ]);
+
+            if ($response->successful()) {
+                $analytics['ad_accounts'] = $response->json()['data'] ?? [];
+            } else {
+                Log::warning('Analytics fetch failed with status: ' . $response->status());
+            }
+        } catch (\Exception $e) {
+            Log::warning('Analytics fetch failed: ' . $e->getMessage());
+        }
+
+        return $analytics;
+    }
+
+    /**
+     * Check if token is valid
+     */
+    private function isTokenValid($token)
+    {
+        try {
+            $response = Http::timeout(5)
+                ->get($this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/me', [
+                    'fields' => 'id',
+                    'access_token' => $token,
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return isset($data['id']) && !empty($data['id']);
+            }
+            if ($response->status() === 400) {
+                $error = $response->json();
+                Log::warning('Token validation failed: ' . ($error['error']['message'] ?? 'Unknown error'));
+            }
+            return false;
+
+        } catch (\Exception $e) {
+            Log::warning('Token validation error: ' . $e->getMessage());
+            return false;
         }
     }
 
     /**
-     * Get Facebook Profile + Posts + Pages
+     * Calculate statistics for dashboard
      */
-    private function getFacebookProfileData($account)
+    private function calculateStats($dashboardData)
     {
-        try {
-            $token = $this->decryptToken($account->access_token);
-            /**facebook profile data */
-            $profile = $this->fbApiGet('me', [
-                'fields' => 'id,name,email,picture,first_name,last_name',
-                'access_token' => $token,
-            ]);
+        $instagramAccounts = $dashboardData['instagram_accounts'] ?? collect();
+        
+        return [
+            'total_pages' => count($dashboardData['pages'] ?? []),
+            'total_instagram_accounts' => $instagramAccounts->count(),
+            'total_instagram_followers' => $instagramAccounts->sum('followers_count'),
+            'total_ad_accounts' => count($dashboardData['analytics']['ad_accounts'] ?? []),
+            'total_permissions_granted' => collect($dashboardData['permissions'] ?? [])
+                ->where('status', 'granted')
+                ->count(),
+        ];
+    }
 
-            $posts = [];
-            $pages = [];
-
-            /* Recent posts */
-            // try {
-            //     $data = $this->fbApiGet('me/posts', [
-            //         'fields' => 'id,message,created_time,reactions.summary(true),comments.summary(true),attachments',
-            //         'limit' => 100,
-            //         'access_token' => $token,
-            //     ]);
-            //     $posts = $data['data'] ?? [];
-            // } catch (Exception $e) {
-            //     Log::warning('Posts fetch failed: ' . $e->getMessage());
-            // }
-
-            /* facebook Pages*/
-            try {
-                $data = $this->fbApiGet('me/accounts', [
-                    'fields' => 'id,name,access_token,instagram_business_account',
-                    'limit' => 50,
-                    'access_token' => $token,
-                ]);
-                $pages = $data['data'] ?? [];
-            } catch (Exception $e) {
-                Log::warning('Pages fetch failed: ' . $e->getMessage());
-            }
-
-            return [
-                'profile'      => $profile,
-                'posts'        => $posts,
-                'pages'        => $pages,
-                'total_posts'  => count($posts),
-                'total_pages'  => count($pages)
-            ];
-        } catch (Exception $e) {
-            Log::error('Profile data fetch failed: ' . $e->getMessage());
-            return ['error' => 'Failed to fetch Facebook data: ' . $e->getMessage()];
-        }
+    private function getEmptyStats()
+    {
+        return [
+            'total_pages' => 0,
+            'total_instagram_accounts' => 0,
+            'total_instagram_followers' => 0,
+            'total_ad_accounts' => 0,
+            'total_permissions_granted' => 0,
+        ];
     }
 
     /**
@@ -248,63 +377,45 @@ class FacebookController extends Controller
 
             $decrypted = Crypt::decryptString($encryptedToken);
             $data = json_decode($decrypted, true);
-            return $data['token'] ?? $decrypted;
+            if (is_array($data) && isset($data['token'])) {
+                return $data['token'];
+            }            
+            return $decrypted; 
         } catch (Exception $e) {
+            Log::error('Token decryption failed: ' . $e->getMessage());
             throw new Exception('Token decryption failed: ' . $e->getMessage());
         }
     }
 
-
     /**
-     * Make Facebook Graph API Call via cURL
+     * Manual token refresh endpoint (optional)
      */
-    private function fbApiGet($endpoint, $params = [])
-    {
-        $url = $this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/' . ltrim($endpoint, '/');
-        $url .= '?' . http_build_query($params);
-
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 30,
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        if (curl_errno($ch)) {
-            $error = curl_error($ch);
-            curl_close($ch);
-            throw new Exception("cURL Error: $error");
-        }
-
-        curl_close($ch);
-
-        $json = json_decode($response, true);
-        if ($httpCode >= 400 || isset($json['error'])) {
-            $errorMsg = $json['error']['message'] ?? 'Unknown API error';
-            Log::warning("Facebook Graph API error on {$endpoint}: {$errorMsg}", $json['error'] ?? []);
-            throw new Exception($errorMsg);
-        }
-
-        return $json;
-    }
-
-    /**
-     * Test token validity
-     */
-    private function testToken($account)
+    public function refreshToken()
     {
         try {
-            $token = $this->decryptToken($account->access_token);
-            $data = $this->fbApiGet('me', [
-                'fields' => 'id,name',
-                'access_token' => $token,
-            ]);
-            return ['valid' => true, 'user_id' => $data['id'], 'name' => $data['name']];
-        } catch (Exception $e) {
-            return ['valid' => false, 'error' => $e->getMessage()];
+            $user = Auth::user();
+            $mainAccount = SocialAccount::where('user_id', $user->id)
+                ->where('provider', 'facebook')
+                ->whereNull('parent_account_id')
+                ->first();
+
+            if (!$mainAccount) {
+                return redirect()->route('facebook.index')
+                    ->with('error', 'No Facebook account connected.');
+            }
+            $success = $this->refreshFacebookToken($mainAccount);
+            if ($success) {
+                return redirect()->route('facebook.index')
+                    ->with('success', 'Facebook token refreshed successfully!');
+            } else {
+                return redirect()->route('facebook.index')
+                    ->with('error', 'Failed to refresh token. Please reconnect your Facebook account.');
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Manual token refresh error: ' . $e->getMessage());
+            return redirect()->route('facebook.index')
+                ->with('error', 'Token refresh failed: ' . $e->getMessage());
         }
     }
-
 }

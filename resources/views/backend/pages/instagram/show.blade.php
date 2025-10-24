@@ -29,46 +29,7 @@
             </div>
         </div>
     </div>
-    <!-- <div class="row mb-2">
-        <div class="col-md-6 col-xl-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="avatar-md bg-primary rounded">
-                                <i class="bx bxs-user-check avatar-title fs-24 text-white"></i>
-                            </div>
-                        </div>
-                        <div class="col-6 text-end">
-                            <p class="text-muted mb-0 text-truncate">Followers</p>
-                            <h3 class="text-dark mt-1 mb-0">
-                                {{ number_format($instagram['followers_count'] ?? 0) }}
-                            </h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-xl-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="avatar-md bg-success rounded">
-                                <i class="bx bx-images avatar-title fs-24 text-white"></i>
-                            </div>
-                        </div>
-                        <div class="col-6 text-end">
-                            <p class="text-muted mb-0 text-truncate">Total Posts</p>
-                            <h3 class="text-dark mt-1 mb-0">
-                                {{ $totalPosts }}
-                            </h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div> -->
+
     <div class="row mb-4">
         <div class="col-xxl-12">
             <div class="card">
@@ -99,8 +60,8 @@
                     </div>
                     <div id="instagram-media-table">
                         @include('backend.pages.instagram.partials.instagram-media-table', [
-                        'media' => $paginatedMedia,
-                        'paginatedMedia' => $paginatedMedia
+                            'media' => $media,
+                            'paging' => $paging
                         ])
                     </div>
                 </div>
@@ -115,10 +76,8 @@
             const chartEl = $('#likes_graph')[0];
             let chart;
 
-            // Load graph data
             function loadGraph(period = 'week') {
                 const instagramId = "{{ $instagram['id'] ?? 0 }}";
-
                 $.get(`{{ route('instagram.metrics.graph', $instagram['id'] ?? 0) }}`, {
                         period: period
                     })
@@ -127,7 +86,6 @@
                             $(chartEl).html(`<p class="text-danger">${data.error}</p>`);
                             return;
                         }
-
                         const options = {
                             chart: {
                                 type: 'line',
@@ -210,7 +168,6 @@
                         };
 
                         if (chart) {
-                            // ✅ Update both series and x-axis
                             chart.updateOptions({
                                 xaxis: {
                                     categories: data.dates
@@ -227,34 +184,31 @@
                         $(chartEl).html(`<p class="text-danger">Failed to load data</p>`);
                     });
             }
-
-            // Button click event
             $('.btn-outline-light').on('click', function() {
                 const period = $(this).data('filter');
                 $('.btn-outline-light').removeClass('active');
                 $(this).addClass('active');
                 loadGraph(period);
             });
-
-            // Initial load
             loadGraph('week');
         });
-
-
-
-
-
         /*Pagination */
-        // AJAX Pagination with jQuery
         $(document).ready(function() {
-            $(document).on('click', '.pagination a', function(e) {
+            $(document).on('click', '.page-link', function(e) {
                 e.preventDefault();
                 const url = $(this).attr('href');
                 fetchInstagramMedia(url);
             });
 
             function fetchInstagramMedia(url) {
-                $('#instagram-media-table').html('<div class="text-center"><div class="spinner-border" role="status"><span class="sr-only">Loading...</span></div></div>');
+                $('#instagram-media-table').html(`
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>                    
+                `);
+
                 $.ajax({
                     url: url,
                     type: "GET",
@@ -266,25 +220,22 @@
                             $('#instagram-media-table').html(data.html);
                             window.history.pushState({}, '', url);
                         } else {
-                            throw new Error(data.error || 'Unknown error occurred');
+                            $('#instagram-media-table').html('<div class="alert alert-danger">Error: ' + (data.error || 'Unknown') + '</div>');
                         }
                     },
-                    error: function(xhr, status, error) {
-                        console.error('Error:', error);
-                        let errorMessage = 'Error loading content';
-                        if (xhr.responseJSON && xhr.responseJSON.error) {
-                            errorMessage = xhr.responseJSON.error;
-                        } else {
-                            errorMessage = error;
-                        }
-                        $('#instagram-media-table').html('<div class="alert alert-danger">' + errorMessage + '</div>');
+                    error: function(xhr) {
+                        const msg = xhr.responseJSON?.error || 'Failed to load data.';
+                        $('#instagram-media-table').html('<div class="alert alert-danger">' + msg + '</div>');
                     }
                 });
             }
+
+            // Handle browser back/forward buttons
             $(window).on('popstate', function() {
                 fetchInstagramMedia(window.location.href);
             });
         });
+
         /*Pagination */
     </script>
     @endpush
