@@ -72,4 +72,20 @@ class SocialAccount extends Model
                     ->where('provider', 'facebook')
                     ->whereNotNull('account_id');
     }
+
+    public function isTokenExpired()
+    {
+        if (!$this->token_expires_at) {
+            return false;
+        }
+        return $this->token_expires_at->isPast();
+    }
+
+    public function isTokenExpiringSoon($days = 7)
+    {
+        if (!$this->token_expires_at) {
+            return false;
+        }
+        return $this->token_expires_at->diffInDays(now()) <= $days;
+    }
 }

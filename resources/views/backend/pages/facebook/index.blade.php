@@ -35,6 +35,11 @@
         gap: 1rem;
         margin-bottom: 5px;
     }
+
+    .token-status-badge {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
 </style>
 @endpush
 
@@ -51,29 +56,95 @@
     </div>
     @endif
 
+    @if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="fas fa-exclamation-triangle"></i> <strong>{{ session('error') }}</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+
     @if($mainAccount)
     <!-- Dashboard Header -->
     <div class="row mb-2">
         <div class="col-12">
             <div class="dashboard-section">
+                <!-- Token Status Header -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h4 class="mb-1">Facebook Integration</h4>
                         <p class="text-muted mb-0">Manage your Facebook pages and connected accounts</p>
                     </div>
-                    <a href="{{ route('facebook.refresh.token') }}" class="btn btn-warning btn-sm" 
-                    onclick="return confirm('Refresh Facebook token?')">
-                        <i class="fas fa-sync-alt"></i> Refresh Token
-                    </a>
-                    <form action="{{ route('social.disconnect', ['provider' => 'facebook']) }}" method="POST">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-outline-danger btn-sm"
-                            onclick="return confirm('Disconnect Facebook?')">
-                            <i class="fas fa-unlink"></i> Disconnect
-                        </button>
-                    </form>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Token Status Display -->
+                        @php
+                        $tokenStatus = 'valid';
+                        $tokenMessage = 'Token Valid';
+                        $badgeClass = 'bg-success';
+                        $iconClass = 'fa-check-circle';
+
+                        if($mainAccount->isTokenExpiringSoon()) {
+                        $tokenStatus = 'expiring_soon';
+                        $tokenMessage = 'Expiring Soon';
+                        $badgeClass = 'bg-warning';
+                        $iconClass = 'fa-clock';
+                        } elseif($mainAccount->isTokenExpired()) {
+                        $tokenStatus = 'expired';
+                        $tokenMessage = 'Token Expired';
+                        $badgeClass = 'bg-danger';
+                        $iconClass = 'fa-exclamation-triangle';
+                        }
+                        @endphp
+
+                        <div class="text-end me-3">
+                            <span class="badge {{ $badgeClass }} token-status-badge d-flex align-items-center">
+                                <i class="fas {{ $iconClass }} me-1"></i>
+                                {{ $tokenMessage }}
+                            </span>
+                            @if($mainAccount->token_expires_at)
+                            <small class="text-muted d-block mt-1">
+                                Expires: {{ $mainAccount->token_expires_at->format('M j, Y') }}
+                            </small>
+                            @endif
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <a href="{{ route('facebook.refresh.token') }}" class="btn btn-warning btn-sm"
+                            onclick="return confirm('Refresh Facebook token? This will update your access token.')">
+                            <i class="fas fa-sync-alt"></i> Refresh Token
+                        </a>
+
+                        <form action="{{ route('social.disconnect', ['provider' => 'facebook']) }}" method="POST" class="m-0">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                onclick="return confirm('Are you sure you want to disconnect Facebook? This will remove all connected data.')">
+                                <i class="fas fa-unlink"></i> Disconnect
+                            </button>
+                        </form>
+                    </div>
                 </div>
+
+                <!-- Token Status Alert for Expired/Expiring Tokens -->
+                @if($tokenStatus !== 'valid')
+                <div class="alert alert-{{ $tokenStatus === 'expired' ? 'danger' : 'warning' }} alert-dismissible fade show mb-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas {{ $iconClass }} me-2"></i>
+                        <div>
+                            <strong>Facebook Token {{ ucfirst(str_replace('_', ' ', $tokenStatus)) }}!</strong>
+                            @if($tokenStatus === 'expired')
+                            Your Facebook access token has expired. Please refresh the token to continue accessing your data.
+                            @elseif($tokenStatus === 'expiring_soon')
+                            Your Facebook token will expire soon. It's recommended to refresh it to avoid interruption.
+                            @endif
+                            @if($mainAccount->token_expires_at)
+                            <br><small>Expiration: {{ $mainAccount->token_expires_at->format('F j, Y \a\t g:i A') }}
+                                ({{ $mainAccount->token_expires_at->diffForHumans() }})</small>
+                            @endif
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                @endif
 
                 <!-- Profile Info -->
                 <div class="profile-item d-flex align-items-center mb-2 p-3 bg-light rounded">
@@ -89,6 +160,12 @@
                         <span class="badge bg-success">
                             <i class="fas fa-bolt"></i> Connected
                         </span>
+                        @if($mainAccount->token_expires_at)
+                        <span class="badge bg-{{ $tokenStatus === 'expired' ? 'danger' : ($tokenStatus === 'expiring_soon' ? 'warning' : 'success') }} ms-2">
+                            <i class="fas {{ $iconClass }}"></i>
+                            Token {{ $mainAccount->token_expires_at->diffForHumans() }}
+                        </span>
+                        @endif
                     </div>
                 </div>
 
@@ -122,6 +199,7 @@
             </div>
         </div>
     </div>
+
     <!-- Main Dashboard Content -->
     <div class="row">
         <!-- Pages Section -->
@@ -171,6 +249,7 @@
                 @endif
             </div>
         </div>
+
         <!-- Instagram Accounts -->
         <div class="col-lg-6 mb-2">
             <div class="dashboard-section h-100">
@@ -182,20 +261,21 @@
                 <div class="list-group">
                     @foreach($dashboardData['instagram_accounts'] as $ig)
                     <div class="list-group-item">
-                        <a href="{{ route('instagram.show', ['id' => $ig['id']]) }}">
+                        <a href="{{ route('instagram.show', ['id' => $ig['id']]) }}" class="text-decoration-none">
                             <div class="d-flex align-items-center">
                                 @if($ig['profile_picture'])
                                 <img src="{{ $ig['profile_picture'] }}"
                                     class="rounded-circle me-3" width="50" height="50" alt="IG">
                                 @endif
                                 <div class="flex-grow-1">
-                                    <h4 class="mb-0">{{ $ig['account_name'] }}</h4>
+                                    <h5 class="mb-0 text-dark">{{ $ig['account_name'] }}</h5>
                                     <small class="text-muted">{{ $ig['username'] }}</small>
                                     <br>
                                     <small class="text-primary">
                                         {{ number_format($ig['followers_count']) }} followers
                                     </small>
                                 </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
                             </div>
                         </a>
                     </div>
@@ -206,12 +286,13 @@
                 @endif
             </div>
         </div>
+
         <!-- Permissions -->
         <div class="col-lg-6 mb-4">
             <div class="dashboard-section h-100">
                 <h5 class="mb-3">
                     <i class="fas fa-shield-alt text-warning"></i>
-                    Permissions
+                    Permissions ({{ $stats['total_permissions_granted'] }}/{{ count($dashboardData['permissions'] ?? []) }})
                 </h5>
                 <div class="row">
                     @foreach($dashboardData['permissions'] as $permission)
@@ -282,8 +363,8 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="card-title mb-0">Facebook Integration</h4>
+                <div class="card-header text-white">
+                    <h4 class="card-title mb-0">Facebook and Instagram Integration</h4>
                 </div>
                 <div class="card-body text-center py-5">
                     <i class="fas fa-rocket fa-4x text-primary mb-3"></i>
@@ -337,6 +418,13 @@
                 this.style.transform = 'translateY(0)';
             });
         });
+        @if($mainAccount->isTokenExpired())
+        setTimeout(() => {
+            if (confirm('Your Facebook token has expired. Would you like to refresh it now?')) {
+                window.location.href = "{{ route('facebook.refresh.token') }}";
+            }
+        }, 3000);
+        @endif
     });
 </script>
 @endif

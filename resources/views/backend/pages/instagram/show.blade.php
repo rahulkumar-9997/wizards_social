@@ -56,7 +56,7 @@
                         <div id="likes_graph" style="min-height: 350px;"></div>
                     </div>
                     <div class="col-12 mb-3">
-                        <h5 class="mb-3">Post</h5>
+                        <h4 class="mb-3">Latest Post</h4>
                     </div>
                     <div id="instagram-media-table">
                         @include('backend.pages.instagram.partials.instagram-media-table', [

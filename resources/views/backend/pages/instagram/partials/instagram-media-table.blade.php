@@ -34,9 +34,15 @@
             <td>
                 <div class="d-flex gap-1">
                     @if(isset($post['permalink']))
-                        <a href="{{ $post['permalink'] }}" target="_blank" class="btn btn-soft-primary btn-sm">View Instagram</a>
+                        <a href="{{ $post['permalink'] }}" target="_blank" class="btn btn-soft-primary btn-sm" data-bs-toggle="tooltip"data-bs-original-title="View this post on instagram">
+                            <i class="ti ti-brand-instagram"></i>
+                            View Instagram
+                        </a>
                     @endif
-                    <a href="" class="btn btn-soft-warning btn-sm">View Insights</a>
+                    <a href="{{ route('instagram.post.insights.page', ['id' => $instagram['id'], 'postId' => $post['id']]) }}" 
+                    class="btn btn-soft-warning btn-sm" data-bs-toggle="tooltip"data-bs-original-title="View this post data">
+                        <i class="bx bx-bar-chart"></i> View Insights
+                    </a>
                 </div>
             </td>
         </tr>
