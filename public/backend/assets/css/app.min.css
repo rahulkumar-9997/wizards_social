@@ -7750,7 +7750,9 @@ textarea.form-control-lg {
   opacity: 0.5;
   -webkit-transition: opacity 0.15s ease;
   transition: opacity 0.15s ease;
+  /* background: #00000069; */
 }
+
 @media (prefers-reduced-motion: reduce) {
   .carousel-control-prev,
 .carousel-control-next {
@@ -7823,7 +7825,7 @@ textarea.form-control-lg {
   margin-left: 3px;
   text-indent: -999px;
   cursor: pointer;
-  background-color: #ffffff;
+  background-color: #000000;
   background-clip: padding-box;
   border: 0;
   border-top: 10px solid transparent;
@@ -22467,5 +22469,25 @@ text-dark {
 }
 
 /* NEW: Source code container */
-
+.test-video-section {
+    position: relative;
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    width: 100%;
+    height: 500px;
+}
+.embed-responsive-div{
+  height: 100%;
+}
+.test-video-section {
+    transition: opacity 0.3s ease;
+}
+.embed-responsive-div video {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    border: none;
+    background-color: #000;
+}
 /*rahul css*/

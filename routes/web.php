@@ -59,6 +59,11 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('/instagram', [InstagramController::class, 'index'])->name('instagram.index');
     Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])
     ->name('instagram.post.insights.page');
+    Route::get('/instagram/post/graph-data', [InstagramController::class, 'getPostGraphData'])
+    ->name('instagram.post.graph.data');
+    Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');
+    Route::post('/instagram/{mediaId}/comments', [InstagramController::class, 'postComment'])->name('instagram.comments.post');
+
     Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube.index');
     Route::prefix('social')->name('social.')->group(function () {
         Route::get('/{provider}/redirect', [SocialController::class, 'redirect'])
