@@ -72,6 +72,14 @@
 @section('main-content')
 <div class="container-fluid">
     <div class="row mb-2">
+        <div id="example-2_wrapper" class="filter-box">
+            <div class="d-flex flex-wrap align-items-center bg-white p-2 gap-1 client-list-filter">
+                <div class="d-flex align-items-center border-end pe-1">
+                    <p class="mb-0 me-2 text-dark-grey f-16">Duration:</p>
+                    <input type="text" class="form-control form-control-sm text-dark border-0 f-14" id="daterange" name="daterange" placeholder="Start Date To End Date" autocomplete="off">
+                </div>
+            </div>
+        </div>
         <div class="col-xl-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center gap-1">
@@ -231,7 +239,7 @@
                                 'label' => 'Saves',
                                 'color' => '#06b6d4'
                                 ];
-                                
+
                                 $statItems[] = [
                                 'value' => $postData['total_interactions'],
                                 'label' => 'Total Interactions',
@@ -276,44 +284,41 @@
         </div>
     </div>
 
-    <!-- Simple Graphs Section -->
+    <!-- Simple Graphs view Section -->
     <div class="row mb-2">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">Views</h4>
-                        <div class="d-flex align-items-center border-end pe-1">
-                            <p class="mb-0 me-2 text-dark-grey f-14">Duration:</p>
-                            <input type="text" class="form-control form-control-sm text-dark border-0 f-14" id="daterange" name="daterange" placeholder="Start Date To End Date" autocomplete="off">
-                        </div>
-                        <!-- <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-primary active time-filter" data-range="week">
-                                Last 7 Days
-                            </button>
-                            <button type="button" class="btn btn-outline-primary time-filter" data-range="month">
-                                Last 30 Days
-                            </button>
-                        </div> -->
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Post: Views / Reach</h5>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="period">
+                    <button class="btn btn-outline-primary period-btn active" data-period="day">Day</button>
+                    <button class="btn btn-outline-primary period-btn" data-period="week">Week</button>
+                    <button class="btn btn-outline-primary period-btn" data-period="month">Month</button>
                     </div>
                 </div>
+
                 <div class="card-body">
-                    <!-- Performance Chart -->
-                    <div class="chart-container">
-                        <h6>Performance Overview</h6>
-                        <div id="performance-chart" style="height: 300px;"></div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong>Total Reach:</strong> <span id="total_reach">--</span>
+                    </div>
+                    <div>
+                        <strong>Total Impr:</strong> <span id="total_impr">--</span>
+                    </div>
                     </div>
 
-                    <!-- Engagement Chart -->
-                    <div class="chart-container">
-                        <h6>Engagement Metrics</h6>
-                        <div id="engagement-chart" style="height: 300px;"></div>
-                    </div>
+                    <div id="insights_chart" style="height: 320px;"></div>
+
+                    <div id="insights_list" class="mt-3"></div>
                 </div>
-            </div>
+                </div>
         </div>
     </div>
 </div>
+<!-- <div class="chart-container">
+    <h6>Engagement Metrics</h6>
+    <div id="engagement-chart" style="height: 300px;"></div>
+</div> -->
 @endsection
 
 @push('scripts')
@@ -321,127 +326,95 @@
 <script src="https://www.gdsons.co.in/public/backend/assets/js/rahul-jquery-ui.min.js"></script>
 <!-- <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script> -->
 <script>
-    $(document).ready(function() {
-        let currentRange = 'week';
-        let performanceChart, engagementChart;
+$(function() {
+  const mediaId = "{{ $postData['id']}}";
+  const mediaType = "{{ $postData['media_type']}}";
+  const route = "{{ route('instagram.post.graph.data.view') }}";
+  let chart = null;
 
-        // Load initial graphs
-        loadGraphs(currentRange);
+  function load(period = 'day') {
+    $('.period-btn').removeClass('active');
+    $(`.period-btn[data-period="${period}"]`).addClass('active');
 
-        // Time filter buttons
-        $('.time-filter').on('click', function() {
-            $('.time-filter').removeClass('active');
-            $(this).addClass('active');
-            currentRange = $(this).data('range');
-            loadGraphs(currentRange);
-        });
+    $('#insights_chart').html('<div class="text-center p-4"><div class="spinner-border"></div></div>');
+    $('#insights_list').html('');
+    $('#total_reach').text('--');
+    $('#total_impr').text('--');
 
-        function loadGraphs(timeRange) {
-            // Show loading
-            $('#performance-chart').html('<div class="text-center p-4"><div class="spinner-border text-primary"></div></div>');
-            $('#engagement-chart').html('<div class="text-center p-4"><div class="spinner-border text-primary"></div></div>');
-
-            $.ajax({
-                url: "{{ route('instagram.post.graph.data') }}",
-                type: "GET",
-                data: {
-                    time_range: timeRange
-                },
-                success: function(response) {
-                    if (response.success) {
-                        renderCharts(response.data);
-                    } else {
-                        showError(response.error);
-                    }
-                },
-                error: function() {
-                    showError('Failed to load graph data');
-                }
-            });
+    $.ajax({
+      url: route,
+      method: 'GET',
+      data: { media_id: mediaId, period: period, mediaType: mediaType },
+      success: function(res) {
+        if (!res.success) {
+          $('#insights_chart').html(`<div class="alert alert-danger">${res.error||'Error'}</div>`);
+          return;
         }
-
-        function renderCharts(data) {
-            // Destroy existing charts
-            if (performanceChart) {
-                performanceChart.destroy();
-            }
-            if (engagementChart) {
-                engagementChart.destroy();
-            }
-
-            // Performance Chart - Now using reach instead of engagement
-            performanceChart = new ApexCharts(document.querySelector("#performance-chart"), {
-                series: [{
-                        name: 'Impressions',
-                        data: data.impressions
-                    },
-                    {
-                        name: 'Reach',
-                        data: data.reach
-                    }
-                ],
-                chart: {
-                    type: 'line',
-                    height: 300,
-                    toolbar: {
-                        show: true
-                    }
-                },
-                stroke: {
-                    curve: 'smooth',
-                    width: 3
-                },
-                xaxis: {
-                    categories: data.dates
-                },
-                colors: ['#3b82f6', '#10b981'],
-                legend: {
-                    position: 'top'
-                }
-            });
-            performanceChart.render();
-
-            // Engagement Chart - Now showing both likes and total engagement
-            engagementChart = new ApexCharts(document.querySelector("#engagement-chart"), {
-                series: [{
-                        name: 'Likes',
-                        data: data.likes
-                    },
-                    {
-                        name: 'Total Engagement',
-                        data: data.engagement
-                    }
-                ],
-                chart: {
-                    type: 'bar',
-                    height: 300,
-                    toolbar: {
-                        show: true
-                    }
-                },
-                plotOptions: {
-                    bar: {
-                        borderRadius: 4,
-                        horizontal: false,
-                    }
-                },
-                xaxis: {
-                    categories: data.dates
-                },
-                colors: ['#f59e0b', '#ef4444']
-            });
-            engagementChart.render();
-        }
-
-        function showError(message) {
-            $('#performance-chart').html('<div class="alert alert-danger">' + message + '</div>');
-            $('#engagement-chart').html('<div class="alert alert-danger">' + message + '</div>');
-        }
-
-        // Load graphs on page load
-        loadGraphs('week');
+        render(res.data);
+      },
+      error: function() {
+        $('#insights_chart').html('<div class="alert alert-danger">Failed to load data</div>');
+      }
     });
+  }
+
+  function render(data) {
+    // totals
+    $('#total_reach').text((data.total_reach || 0).toLocaleString());
+    $('#total_impr').text((data.total_impressions || 0).toLocaleString());
+
+    if (!data.timeline || data.timeline.length === 0) {
+      $('#insights_chart').html('<div class="alert alert-warning text-center mb-3">No data available for selected period</div>');
+      $('#insights_list').html('');
+      return;
+    }
+
+    const labels = data.timeline.map(t => t.label);
+    const reachSeries = data.timeline.map(t => t.reach);
+    const imprSeries = data.timeline.map(t => t.impressions);
+
+    // destroy previous chart
+    if (chart) chart.destroy();
+
+    chart = new ApexCharts(document.querySelector("#insights_chart"), {
+      series: [
+        { name: 'Reach', data: reachSeries },
+        { name: 'Impressions', data: imprSeries }
+      ],
+      chart: { type: 'line', height: 320, toolbar: { show: false } },
+      stroke: { curve: 'smooth', width: 3 },
+      xaxis: { categories: labels },
+      markers: { size: 4 },
+      colors: ['#3b82f6','#10b981'],
+      tooltip: { shared: true, y: { formatter: v => v.toLocaleString() } },
+      legend: { position: 'top' }
+    });
+
+    chart.render();
+
+    // list below chart
+    let html = '<div class="list-group">';
+    data.timeline.forEach(item => {
+      html += `<div class="list-group-item d-flex justify-content-between align-items-center">
+        <div><strong>${item.label}</strong><div class="text-muted">${item.time}</div></div>
+        <div class="text-end">
+          <div>Reach: <strong>${item.reach.toLocaleString()}</strong></div>
+          <div>Impr: <strong>${item.impressions.toLocaleString()}</strong></div>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    $('#insights_list').html(html);
+  }
+
+  // click handlers
+  $('.period-btn').on('click', function(){ load($(this).data('period')); });
+
+  // initial load
+  load('day');
+});
 </script>
+
 <script>
     $('#daterange').daterangepicker({
         opens: 'right',
@@ -451,7 +424,7 @@
             'Last 15 Days': [moment().subtract(15, 'days'), moment()],
             'Last 28 Days': [moment().subtract(28, 'days'), moment()],
             'Last 90 Days': [moment().subtract(89, 'days'), moment()],
-            'Last 60 Days': [moment().subtract(59, 'days'), moment()],            
+            'Last 60 Days': [moment().subtract(59, 'days'), moment()],
             'This Week': [moment().subtract(6, 'months'), moment()],
             'This Month': [moment().subtract(6, 'months'), moment()],
             'This Year': [moment().subtract(1, 'year'), moment()],
@@ -480,66 +453,61 @@
                 $btn.data('state', 'more');
             }
         });
-        $('.caption-container').each(function() {
-            const $container = $(this);
-            const $content = $container.find('.caption-content');
-            const $text = $container.find('.caption-text');
-            if ($text.height() > $content.height()) {
-                $container.find('.read-more-btn').show();
-            }
-        });
+        
     });
 </script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const section = document.getElementById('ig-comments-section');
-    const mediaId = section.dataset.mediaId;
-    const commentsList = document.getElementById('ig-comments-list');
-    const form = document.getElementById('ig-comment-form');
-    const token = document.querySelector('meta[name="csrf-token"]').content;
+    document.addEventListener('DOMContentLoaded', function() {
+        const section = document.getElementById('ig-comments-section');
+        const mediaId = section.dataset.mediaId;
+        const commentsList = document.getElementById('ig-comments-list');
+        const form = document.getElementById('ig-comment-form');
+        const token = document.querySelector('meta[name="csrf-token"]').content;
 
-    // 🔹 Load comments from controller (HTML)
-    function loadComments() {
-        commentsList.innerHTML = '<p class="text-muted">Loading comments...</p>';
-        fetch(`/instagram/${mediaId}/comments/html`)
-            .then(res => res.json())
-            .then(data => {
-                commentsList.innerHTML = data.html || '<p class="text-danger">Failed to load comments.</p>';
-            })
-            .catch(() => {
-                commentsList.innerHTML = '<p class="text-danger">Error loading comments.</p>';
-            });
-    }
+        // 🔹 Load comments from controller (HTML)
+        function loadComments() {
+            commentsList.innerHTML = '<p class="text-muted">Loading comments...</p>';
+            fetch(`/instagram/${mediaId}/comments/html`)
+                .then(res => res.json())
+                .then(data => {
+                    commentsList.innerHTML = data.html || '<p class="text-danger">Failed to load comments.</p>';
+                })
+                .catch(() => {
+                    commentsList.innerHTML = '<p class="text-danger">Error loading comments.</p>';
+                });
+        }
 
-    // 🔹 Post comment using AJAX
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const message = document.getElementById('ig-comment-message').value.trim();
-        if (!message) return;
+        // 🔹 Post comment using AJAX
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = document.getElementById('ig-comment-message').value.trim();
+            if (!message) return;
 
-        fetch(`/instagram/${mediaId}/comments`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': token
-            },
-            body: JSON.stringify({ message })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('ig-comment-message').value = '';
-                loadComments(); // reload list
-            } else {
-                alert(data.error || 'Failed to post comment.');
-            }
-        })
-        .catch(() => alert('Network error while posting comment.'));
+            fetch(`/instagram/${mediaId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token
+                    },
+                    body: JSON.stringify({
+                        message
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('ig-comment-message').value = '';
+                        loadComments(); // reload list
+                    } else {
+                        alert(data.error || 'Failed to post comment.');
+                    }
+                })
+                .catch(() => alert('Network error while posting comment.'));
+        });
+
+        // Initial load
+        loadComments();
     });
-
-    // Initial load
-    loadComments();
-});
 </script>
 
 @endpush

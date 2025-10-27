@@ -59,7 +59,7 @@ class InstagramController extends Controller
             if (request()->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'html' => view('backend.pages.instagram.partials.instagram-media-table', compact('media', 'paging'))->render(),
+                    'html' => view('backend.pages.instagram.partials.instagram-media-table', compact('media', 'paging', 'instagram'))->render(),
                 ]);
             }
             return view('backend.pages.instagram.show', compact(
@@ -474,63 +474,139 @@ class InstagramController extends Controller
         }
     }
 
+    public function getPostGraphDataView(Request $request)
+{
+    try {
+        $mediaId = $request->get('media_id');
+        $media_type = strtoupper($request->get('mediaType', 'UNKNOWN'));
+        $period  = $request->get('period', 'day');
 
-
-    public function getPostGraphData(Request $request)
-    {
-        try {
-            $timeRange = $request->get('time_range', 'week');
-            $data = $this->generateSimpleGraphData($timeRange);
-            return response()->json([
-                'success' => true,
-                'data' => $data
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Graph data error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to load graph data'], 500);
-        }
-    }
-
-    /**
-     * Generate simple graph data
-     */
-    private function generateSimpleGraphData($timeRange)
-    {
-        // Simple demo data
-        $dates = [];
-        $impressions = [];
-        $reach = [];
-        $likes = [];
-        $engagement = [];
-
-        // Generate dates based on time range
-        if ($timeRange === 'week') {
-            for ($i = 6; $i >= 0; $i--) {
-                $date = now()->subDays($i);
-                $dates[] = $date->format('M j');
-                $impressions[] = rand(500, 2000);
-                $reach[] = rand(400, 1800);
-                $likes[] = rand(100, 800);
-                $engagement[] = rand(150, 900); // likes + comments + shares
-            }
-        } else {
-            // Month view
-            for ($i = 29; $i >= 0; $i -= 2) {
-                $date = now()->subDays($i);
-                $dates[] = $date->format('M j');
-                $impressions[] = rand(800, 4000);
-                $reach[] = rand(600, 3500);
-                $likes[] = rand(200, 1500);
-                $engagement[] = rand(300, 1800); // likes + comments + shares
-            }
+        if (!$mediaId) {
+            return response()->json(['success' => false, 'error' => 'Media ID required'], 400);
         }
 
-        return [
-            'dates' => $dates,
-            'impressions' => $impressions,
-            'reach' => $reach,
-            'likes' => $likes,
-            'engagement' => $engagement
+        if (!in_array($period, ['day', 'week', 'month'])) {
+            $period = 'day';
+        }
+
+        $user = Auth::user();
+        $mainAccount = \App\Models\SocialAccount::where('user_id', $user->id)
+            ->where('provider', 'facebook')
+            ->whereNull('parent_account_id')
+            ->first();
+
+        if (!$mainAccount) {
+            return response()->json(['success' => false, 'error' => 'Facebook account not connected'], 401);
+        }
+
+        $token = \App\Helpers\SocialTokenHelper::getFacebookToken($mainAccount);
+
+        /**
+         * ✅ Step 1: Choose metrics (impressions removed for v22+)
+         */
+        $supportedMetrics = ['reach', 'likes', 'comments', 'saved', 'shares'];
+        $metricsString = implode(',', $supportedMetrics);
+
+        /**
+         * ✅ Step 2: Define time range (last 30 days like Windsor)
+         */
+        $since = now()->subDays(30)->startOfDay()->timestamp;
+        $until = now()->endOfDay()->timestamp;
+
+        /**
+         * ✅ Step 3: Fetch insights data
+         */
+        $insightsUrl = "https://graph.facebook.com/v24.0/{$mediaId}/insights";
+        $params = [
+            'metric' => $metricsString,
+            'period' => $period,
+            'since' => $since,
+            'until' => $until,
+            'access_token' => $token,
         ];
+
+        $insightData = [];
+        $resp = Http::timeout(60)->get($insightsUrl, $params);
+
+        if ($resp->ok()) {
+            $json = $resp->json();
+            $insightData = $json['data'] ?? [];
+        } else {
+            Log::warning('Insights API failed', ['response' => $resp->body()]);
+        }
+
+        /**
+         * ✅ Step 4: Fetch play_count if Reel/Video
+         */
+        $playCount = 0;
+        if (in_array($media_type, ['REEL', 'VIDEO'])) {
+            $mediaResp = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$mediaId}", [
+                'fields' => 'id,media_type,play_count',
+                'access_token' => $token,
+            ]);
+
+            if ($mediaResp->ok()) {
+                $mediaJson = $mediaResp->json();
+                $playCount = (int) ($mediaJson['play_count'] ?? 0);
+            }
+        }
+
+        /**
+         * ✅ Step 5: Aggregate data for timeline + totals
+         */
+        $timeline = [];
+        $totals = array_fill_keys(array_merge($supportedMetrics, ['plays']), 0);
+        $totals['plays'] = $playCount;
+
+        foreach ($insightData as $m) {
+            $name = $m['name'];
+            foreach ($m['values'] ?? [] as $v) {
+                if (!isset($v['end_time'])) continue;
+
+                $time = \Carbon\Carbon::parse($v['end_time'])
+                    ->setTimezone('Asia/Kolkata')
+                    ->format('d M');
+
+                $val = (int) ($v['value'] ?? 0);
+                $timeline[$time][$name] = $val;
+                $totals[$name] += $val;
+            }
+        }
+
+        $formattedTimeline = [];
+        foreach ($timeline as $time => $values) {
+            $formattedTimeline[] = array_merge(['time' => $time], $values);
+        }
+
+        /**
+         * ✅ Step 6: Return Windsor-style response
+         */
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'media_type' => $media_type,
+                'metrics_used' => $metricsString,
+                'totals' => $totals,
+                'timeline' => array_values($formattedTimeline),
+                'date_range' => [
+                    'since' => now()->subDays(30)->format('d M Y'),
+                    'until' => now()->format('d M Y'),
+                ],
+            ],
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('getPostGraphDataView error', ['e' => $e->getMessage()]);
+        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
     }
 }
+
+
+
+
+
+}
+
+
+
+   
