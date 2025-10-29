@@ -2,7 +2,7 @@
 @section('title', 'Post Insights - ' . ($instagram['username'] ?? ''))
 
 @push('styles')
-<link rel="stylesheet" type="text/css" href="https://www.gdsons.co.in/public/backend/assets/js/daterangepicker/daterangepicker.css" />
+
 <style>
     .stat-card {
         background: #f8f9fa;
@@ -322,8 +322,7 @@
 @endsection
 
 @push('scripts')
-<script type="text/javascript" src="https://www.gdsons.co.in/public/backend/assets/js/daterangepicker/daterangepicker.min.js"></script>
-<script src="https://www.gdsons.co.in/public/backend/assets/js/rahul-jquery-ui.min.js"></script>
+
 <!-- <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script> -->
 <script>
 $(function() {
@@ -416,25 +415,7 @@ $(function() {
 </script>
 
 <script>
-    $('#daterange').daterangepicker({
-        opens: 'right',
-        ranges: {
-            'Today': [moment(), moment()],
-            'Last 7 Days': [moment().subtract(7, 'days'), moment()],
-            'Last 15 Days': [moment().subtract(15, 'days'), moment()],
-            'Last 28 Days': [moment().subtract(28, 'days'), moment()],
-            'Last 90 Days': [moment().subtract(89, 'days'), moment()],
-            'Last 60 Days': [moment().subtract(59, 'days'), moment()],
-            'This Week': [moment().subtract(6, 'months'), moment()],
-            'This Month': [moment().subtract(6, 'months'), moment()],
-            'This Year': [moment().subtract(1, 'year'), moment()],
-        },
-        autoUpdateInput: false,
-        locale: {
-            format: 'YYYY-MM-DD',
-            cancelLabel: 'Clear',
-        }
-    });
+    
     $(document).ready(function() {
         // Read More/Less functionality
         $(document).on('click', '.read-more-btn', function() {
@@ -476,36 +457,6 @@ $(function() {
                     commentsList.innerHTML = '<p class="text-danger">Error loading comments.</p>';
                 });
         }
-
-        // 🔹 Post comment using AJAX
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const message = document.getElementById('ig-comment-message').value.trim();
-            if (!message) return;
-
-            fetch(`/instagram/${mediaId}/comments`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': token
-                    },
-                    body: JSON.stringify({
-                        message
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('ig-comment-message').value = '';
-                        loadComments(); // reload list
-                    } else {
-                        alert(data.error || 'Failed to post comment.');
-                    }
-                })
-                .catch(() => alert('Network error while posting comment.'));
-        });
-
-        // Initial load
         loadComments();
     });
 </script>

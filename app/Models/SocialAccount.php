@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class SocialAccount extends Model
 {
@@ -87,5 +88,36 @@ class SocialAccount extends Model
             return false;
         }
         return $this->token_expires_at->diffInDays(now()) <= $days;
+    }
+
+     public function disconnect()
+    {
+        // Clear all related caches
+        Cache::forget('fb_dashboard_' . $this->id);
+        Cache::forget('social_account_' . $this->user_id . '_' . $this->provider);
+
+        // Remove token data but keep the record
+        $this->update([
+            'access_token' => null,
+            'refresh_token' => null,
+            'token_expires_at' => null,
+            'updated_at' => now(),
+        ]);
+
+        // Also disconnect any child accounts (Instagram accounts)
+        SocialAccount::where('parent_account_id', $this->id)
+            ->update([
+                'access_token' => null,
+                'refresh_token' => null,
+                'token_expires_at' => null,
+            ]);
+    }
+
+    /**
+     * Check if account is connected (has valid token)
+     */
+    public function isConnected()
+    {
+        return !empty($this->access_token) && !$this->isTokenExpired();
     }
 }

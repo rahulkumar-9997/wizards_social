@@ -19,15 +19,7 @@
 
     .profile-item img {
         border: 2px solid #ddd;
-    }
-
-    .dashboard-section {
-        background: #fff;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
+    }   
 
     .quick-stats {
         display: grid;
@@ -45,7 +37,6 @@
 
 @section('main-content')
 <div class="container-fluid">
-    <!-- Success Message -->
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show">
         <i class="fas fa-check-circle"></i> <strong>{{ session('success') }}</strong>
@@ -64,18 +55,15 @@
     @endif
 
     @if($mainAccount)
-    <!-- Dashboard Header -->
-    <div class="row mb-2">
-        <div class="col-12">
-            <div class="dashboard-section">
-                <!-- Token Status Header -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center gap-1">
                     <div>
                         <h4 class="mb-1">Facebook Integration</h4>
                         <p class="text-muted mb-0">Manage your Facebook pages and connected accounts</p>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <!-- Token Status Display -->
                         @php
                         $tokenStatus = 'valid';
                         $tokenMessage = 'Token Valid';
@@ -106,8 +94,6 @@
                             </small>
                             @endif
                         </div>
-
-                        <!-- Action Buttons -->
                         <a href="{{ route('facebook.refresh.token') }}" class="btn btn-warning btn-sm"
                             onclick="return confirm('Refresh Facebook token? This will update your access token.')">
                             <i class="fas fa-sync-alt"></i> Refresh Token
@@ -122,172 +108,134 @@
                             </button>
                         </form>
                     </div>
+                    @if($tokenStatus !== 'valid')
+                    <div class="alert alert-{{ $tokenStatus === 'expired' ? 'danger' : 'warning' }} alert-dismissible fade show mb-3" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="fas {{ $iconClass }} me-2"></i>
+                            <div>
+                                <strong>Facebook Token {{ ucfirst(str_replace('_', ' ', $tokenStatus)) }}!</strong>
+                                @if($tokenStatus === 'expired')
+                                Your Facebook access token has expired. Please refresh the token to continue accessing your data.
+                                @elseif($tokenStatus === 'expiring_soon')
+                                Your Facebook token will expire soon. It's recommended to refresh it to avoid interruption.
+                                @endif
+                                @if($mainAccount->token_expires_at)
+                                <br><small>Expiration: {{ $mainAccount->token_expires_at->format('F j, Y \a\t g:i A') }}
+                                    ({{ $mainAccount->token_expires_at->diffForHumans() }})</small>
+                                @endif
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    @endif                    
                 </div>
-
-                <!-- Token Status Alert for Expired/Expiring Tokens -->
-                @if($tokenStatus !== 'valid')
-                <div class="alert alert-{{ $tokenStatus === 'expired' ? 'danger' : 'warning' }} alert-dismissible fade show mb-3" role="alert">
-                    <div class="d-flex align-items-center">
-                        <i class="fas {{ $iconClass }} me-2"></i>
-                        <div>
-                            <strong>Facebook Token {{ ucfirst(str_replace('_', ' ', $tokenStatus)) }}!</strong>
-                            @if($tokenStatus === 'expired')
-                            Your Facebook access token has expired. Please refresh the token to continue accessing your data.
-                            @elseif($tokenStatus === 'expiring_soon')
-                            Your Facebook token will expire soon. It's recommended to refresh it to avoid interruption.
+                <div class="card-body">
+                    <div class="profile-item d-flex align-items-center mb-2 p-3 bg-light rounded">
+                        @if(isset($dashboardData['profile']['picture']['data']['url']))
+                        <img src="{{ $dashboardData['profile']['picture']['data']['url'] }}"
+                            class="rounded-circle me-3" width="80" height="80" alt="Profile">
+                        @endif
+                        <div class="flex-grow-1">
+                            <h4 class="mb-1">{{ $dashboardData['profile']['name'] ?? 'Unknown' }}</h4>
+                            @if(isset($dashboardData['profile']['email']))
+                            <p class="text-muted mb-1">{{ $dashboardData['profile']['email'] }}</p>
                             @endif
+                            <span class="badge bg-success">
+                                <i class="fas fa-bolt"></i> Connected
+                            </span>
                             @if($mainAccount->token_expires_at)
-                            <br><small>Expiration: {{ $mainAccount->token_expires_at->format('F j, Y \a\t g:i A') }}
-                                ({{ $mainAccount->token_expires_at->diffForHumans() }})</small>
+                            <span class="badge bg-{{ $tokenStatus === 'expired' ? 'danger' : ($tokenStatus === 'expiring_soon' ? 'warning' : 'success') }} ms-2">
+                                <i class="fas {{ $iconClass }}"></i>
+                                Token {{ $mainAccount->token_expires_at->diffForHumans() }}
+                            </span>
                             @endif
                         </div>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-                @endif
+                    <div class="quick-stats">
+                        <div class="stat-card card text-center">
+                            <div class="card-body">
+                                <h3 class="text-primary">{{ $stats['total_pages'] }}</h3>
+                                <p class="text-muted mb-0">Facebook Pages</p>
+                            </div>
+                        </div>
+                        <div class="stat-card card text-center">
+                            <div class="card-body">
+                                <h3 class="text-success">{{ $stats['total_instagram_accounts'] }}</h3>
+                                <p class="text-muted mb-0">Instagram Accounts</p>
+                            </div>
+                        </div>
+                        <div class="stat-card card text-center">
+                            <div class="card-body">
+                                <h3 class="text-info">{{ number_format($stats['total_instagram_followers']) }}</h3>
+                                <p class="text-muted mb-0">Total Followers</p>
+                            </div>
+                        </div>
+                        <div class="stat-card card text-center">
+                            <div class="card-body">
+                                <h3 class="text-warning">{{ $stats['total_ad_accounts'] }}</h3>
+                                <p class="text-muted mb-0">Ad Accounts</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="mb-2">
+                                <label for="facebook_pages" class="form-label">Select Facebook Page *</label>
+                                <select class="form-control" id="facebook_pages"
+                                    data-choices data-placeholder="Select Facebook Page"
+                                    name="facebook_pages" required>
+                                    <option value="">Choose a Facebook Page</option>
 
-                <!-- Profile Info -->
-                <div class="profile-item d-flex align-items-center mb-2 p-3 bg-light rounded">
-                    @if(isset($dashboardData['profile']['picture']['data']['url']))
-                    <img src="{{ $dashboardData['profile']['picture']['data']['url'] }}"
-                        class="rounded-circle me-3" width="80" height="80" alt="Profile">
-                    @endif
-                    <div class="flex-grow-1">
-                        <h4 class="mb-1">{{ $dashboardData['profile']['name'] ?? 'Unknown' }}</h4>
-                        @if(isset($dashboardData['profile']['email']))
-                        <p class="text-muted mb-1">{{ $dashboardData['profile']['email'] }}</p>
-                        @endif
-                        <span class="badge bg-success">
-                            <i class="fas fa-bolt"></i> Connected
-                        </span>
-                        @if($mainAccount->token_expires_at)
-                        <span class="badge bg-{{ $tokenStatus === 'expired' ? 'danger' : ($tokenStatus === 'expiring_soon' ? 'warning' : 'success') }} ms-2">
-                            <i class="fas {{ $iconClass }}"></i>
-                            Token {{ $mainAccount->token_expires_at->diffForHumans() }}
-                        </span>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Quick Stats -->
-                <div class="quick-stats">
-                    <div class="stat-card card text-center">
-                        <div class="card-body">
-                            <h3 class="text-primary">{{ $stats['total_pages'] }}</h3>
-                            <p class="text-muted mb-0">Facebook Pages</p>
-                        </div>
-                    </div>
-                    <div class="stat-card card text-center">
-                        <div class="card-body">
-                            <h3 class="text-success">{{ $stats['total_instagram_accounts'] }}</h3>
-                            <p class="text-muted mb-0">Instagram Accounts</p>
-                        </div>
-                    </div>
-                    <div class="stat-card card text-center">
-                        <div class="card-body">
-                            <h3 class="text-info">{{ number_format($stats['total_instagram_followers']) }}</h3>
-                            <p class="text-muted mb-0">Total Followers</p>
-                        </div>
-                    </div>
-                    <div class="stat-card card text-center">
-                        <div class="card-body">
-                            <h3 class="text-warning">{{ $stats['total_ad_accounts'] }}</h3>
-                            <p class="text-muted mb-0">Ad Accounts</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Dashboard Content -->
-    <div class="row">
-        <!-- Pages Section -->
-        <div class="col-lg-6 mb-2">
-            <div class="dashboard-section h-100">
-                <h5 class="mb-3">
-                    <i class="fas fa-flag text-primary"></i>
-                    Facebook Pages ({{ $stats['total_pages'] }})
-                </h5>
-                @if(!empty($dashboardData['pages']))
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Category</th>
-                                <th>Instagram</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($dashboardData['pages'] as $page)
-                            <tr>
-                                <td>
-                                    <strong>{{ $page['name'] }}</strong>
-                                    <br><small class="text-muted">ID: {{ $page['id'] }}</small>
-                                </td>
-                                <td>{{ $page['category'] }}</td>
-                                <td>
+                                    @if (!empty($dashboardData['pages']))
+                                    @foreach ($dashboardData['pages'] as $page)
                                     @php
                                     $hasInstagram = collect($dashboardData['instagram_accounts'])
                                     ->where('connected_page', $page['name'])
                                     ->count() > 0;
                                     @endphp
-                                    @if($hasInstagram)
-                                    <span class="badge bg-success">Connected</span>
+                                    <option value="{{ $page['id'] }}">
+                                        {{ $page['name'] }}
+                                        @if(!empty($page['category']))
+                                        ({{ $page['category'] }})
+                                        @endif
+                                        — {{ $hasInstagram ? '✅ Instagram Connected' : '❌ No Instagram' }}
+                                    </option>
+                                    @endforeach
                                     @else
-                                    <span class="badge bg-secondary">Not Connected</span>
+                                    <option disabled>No Facebook pages found.</option>
                                     @endif
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @else
-                <p class="text-muted">No Facebook pages found.</p>
-                @endif
-            </div>
-        </div>
-
-        <!-- Instagram Accounts -->
-        <div class="col-lg-6 mb-2">
-            <div class="dashboard-section h-100">
-                <h5 class="mb-3">
-                    <i class="fab fa-instagram text-danger"></i>
-                    Instagram Accounts ({{ $stats['total_instagram_accounts'] }})
-                </h5>
-                @if($dashboardData['instagram_accounts']->count() > 0)
-                <div class="list-group">
-                    @foreach($dashboardData['instagram_accounts'] as $ig)
-                    <div class="list-group-item">
-                        <a href="{{ route('instagram.show', ['id' => $ig['id']]) }}" class="text-decoration-none">
-                            <div class="d-flex align-items-center">
-                                @if($ig['profile_picture'])
-                                <img src="{{ $ig['profile_picture'] }}"
-                                    class="rounded-circle me-3" width="50" height="50" alt="IG">
-                                @endif
-                                <div class="flex-grow-1">
-                                    <h5 class="mb-0 text-dark">{{ $ig['account_name'] }}</h5>
-                                    <small class="text-muted">{{ $ig['username'] }}</small>
-                                    <br>
-                                    <small class="text-primary">
-                                        {{ number_format($ig['followers_count']) }} followers
-                                    </small>
-                                </div>
-                                <i class="fas fa-chevron-right text-muted"></i>
+                                </select>
                             </div>
-                        </a>
-                    </div>
-                    @endforeach
-                </div>
-                @else
-                <p class="text-muted">No Instagram accounts connected.</p>
-                @endif
-            </div>
-        </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="mb-2">
+                                <label for="instagram_pages" class="form-label">Select Instagram Account *</label>
+                                <select class="form-control" id="instagram_pages"
+                                    data-choices data-placeholder="Select Instagram Account"
+                                    name="instagram_pages" required>
+                                    <option value="">Choose Instagram Account</option>
 
-        <!-- Permissions -->
+                                    @if (!empty($dashboardData['instagram_accounts']) && $dashboardData['instagram_accounts']->count() > 0)
+                                    @foreach ($dashboardData['instagram_accounts'] as $ig)
+                                    <option value="{{ $ig['id'] }}">
+                                        {{ $ig['account_name'] }}
+                                        ({{ $ig['username'] }})
+                                        — {{ number_format($ig['followers_count'] ?? 0) }} followers
+                                    </option>
+                                    @endforeach
+                                    @else
+                                    <option disabled>No Instagram accounts connected.</option>
+                                    @endif
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>       
+
+    </div>
+    <div class="row">
         <div class="col-lg-6 mb-4">
             <div class="dashboard-section h-100">
                 <h5 class="mb-3">
@@ -426,6 +374,17 @@
         }, 3000);
         @endif
     });
+</script>
+<script>
+$(document).ready(function() {
+    $('#instagram_pages').on('change', function() {
+        let selectedId = $(this).val();
+        if (selectedId) {
+            let baseUrl = "{{ url('/instagram') }}"; 
+            window.location.href = `${baseUrl}/${selectedId}`;
+        }
+    });
+});
 </script>
 @endif
 @endpush

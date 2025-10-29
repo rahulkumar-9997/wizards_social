@@ -1,5 +1,83 @@
 @extends('backend.pages.layouts.master')
 @section('title', 'Instagram Dashboard')
+@push('styles')
+<style>
+    .metric-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        background: #fff;
+        text-align: center;
+    }
+
+    .metric-header {
+        background-color: #c2185b;
+        color: #fff;
+        padding: 6px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .metric-subheader {
+        background-color: #7b1fa2;
+        color: #fff;
+        font-weight: 500;
+        padding: 4px;
+    }
+
+    .metric-body {
+        padding: 10px;
+    }
+
+    .metric-body h3 {
+        font-weight: 700;
+        font-size: 1.6rem;
+    }
+
+    .label-row {
+        display: flex;
+        justify-content: space-between;
+        background: #000;
+        color: #fff;
+        font-size: 0.85rem;
+        padding: 3px 8px;
+    }
+
+    .percent {
+        font-weight: bold;
+        color: #fff;
+        padding: 6px;
+        margin-top: 4px;
+        font-size: 1rem;
+    }
+
+    .percent.red {
+        background-color: #dc3545;
+    }
+
+    .percent.green {
+        background-color: #28a745;
+    }
+
+    .stats-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        background: #f8f9fa;
+        margin-top: 5px;
+        padding: 6px;
+    }
+
+    .stats-row div {
+        flex: 1;
+    }
+
+    .icon-metric {
+        font-size: 2rem;
+        color: #c2185b;
+    }
+</style>
+@endpush
 @section('main-content')
 <div class="container-fluid">
     <div class="row mb-2">
@@ -32,39 +110,8 @@
 
     <div class="row mb-4">
         <div class="col-xxl-12">
-            <div class="card">
-                <div class="card-header text-white">
-                    <h4 class="mb-2">
-                        Performance
-                    </h4>
-                    <!-- <h5>17 September 2025 - 14 October 2025</h5> -->
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="card-title mb-0">Instagram Daily Insights</h4>
-                        <div>
-                            <button type="button" class="btn btn-sm btn-outline-light active filter-btn" data-filter="week">week</button>
-                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="day">day</button>
+            <div id="insta_face_dashboard">
 
-                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="days_28">days_28</button>
-                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="month">month</button>
-                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="lifetime">lifetime</button>
-                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="total_over_range">total_over_range</button>
-                        </div>
-                    </div>
-                    <div class="map-section">
-                        <div id="likes_graph" style="min-height: 350px;"></div>
-                    </div>
-                    <div class="col-12 mb-3">
-                        <h4 class="mb-3">Latest Post</h4>
-                    </div>
-                    <div id="instagram-media-table">
-                        @include('backend.pages.instagram.partials.instagram-media-table', [
-                            'media' => $media,
-                            'paging' => $paging
-                        ])
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -73,125 +120,86 @@
     @push('scripts')
     <script>
         $(document).ready(function() {
-            const chartEl = $('#likes_graph')[0];
-            let chart;
-
-            function loadGraph(period = 'week') {
-                const instagramId = "{{ $instagram['id'] ?? 0 }}";
-                $.get(`{{ route('instagram.metrics.graph', $instagram['id'] ?? 0) }}`, {
-                        period: period
-                    })
-                    .done(function(data) {
-                        if (data.error) {
-                            $(chartEl).html(`<p class="text-danger">${data.error}</p>`);
-                            return;
-                        }
-                        const options = {
-                            chart: {
-                                type: 'line',
-                                height: 350,
-                                toolbar: {
-                                    show: false
-                                },
-                                zoom: {
-                                    enabled: false
-                                },
-                                foreColor: '#ccc'
-                            },
-                            stroke: {
-                                curve: 'smooth',
-                                width: 2
-                            },
-                            markers: {
-                                size: 3
-                            },
-                            grid: {
-                                borderColor: '#333',
-                                strokeDashArray: 3
-                            },
-                            xaxis: {
-                                categories: data.dates,
-                                labels: {
-                                    rotate: -45,
-                                    style: {
-                                        fontSize: '12px'
-                                    }
-                                }
-                            },
-                            yaxis: {
-                                title: {
-                                    text: 'Count',
-                                    style: {
-                                        color: '#ccc'
-                                    }
-                                },
-                                min: 0
-                            },
-                            legend: {
-                                position: 'top',
-                                horizontalAlign: 'right',
-                                labels: {
-                                    colors: '#000000ff'
-                                }
-                            },
-                            colors: ['#3b82f6', '#10b981', '#f43f5e', '#f59e0b'],
-                            series: [{
-                                    name: 'Reach',
-                                    data: data.reach
-                                },
-                                {
-                                    name: 'Likes',
-                                    data: data.likes
-                                },
-                                {
-                                    name: 'Comments',
-                                    data: data.comments
-                                },
-                                {
-                                    name: 'Views',
-                                    data: data.views
-                                }
-                            ],
-                            tooltip: {
-                                theme: 'dark',
-                                shared: true,
-                                intersect: false
-                            },
-                            title: {
-                                text: 'Instagram Media Insights Trends',
-                                align: 'left',
-                                style: {
-                                    color: '#fff',
-                                    fontSize: '16px'
-                                }
-                            }
-                        };
-
-                        if (chart) {
-                            chart.updateOptions({
-                                xaxis: {
-                                    categories: data.dates
-                                },
-                                series: options.series
-                            });
-                        } else {
-                            chart = new ApexCharts(chartEl, options);
-                            chart.render();
-                        }
-                    })
-                    .fail(function(err) {
-                        console.error('Error loading graph:', err);
-                        $(chartEl).html(`<p class="text-danger">Failed to load data</p>`);
-                    });
-            }
-            $('.btn-outline-light').on('click', function() {
-                const period = $(this).data('filter');
-                $('.btn-outline-light').removeClass('active');
-                $(this).addClass('active');
-                loadGraph(period);
+            const id = "{{ $instagram['id'] }}";
+            $('.daterange').daterangepicker({
+                opens: 'right',
+                startDate: moment().subtract(28, 'days'),
+                endDate: moment(),
+                ranges: {
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(7, 'days'), moment()],
+                    'Last 15 Days': [moment().subtract(15, 'days'), moment()],
+                    'Last 28 Days': [moment().subtract(28, 'days'), moment()],
+                    'Last 60 Days': [moment().subtract(59, 'days'), moment()],
+                    'Last 90 Days': [moment().subtract(89, 'days'), moment()],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                },
+                autoUpdateInput: false,
+                locale: {
+                    format: 'YYYY-MM-DD',
+                    cancelLabel: 'Clear',
+                }
             });
-            loadGraph('week');
+
+            // Load initial data with default date range (last 28 days)
+            loadInstagramData(id, moment().subtract(28, 'days').format('YYYY-MM-DD'), moment().format('YYYY-MM-DD'));
+
+            // Date range change event
+            $('.daterange').on('apply.daterangepicker', function(ev, picker) {
+                const startDate = picker.startDate.format('YYYY-MM-DD');
+                const endDate = picker.endDate.format('YYYY-MM-DD');
+
+                // Update input field
+                $(this).val(picker.startDate.format('YYYY-MM-DD') + ' - ' + picker.endDate.format('YYYY-MM-DD'));
+
+                // Load data with selected date range
+                loadInstagramData(id, startDate, endDate);
+            });
+
+            // Clear date range
+            $('.daterange').on('cancel.daterangepicker', function(ev, picker) {
+                $(this).val('');
+                // Reset to default date range
+                loadInstagramData(id, moment().subtract(28, 'days').format('YYYY-MM-DD'), moment().format('YYYY-MM-DD'));
+            });
         });
+
+        function loadInstagramData(accountId, startDate, endDate) {
+            const loadingHtml = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading performance data...</p>
+        </div>
+    `;
+
+            $('#insta_face_dashboard').html(loadingHtml);
+
+            $.ajax({
+                url: `/instagram/fetch/${accountId}`,
+                type: 'GET',
+                data: {
+                    start_date: startDate,
+                    end_date: endDate
+                },
+                success: function(res) {
+                    if (res.success) {
+                        $('#insta_face_dashboard').html(res.html);
+                    } else {
+                        $('#insta_face_dashboard').html(`<div class="alert alert-danger">${res.message}</div>`);
+                    }
+                },
+                error: function(xhr) {
+                    const errorMessage = xhr.responseJSON?.error || 'Error fetching data';
+                    $('#insta_face_dashboard').html(`<div class="alert alert-danger">${errorMessage}</div>`);
+                }
+            });
+        }
+    </script>
+    <script>
         /*Pagination */
         $(document).ready(function() {
             $(document).on('click', '.page-link', function(e) {
@@ -230,7 +238,6 @@
                 });
             }
 
-            // Handle browser back/forward buttons
             $(window).on('popstate', function() {
                 fetchInstagramMedia(window.location.href);
             });

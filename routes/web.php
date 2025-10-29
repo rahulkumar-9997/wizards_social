@@ -1,5 +1,7 @@
 <?php
-
+// use App\Livewire\Backend\Dashboard;
+// use App\Livewire\Backend\Database;
+// use App\Livewire\Backend\Facebook\Index;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Backend\LoginController;
 use App\Http\Controllers\Backend\ForgotPasswordController;
@@ -53,15 +55,7 @@ Route::group(['middleware' => ['auth']], function() {
     Route::resource('roles', RolesController::class);
     Route::resource('permissions', PermissionsController::class);
     
-    Route::get('/facebook', [FacebookController::class, 'index'])->name('facebook.index');
-    Route::get('/facebook/refresh-token', [FacebookController::class, 'refreshToken'])
-    ->name('facebook.refresh.token');
-    Route::get('/instagram', [InstagramController::class, 'index'])->name('instagram.index');
-    Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])
-    ->name('instagram.post.insights.page');
-    Route::get('/instagram/post/graph-data-view', [InstagramController::class, 'getPostGraphDataView'])->name('instagram.post.graph.data.view');
-    Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');
-    Route::post('/instagram/{mediaId}/comments', [InstagramController::class, 'postComment'])->name('instagram.comments.post');
+    Route::get('/facebook', [FacebookController::class, 'index'])->name('facebook.index');    
 
     Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube.index');
     Route::prefix('social')->name('social.')->group(function () {
@@ -76,7 +70,18 @@ Route::group(['middleware' => ['auth']], function() {
     ->name('disconnect');
 
     });
+    Route::get('/facebook/refresh-token', [FacebookController::class, 'refreshToken'])
+    ->name('facebook.refresh.token');
+    Route::get('/instagram', [InstagramController::class, 'index'])->name('instagram.index');
     Route::get('instagram/{id}', [InstagramController::class, 'show'])->name('instagram.show');
+    Route::get('/instagram/fetch/{id}', [InstagramController::class, 'fetchHtml'])
+    ->name('instagram.fetch.html');
+
+    Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])->name('instagram.post.insights.page');
+
+    
+    Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');
+   
     Route::get('/instagram/{id}/metrics-graph', [InstagramController::class, 'metricsGraph'])
     ->name('instagram.metrics.graph');
 

@@ -48,10 +48,10 @@
                </div>
             </div>
             <!-- App Search-->
-            <form class="app-search d-none d-md-block ms-2">
+            <form class="app-datepicker d-none d-md-block ms-2">
                <div class="position-relative">
-                  <input type="search" class="form-control" placeholder="Search..." autocomplete="off" value="">
-                  <iconify-icon icon="solar:magnifer-linear" class="search-widget-icon"></iconify-icon>
+                  <input type="text" class="form-control form-control-sm text-dark  f-14 daterange" placeholder="Start Date To End Date" autocomplete="off" >
+                  <span class="bx bx-calendar-check position-absolute top-50 end-0 translate-middle-y me-2"></span>
                </div>
             </form>
          </div>
