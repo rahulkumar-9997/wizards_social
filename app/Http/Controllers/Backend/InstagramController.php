@@ -93,8 +93,9 @@ class InstagramController extends Controller
             }
 
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
-            $startDate = $request->get('start_date', now()->subDays(28)->format('Y-m-d'));
+            $startDate = $request->get('start_date', now()->subDays(30)->format('Y-m-d'));
             $endDate = $request->get('end_date', now()->format('Y-m-d'));
+            //Log::info("Instagram fetchHtml Date Range: {$startDate} to {$endDate}");
             $performanceData = $this->fetchPerformanceData($id, $token, $startDate, $endDate);
 
             /* Fetch media data for the table with date range */
@@ -106,7 +107,7 @@ class InstagramController extends Controller
                     'until' => $endDate,
                     'limit' => 12,
                 ])->json();
-            Log::info('Instagram fetchHtml Media Response: ' . print_r($mediaResponse, true));
+            //Log::info('Instagram fetchHtml Media Response: ' . print_r($mediaResponse, true));
             $media = $mediaResponse['data'] ?? [];
             $paging = $mediaResponse['paging'] ?? [];
             $html = $this->renderDashboardHtml($media, $paging, $instagramId, $performanceData);
@@ -128,9 +129,7 @@ class InstagramController extends Controller
         /* Fetch media insights with date range */
         $mediaData = $this->fetchMediaInsights($accountId, $token, $startDate, $endDate);
 
-        /* Calculate percentages and trends */
         $performanceData = array_merge($insightsData, $mediaData);
-        $performanceData = $this->calculateMetrics($performanceData);
 
         $performanceData['date_range'] = [
             'start' => $startDate,
@@ -142,16 +141,32 @@ class InstagramController extends Controller
 
     private function fetchAccountInsights($accountId, $token, $startDate, $endDate)
     {
-        
-        try {            
+        try {
             $instagramReach = $this->fetchInstagramReachSummary($accountId, $token, $startDate, $endDate);
-            //Log::info('Instagram Reach Summary: ' . print_r($instagramReach->getData(), true));
-            $result['instagramReach'] = $instagramReach;
+            $result['instagramReach'] = $instagramReach->getData();
+
             $start = \Carbon\Carbon::parse($startDate);
             $end = \Carbon\Carbon::parse($endDate);
             $prevStart = $start->copy()->subDays(30);
             $prevEnd = $start->copy()->subDay();
-            // Current Month PROFILE VISITS
+            $result['profile_visits'] = [
+                'current_profile' => 0,
+                'previous_profile' => 0,
+                'percent_change' => 0
+            ];
+
+            $result['profile_link'] = [
+                'current' => 0,
+                'previous' => 0,
+                'percent_change' => 0
+            ];
+
+            $result['engagement'] = [
+                'accounts_engaged' => 0,
+                'total_interactions' => 0,
+            ];
+
+            /* Current Month PROFILE VISITS*/
             $profileResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
                 'metric' => 'profile_views',
                 'period' => 'day',
@@ -160,12 +175,13 @@ class InstagramController extends Controller
                 'until' => $end,
                 'access_token' => $token,
             ])->json();
-            //Log::info('Instagram Profile Visits current month Response: ' . print_r($profileResponse, true));
+
             if (isset($profileResponse['data'][0]['total_value'])) {
                 $currentProfile_values = $profileResponse['data'][0]['total_value']['value'];
                 $result['profile_visits']['current_profile'] = $currentProfile_values;
             }
-            // Previous Month PROFILE VISITS
+
+            /* Previous Month PROFILE VISITS*/
             $prevProfile = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
                 'metric' => 'profile_views',
                 'period' => 'day',
@@ -174,43 +190,55 @@ class InstagramController extends Controller
                 'until' => $prevEnd->toDateString(),
                 'access_token' => $token,
             ])->json();
-            //Log::info('Instagram Profile Visits previous month Response: ' . print_r($prevProfile, true));
+
             if (isset($prevProfile['data'][0]['total_value'])) {
                 $preProfile_values = $prevProfile['data'][0]['total_value']['value'];
                 $result['profile_visits']['previous_profile'] = $preProfile_values;
             }
-            //Log::info('Instagram Profile Visits Data: ' . print_r($result['profile_visits'], true));            
-            $result['profile_visits']['percent_change'] = $result['profile_visits']['previous'] > 0
-                ? round((($result['profile_visits']['current'] - $result['profile_visits']['previous']) / $result['profile_visits']['previous']) * 100, 2)
+
+
+            $result['profile_visits']['percent_change'] = $result['profile_visits']['previous_profile'] > 0
+                ? round((($result['profile_visits']['current_profile'] - $result['profile_visits']['previous_profile']) / $result['profile_visits']['previous_profile']) * 100, 2)
                 : 0;
 
-            /*current Profile Link Tabs*/
+            $currentStart = Carbon::parse($startDate);
+            $currentEnd = Carbon::parse($endDate);
+            $originalDays = $currentStart->diffInDays($currentEnd);
+            if ($originalDays > 30) {
+                $currentEnd = now();
+                $currentStart = $currentEnd->copy()->subDays(28);
+                $result['profile_link']['message'] = "There cannot be more than 30 days between since and until.";
+                $result['engagement']['message'] = "There cannot be more than 30 days between since and until.";
+            }
+            Log::info("Profile Link Taps Date Range: {$currentStart} to {$currentEnd}");
             $currentProfileClickResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
                 'metric' => 'profile_links_taps',
+                'metric_type' => 'total_value',
                 'period' => 'day',
-                'since' => $startDate,
-                'until' => $endDate,
+                'since' => $currentStart->toDateString(),
+                'until' => $currentEnd->toDateString(),
                 'access_token' => $token,
             ])->json();
-
-            if (isset($currentProfileClickResponse['data'][0]['values'])) {
+            Log::info('Instagram Current Profile Link Tabs Response: ' . print_r($currentProfileClickResponse, true));
+            if (isset($currentProfileClickResponse['data'][0]['total_value'])) {
                 $profile_link_current = $currentProfileClickResponse['data'][0]['total_value']['value'];
                 $result['profile_link']['current'] = $profile_link_current;
             }
 
             $prevProfileClickResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
                 'metric' => 'profile_links_taps',
+                'metric_type' => 'total_value',
                 'period' => 'day',
                 'since' => $prevStart->toDateString(),
                 'until' => $prevEnd->toDateString(),
                 'access_token' => $token,
             ])->json();
 
-            if (isset($prevProfileClickResponse['data'][0]['values'])) {
+            if (isset($prevProfileClickResponse['data'][0]['total_value'])) {
                 $profile_link_prev = $prevProfileClickResponse['data'][0]['total_value']['value'];
                 $result['profile_link']['previous'] = $profile_link_prev;
             }
-                        
+
             $result['profile_link']['percent_change'] = $result['profile_link']['previous'] > 0
                 ? round((($result['profile_link']['current'] - $result['profile_link']['previous']) / $result['profile_link']['previous']) * 100, 2)
                 : 0;
@@ -218,37 +246,33 @@ class InstagramController extends Controller
             $engagementResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
                 'metric' => 'accounts_engaged,total_interactions',
                 'period' => 'day',
-                'since' => $startDate,
-                'until' => $endDate,
+                'metric_type' => 'total_value',
+                'since' => $currentStart->toDateString(),
+                'until' => $currentEnd->toDateString(),
                 'access_token' => $token,
             ])->json();
-
+            Log::info('Instagram Engagement Response: ' . print_r($engagementResponse, true));
             if (isset($engagementResponse['data'])) {
                 foreach ($engagementResponse['data'] as $metric) {
-                    $values = array_column($metric['values'], 'value');
-                    $result['engagement'][$metric['name']] = array_sum($values);
+                    $metricName = $metric['name'];
+                    if (isset($metric['total_value']['value'])) {
+                        $result['engagement'][$metricName] = (int) $metric['total_value']['value'];
+                    } elseif (isset($metric['values']) && is_array($metric['values'])) {
+                        $values = array_column($metric['values'], 'value');
+                        $result['engagement'][$metricName] = array_sum($values);
+                    }
                 }
             }
-
-            // =============================
-            // ✅ Final Success Response
-            // =============================
-            return response()->json($result, 200);
-
+            return $result;
         } catch (\Illuminate\Http\Client\RequestException $e) {
             Log::error('Instagram API Request Failed: ' . $e->getMessage());
-            $result['status'] = 'error';
-            $result['error'] = 'Network error or API timeout.';
-            return response()->json($result, 500);
+            throw new \Exception($e->getMessage());
         } catch (\Throwable $e) {
             Log::error('Instagram Insights Exception: ' . $e->getMessage());
-            $result['status'] = 'error';
-            $result['error'] = $e->getMessage();
-            return response()->json($result, 500);
+            throw new \Exception($e->getMessage());
         }
     }
 
-    
     private function fetchInstagramReachSummary($accountId, $token, $startDate, $endDate)
     {
         $result = [
@@ -375,7 +399,7 @@ class InstagramController extends Controller
             // ==========================================================
             return response()->json([
                 'status' => 'success',
-                'message' => $warning ? $warning: 'Reach data fetched successfully.',
+                'message' => $warning ? $warning : 'Reach data fetched successfully.',
                 'reach' => [
                     'current_month' => [
                         'total' => $result['reach']['current'],
@@ -396,7 +420,6 @@ class InstagramController extends Controller
                     'percent_change' => $result['reach']['percent_change'],
                 ]
             ], 200);
-
         } catch (\Throwable $e) {
             Log::error('Instagram Reach Fetch Error: ' . $e->getMessage());
             return response()->json([
@@ -406,105 +429,177 @@ class InstagramController extends Controller
         }
     }
 
-
-
     private function fetchMediaInsights($accountId, $token, $startDate, $endDate)
     {
-        /* Fetch media data with date range */
-        $mediaResponse = Http::timeout(15)->get("https://graph.facebook.com/v24.0/{$accountId}/media", [
+        $start = \Carbon\Carbon::parse($startDate);
+        $end = \Carbon\Carbon::parse($endDate);
+        $prevStart = $start->copy()->subDays(30);
+        $prevEnd = $start->copy()->subDay();
+        $counts = [];
+        /* ===== Followers / Unfollowers (Current) ===== */
+        $current_month_followers = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
+            'metric' => 'follows_and_unfollows',
+            'period' => 'day',
+            'breakdown' => 'follow_type',
+            'metric_type' => 'total_value',
+            'since' => $startDate,
+            'until' => $endDate,
+            'access_token' => $token,
+        ])->json();
+
+        $followers = 0;
+        $unfollowers = 0;
+        if (isset($current_month_followers['data'][0]['total_value']['breakdowns'][0]['results'])) {
+            foreach ($current_month_followers['data'][0]['total_value']['breakdowns'][0]['results'] as $result) {
+                $type = $result['dimension_values'][0] ?? '';
+                $value = $result['value'] ?? 0;
+                if ($type === 'FOLLOWER') {
+                    $followers += $value;
+                } elseif ($type === 'NON_FOLLOWER') {
+                    $unfollowers += $value;
+                }
+            }
+        }
+
+        /* ===== Followers / Unfollowers (Previous) ===== */
+        $previous_month_followers = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
+            'metric' => 'follows_and_unfollows',
+            'period' => 'day',
+            'breakdown' => 'follow_type',
+            'metric_type' => 'total_value',
+            'since' => $prevStart->toDateString(),
+            'until' => $prevEnd->toDateString(),
+            'access_token' => $token,
+        ])->json();
+
+        $previous_followers = 0;
+        $previous_unfollowers = 0;
+        if (isset($previous_month_followers['data'][0]['total_value']['breakdowns'][0]['results'])) {
+            foreach ($previous_month_followers['data'][0]['total_value']['breakdowns'][0]['results'] as $result) {
+                $pre_type = $result['dimension_values'][0] ?? '';
+                $pre_value = $result['value'] ?? 0;
+                if ($pre_type === 'FOLLOWER') {
+                    $previous_followers += $pre_value;
+                } elseif ($pre_type === 'NON_FOLLOWER') {
+                    $previous_unfollowers += $pre_value;
+                }
+            }
+        }
+        /* ===== Current Media ===== */
+        $mediaResponseCurrent = Http::timeout(15)->get("https://graph.facebook.com/v24.0/{$accountId}/media", [
             'fields' => 'media_type,media_product_type,like_count,comments_count,timestamp',
             'since' => $startDate,
             'until' => $endDate,
             'access_token' => $token,
-            'limit' => 100
         ])->json();
-        Log ::info('Instagram Media Insights Response: ' . print_r($mediaResponse, true));
-        $counts = [
-            'posts' => ['current' => 0, 'previous' => 0],
-            'stories' => ['current' => 0, 'previous' => 0],
-            'reels' => ['current' => 0, 'previous' => 0],
-            'unfollows' => ['current' => 0, 'previous' => 0],
-            'followers' => ['current' => 0, 'previous' => 0],
-            'content_interaction' => ['current' => 0, 'previous' => 0]
-        ];
-
-        $posts = 0;
-        $stories = 0;
-        $reels = 0;
-        $totalInteractions = 0;
-
-        if (isset($mediaResponse['data'])) {
-            foreach ($mediaResponse['data'] as $media) {
+        $posts = $stories = $reels = $totalInteractions = 0;
+        if (isset($mediaResponseCurrent['data'])) {
+            foreach ($mediaResponseCurrent['data'] as $media) {
                 $mediaType = $media['media_type'] ?? '';
                 $productType = $media['media_product_type'] ?? '';
 
-                if ($productType === 'STORIES') {
-                    $stories++;
-                } elseif ($productType === 'REELS') {
-                    $reels++;
-                } elseif ($mediaType === 'CAROUSEL_ALBUM' || $mediaType === 'IMAGE') {
-                    $posts++;
-                }
+                if ($productType === 'STORIES') $stories++;
+                elseif ($productType === 'REELS') $reels++;
+                elseif ($mediaType === 'CAROUSEL_ALBUM' || $mediaType === 'IMAGE') $posts++;
+
                 $totalInteractions += ($media['like_count'] ?? 0) + ($media['comments_count'] ?? 0);
             }
         }
-        $counts['posts'] = ['current' => $posts, 'previous' => max(1, $posts - rand(1, 3))];
-        $counts['stories'] = ['current' => $stories, 'previous' => max(1, $stories - rand(1, 3))];
-        $counts['reels'] = ['current' => $reels, 'previous' => max(1, $reels - rand(0, 2))];
-        $counts['unfollows'] = ['current' => rand(15, 25), 'previous' => rand(10, 20)];
-        $counts['followers'] = ['current' => rand(150, 200), 'previous' => rand(300, 400)];
-        $counts['content_interaction'] = ['current' => $totalInteractions, 'previous' => max(1, $totalInteractions - rand(200, 500))];
 
-        return $counts;
-    }
+        /* ===== Previous Media ===== */
+        $mediaResponsePrevious = Http::timeout(15)->get("https://graph.facebook.com/v24.0/{$accountId}/media", [
+            'fields' => 'media_type,media_product_type,like_count,comments_count,timestamp',
+            'since' => $prevStart->toDateString(),
+            'until' => $prevEnd->toDateString(),
+            'access_token' => $token,
+        ])->json();
 
-    private function calculateMetrics($data)
-    {
-        $metrics = ['reach', 'profile_visits', 'reach_gained', 'reach_lost', 'posts', 'stories', 'reels', 'unfollows', 'followers', 'content_interaction'];
+        $pre_posts = $pre_stories = $pre_reels = $pre_totalInteractions = 0;
 
-        foreach ($metrics as $metric) {
-            if (isset($data[$metric]['current']) && isset($data[$metric]['previous'])) {
-                $current = $data[$metric]['current'];
-                $previous = $data[$metric]['previous'];
+        if (isset($mediaResponsePrevious['data'])) {
+            foreach ($mediaResponsePrevious['data'] as $mediaPrev) {
+                $preMediaType = $mediaPrev['media_type'] ?? '';
+                $preProductType = $mediaPrev['media_product_type'] ?? '';
 
-                if ($previous > 0) {
-                    $percentage = (($current - $previous) / $previous) * 100;
-                } else {
-                    $percentage = $current > 0 ? 100 : 0;
-                }
+                if ($preProductType === 'STORIES') $pre_stories++;
+                elseif ($preProductType === 'REELS') $pre_reels++;
+                elseif ($preMediaType === 'CAROUSEL_ALBUM' || $preMediaType === 'IMAGE') $pre_posts++;
 
-                $data[$metric]['percentage'] = round($percentage, 2);
-                $data[$metric]['trend'] = $percentage >= 0 ? 'green' : 'red';
-                $data[$metric]['formatted_current'] = $this->formatNumber($current);
-                $data[$metric]['formatted_previous'] = $this->formatNumber($previous);
+                $pre_totalInteractions += ($mediaPrev['like_count'] ?? 0) + ($mediaPrev['comments_count'] ?? 0);
             }
         }
+        $data = [
+            'followers' => ['previous' => $previous_followers, 'current' => $followers],
+            'unfollowers' => ['previous' => $previous_unfollowers, 'current' => $unfollowers],
+            'posts' => ['previous' => $pre_posts, 'current' => $posts],
+            'stories' => ['previous' => $pre_stories, 'current' => $stories],
+            'reels' => ['previous' => $pre_reels, 'current' => $reels],
+            'content_interaction' => ['previous' => $pre_totalInteractions, 'current' => $totalInteractions],
+        ];
 
-        // Format numbers
-        $data['overview']['formatted_views'] = $this->formatNumber($data['overview']['views']);
-        $data['overview']['formatted_reach'] = $this->formatNumber($data['overview']['reach']);
-        $data['overview']['formatted_link_clicks'] = $this->formatNumber($data['overview']['link_clicks']);
-        $data['formatted_paid_reach'] = $this->formatNumber($data['paid_reach']);
-        $data['formatted_organic_reach'] = $this->formatNumber($data['organic_reach']);
-        $data['formatted_followers_reach'] = $this->formatNumber($data['followers_reach']);
-        $data['formatted_non_followers_reach'] = $this->formatNumber($data['non_followers_reach']);
+        /* ===== Percent & Status (↑↓) Calculation ===== */
+        $final = [];
+        foreach ($data as $key => $value) {
+            $prev = $value['previous'] ?? 0;
+            $cur = $value['current'] ?? 0;
 
-        return $data;
-    }
+            if ($prev == 0) {
+                $percent = $cur > 0 ? 100 : 0;
+            } else {
+                $percent = round((($cur - $prev) / $prev) * 100, 2);
+            }
 
-    private function formatNumber($number)
-    {
-        if ($number >= 1000000) {
-            return number_format($number / 1000000, 1) . 'M';
-        } elseif ($number >= 1000) {
-            return number_format($number / 1000, 1) . 'K';
+            $status = $percent > 0 ? '↑' : ($percent < 0 ? '↓' : '-');
+
+            $final[$key] = [
+                'previous' => $prev,
+                'current' => $cur,
+                'percent' => $percent,
+                'status' => $status,
+            ];
         }
-        return number_format($number);
+
+        return $final;
     }
 
     private function renderDashboardHtml($media = [], $paging = [], $instagramId, $performanceData)
     {
+        // Log::info('Rendering Dashboard HTML with Performance Data: ' . print_r($performanceData, true));
         $dateRange = $performanceData['date_range']['display'];
+        $instagramReach = $performanceData['instagramReach'] ?? null;
+        $paidReach = $instagramReach ? ($instagramReach->reach->current_month->paid ?? 0) : 0;
+        $organicReach = $instagramReach ? ($instagramReach->reach->current_month->organic ?? 0) : 0;
+        $followersReach = $instagramReach ? ($instagramReach->reach->current_month->followers ?? 0) : 0;
+        $nonFollowersReach = $instagramReach ? ($instagramReach->reach->current_month->non_followers ?? 0) : 0;
+
+        $formattedPaidReach = $this->formatNumber($paidReach);
+        $formattedOrganicReach = $this->formatNumber($organicReach);
+        $formattedFollowersReach = $this->formatNumber($followersReach);
+        $formattedNonFollowersReach = $this->formatNumber($nonFollowersReach);
+
+
+        $currentReach = $instagramReach ? ($instagramReach->reach->current_month->total ?? 0) : 0;
+        $previousReach = $instagramReach ? ($instagramReach->reach->previous_month->total ?? 0) : 0;
+        $reachPercentage = $instagramReach ? ($instagramReach->reach->percent_change ?? 0) : 0;
+        $reachTrend = $reachPercentage >= 0 ? 'positive' : 'negative';
+
+
+        $currentProfile = $performanceData['profile_visits']['current_profile'] ?? 0;
+        $previousProfile = $performanceData['profile_visits']['previous_profile'] ?? 0;
+        $profilePercentage = $performanceData['profile_visits']['percent_change'] ?? 0;
+        $profileTrend = $profilePercentage >= 0 ? 'positive' : 'negative';
+
+
+        $accountsEngaged = $performanceData['engagement']['accounts_engaged'] ?? 0;
+        $totalInteractions = $performanceData['engagement']['total_interactions'] ?? 0;
+        $profileLinkCurrent = $performanceData['profile_link']['current'] ?? 0;
+        $profileLinkPre = $performanceData['profile_link']['previous'] ?? 0;
+        $profileLinkPercent = $performanceData['profile_link']['percent_change'] ?? 0;
+
+        $postsCurrent = $performanceData['posts']['current'] ?? 0;
+        $storiesCurrent = $performanceData['stories']['current'] ?? 0;
+        $reelsCurrent = $performanceData['reels']['current'] ?? 0;
+        $contentInteractionCurrent = $performanceData['content_interaction']['current'] ?? 0;
 
         $mediaTableHtml = view('backend.pages.instagram.partials.instagram-media-table', [
             'media' => $media,
@@ -527,50 +622,49 @@ class InstagramController extends Controller
                         <div class="metric-card">
                             <div class="metric-header">Reach</div>
                             <div class="metric-body">
-                                <h3>' . $performanceData['reach']['formatted_previous'] . ' → ' . $performanceData['reach']['formatted_current'] . '</h3>
-                                <div class="label-row">
-                                    <span>Previous Period</span>
-                                    <span>Current Period</span>
-                                </div>
-                                <div class="percent ' . $performanceData['reach']['trend'] . '">' . ($performanceData['reach']['percentage'] >= 0 ? '+' : '') . $performanceData['reach']['percentage'] . '%</div>
-                                <div class="stats-row">
-                                    <div><strong>' . $performanceData['formatted_paid_reach'] . '</strong><br><small>Paid Reach</small></div>
-                                    <div><strong>' . $performanceData['formatted_organic_reach'] . '</strong><br><small>Organic Reach</small></div>
-                                </div>
-                                <div class="stats-row">
-                                    <div><strong>' . $performanceData['formatted_followers_reach'] . '</strong><br><small>Followers</small></div>
-                                    <div><strong>' . $performanceData['formatted_non_followers_reach'] . '</strong><br><small>Non-Followers</small></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-3 col-sm-6">
-                        <div class="metric-card">
-                            <div class="metric-header">Reach Gained</div>
-                            <div class="metric-subheader">Gained</div>
-                            <div class="metric-body">
-                                <h3>' . $performanceData['reach_gained']['formatted_previous'] . ' → ' . $performanceData['reach_gained']['formatted_current'] . '</h3>
-                                <div class="label-row">
-                                    <span>Previous Period</span>
-                                    <span>Current Period</span>
-                                </div>
-                                <div class="percent ' . $performanceData['reach_gained']['trend'] . '">' . ($performanceData['reach_gained']['percentage'] >= 0 ? '+' : '') . $performanceData['reach_gained']['percentage'] . '%</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-3 col-sm-6">
-                        <div class="metric-card">
-                            <div class="metric-header">Reach Lost</div>
-                            <div class="metric-subheader">Lost</div>
-                            <div class="metric-body">
-                                <h3>' . $performanceData['reach_lost']['formatted_previous'] . ' → ' . $performanceData['reach_lost']['formatted_current'] . '</h3>
-                                <div class="label-row">
-                                    <span>Previous Period</span>
-                                    <span>Current Period</span>
-                                </div>
-                                <div class="percent ' . $performanceData['reach_lost']['trend'] . '">' . ($performanceData['reach_lost']['percentage'] >= 0 ? '+' : '') . $performanceData['reach_lost']['percentage'] . '%</div>
+                                <table class="table table-sm mb-2 align-middle text-center">
+                                    <tr>
+                                        <th>
+                                            <h3 class="mb-0">' . $this->formatNumber($previousReach) . '</h3>
+                                        </th>
+                                        <th>
+                                            <h3 class="mb-0">' . $this->formatNumber($currentReach) . '</h3>
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: center;" class="bg-black text-light">Previous Month</td>
+                                        <td style="text-align: center;" class="bg-black text-light">Current Month</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" class="">
+                                           <h4 class="mb-0"> ' . ($reachPercentage >= 0 ? '+' : '') . $reachPercentage . '%</h4>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: center;" class="bg-black text-light">Paid Reach</td>
+                                        <td style="text-align: center;" class="bg-black text-light">Organic Reach</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <h4 class="mb-0">' . $formattedPaidReach . '</h4>
+                                        </td>
+                                        <td>
+                                            <h4 class="mb-0">' . $formattedOrganicReach . '</h4>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: center;" class="bg-black text-light">Followers</td>
+                                        <td style="text-align: center;" class="bg-black text-light">Non-Followers</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <h4 class="mb-0">' . $formattedFollowersReach . '</h4>
+                                        </td>
+                                        <td>
+                                            <h4 class="mb-0">' . $formattedNonFollowersReach . '</h4>
+                                        </td>
+                                    </tr>
+                                </table> 
                             </div>
                         </div>
                     </div>
@@ -578,14 +672,83 @@ class InstagramController extends Controller
                     <div class="col-md-3 col-sm-6">
                         <div class="metric-card">
                             <div class="metric-header">Profile Visits</div>
-                            <div class="metric-subheader">Gained</div>
+                            <div class="metric-body"> 
+                                <table class="table table-sm mb-2 align-middle text-center">
+                                    <tr>
+                                        <th>
+                                            <h3 class="mb-0">' . $this->formatNumber($previousProfile) . '</h3>
+                                        </th>
+                                        <th>
+                                            <h3 class="mb-0">' . $this->formatNumber($currentProfile) . '</h3>
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: center;" class="bg-black text-light">Previous Month</td>
+                                        <td style="text-align: center;" class="bg-black text-light">Current Month</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" class="">
+                                            <h4 class="mb-0">
+                                            ' . ($profilePercentage >= 0 ? '+' : '') . $profilePercentage . '%
+                                            </h4>
+                                        </td>
+                                    </tr>                                    
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="metric-card">
+                            <div class="metric-header">Profile Links Clicks</div>
                             <div class="metric-body">
-                                <h3>' . $performanceData['profile_visits']['formatted_previous'] . ' → ' . $performanceData['profile_visits']['formatted_current'] . '</h3>
-                                <div class="label-row">
-                                    <span>Previous Period</span>
-                                    <span>Current Period</span>
+                                <table class="table table-sm mb-2 align-middle text-center">
+                                    ' . (isset($performanceData['profile_link']['message']) && !empty($performanceData['profile_link']['message'])
+            ? '<tr>
+                                        <td colspan="2" class="text-info small text-start">
+                                            <i class="fas fa-info-circle"></i> ' . e($performanceData['profile_link']['message']) . '
+                                        </td>
+                                    </tr>'
+            : '') . '
+                                    <tr>
+                                        <th>
+                                            <h3 class="mb-0">' . $this->formatNumber($profileLinkPre) . '</h3>
+                                        </th>
+                                        <th>
+                                            <h3 class="mb-0">' . $this->formatNumber($profileLinkCurrent) . '</h3>
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <td style="text-align: center;" class="bg-black text-light">Previous Month</td>
+                                        <td style="text-align: center;" class="bg-black text-light">Current Month</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" class="">
+                                            <h4 class="mb-0">
+                                            ' . ($profileLinkPercent >= 0 ? '+' : '') . $profileLinkPercent . '%
+                                            </h4>
+                                        </td>
+                                    </tr>                                    
+                                </table>                                
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 col-sm-6">
+                        <div class="metric-card">
+                            <div class="metric-header">Engagement</div>
+                            <div class="metric-body">                                
+                                <div class="stats-row">
+                                    <div class="account-enga">
+                                        <h4>' . $this->formatNumber($accountsEngaged) . '</h4>
+                                        <p class="mb-0">Accounts Engaged</p>
+                                    </div>
+                                    <div class="account-enga">
+                                        <h4>' . $this->formatNumber($totalInteractions) . '</h4>
+                                        <p class="mb-0">Total Interactions</p>
+                                    </div>
                                 </div>
-                                <div class="percent ' . $performanceData['profile_visits']['trend'] . '">' . ($performanceData['profile_visits']['percentage'] >= 0 ? '+' : '') . $performanceData['profile_visits']['percentage'] . '%</div>
+                                ' . (isset($performanceData['engagement']['message']) ?
+            '<div class="small text-info mt-2"><i class="fas fa-info-circle"></i> ' . $performanceData['profile_link']['message'] . '</div>' : '') . '
                             </div>
                         </div>
                     </div>
@@ -594,8 +757,7 @@ class InstagramController extends Controller
                     <div class="col-md-2 col-sm-4">
                         <div class="metric-card py-3">
                             <div class="icon-metric mb-1">➕</div>
-                            <div class="fw-bold fs-5">' . $performanceData['posts']['current'] . '</div>
-                            <div class="percent ' . $performanceData['posts']['trend'] . '">' . ($performanceData['posts']['percentage'] >= 0 ? '+' : '') . $performanceData['posts']['percentage'] . '%</div>
+                            <div class="fw-bold fs-5">' . $postsCurrent . '</div>
                             <div class="small">Number of Posts</div>
                         </div>
                     </div>
@@ -603,8 +765,7 @@ class InstagramController extends Controller
                     <div class="col-md-2 col-sm-4">
                         <div class="metric-card py-3">
                             <div class="icon-metric mb-1">🎥</div>
-                            <div class="fw-bold fs-5">' . $performanceData['stories']['current'] . '</div>
-                            <div class="percent ' . $performanceData['stories']['trend'] . '">' . ($performanceData['stories']['percentage'] >= 0 ? '+' : '') . $performanceData['stories']['percentage'] . '%</div>
+                            <div class="fw-bold fs-5">' . $storiesCurrent . '</div>
                             <div class="small">Number of Stories</div>
                         </div>
                     </div>
@@ -612,35 +773,14 @@ class InstagramController extends Controller
                     <div class="col-md-2 col-sm-4">
                         <div class="metric-card py-3">
                             <div class="icon-metric mb-1">📹</div>
-                            <div class="fw-bold fs-5">' . $performanceData['reels']['current'] . '</div>
-                            <div class="percent ' . $performanceData['reels']['trend'] . '">' . ($performanceData['reels']['percentage'] >= 0 ? '+' : '') . $performanceData['reels']['percentage'] . '%</div>
+                            <div class="fw-bold fs-5">' . $reelsCurrent . '</div>
                             <div class="small">Number of Reels</div>
                         </div>
-                    </div>
-
-                    <div class="col-md-2 col-sm-4">
-                        <div class="metric-card py-3">
-                            <div class="icon-metric mb-1">📉</div>
-                            <div class="fw-bold fs-5">' . $performanceData['unfollows']['current'] . '</div>
-                            <div class="percent ' . $performanceData['unfollows']['trend'] . '">' . ($performanceData['unfollows']['percentage'] >= 0 ? '+' : '') . $performanceData['unfollows']['percentage'] . '%</div>
-                            <div class="small">Number of Unfollows</div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-2 col-sm-4">
-                        <div class="metric-card py-3">
-                            <div class="icon-metric mb-1">👥</div>
-                            <div class="fw-bold fs-5">' . $performanceData['followers']['current'] . '</div>
-                            <div class="percent ' . $performanceData['followers']['trend'] . '">' . ($performanceData['followers']['percentage'] >= 0 ? '+' : '') . $performanceData['followers']['percentage'] . '%</div>
-                            <div class="small">Number of Followers</div>
-                        </div>
-                    </div>
-
+                    </div>  
                     <div class="col-md-2 col-sm-4">
                         <div class="metric-card py-3">
                             <div class="icon-metric mb-1">💬</div>
-                            <div class="fw-bold fs-5">' . $performanceData['content_interaction']['formatted_current'] . '</div>
-                            <div class="percent ' . $performanceData['content_interaction']['trend'] . '">' . ($performanceData['content_interaction']['percentage'] >= 0 ? '+' : '') . $performanceData['content_interaction']['percentage'] . '%</div>
+                            <div class="fw-bold fs-5">' . $this->formatNumber($contentInteractionCurrent) . '</div>
                             <div class="small">Content Interaction</div>
                         </div>
                     </div>
@@ -656,6 +796,24 @@ class InstagramController extends Controller
     </div>';
 
         return $html;
+    }
+
+    private function formatNumber($number)
+    {
+        if ($number >= 1000000) {
+            return round($number / 1000000, 1) . 'M';
+        } elseif ($number >= 1000) {
+            return round($number / 1000, 1) . 'K';
+        }
+        return $number;
+    }
+
+    private function calculatePercentage($current, $previous)
+    {
+        if ($previous == 0) {
+            return $current > 0 ? 100 : 0;
+        }
+        return round((($current - $previous) / $previous) * 100, 2);
     }
 
 

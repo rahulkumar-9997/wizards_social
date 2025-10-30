@@ -45,7 +45,7 @@
 
     .percent {
         font-weight: bold;
-        color: #fff;
+        color: #000000;
         padding: 6px;
         margin-top: 4px;
         font-size: 1rem;
@@ -63,9 +63,15 @@
         display: flex;
         justify-content: space-between;
         font-size: 0.85rem;
-        background: #f8f9fa;
         margin-top: 5px;
         padding: 6px;
+        gap: 5px;
+    }
+
+    .stats-row .account-enga {
+        background: #dde4eba4;
+        padding: 5px;
+        border-radius: 5px;
     }
 
     .stats-row div {
@@ -73,7 +79,7 @@
     }
 
     .icon-metric {
-        font-size: 2rem;
+        font-size: 22px;
         color: #c2185b;
     }
 </style>
@@ -125,16 +131,15 @@
                 opens: 'right',
                 startDate: moment().subtract(28, 'days'),
                 endDate: moment(),
+                maxDate: moment(), // 🚫 Prevent future dates
+                dateLimit: {
+                    days: 30
+                }, // ✅ Limit to 30 days max
                 ranges: {
                     'Today': [moment(), moment()],
-                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-                    'Last 7 Days': [moment().subtract(7, 'days'), moment()],
-                    'Last 15 Days': [moment().subtract(15, 'days'), moment()],
-                    'Last 28 Days': [moment().subtract(28, 'days'), moment()],
-                    'Last 60 Days': [moment().subtract(59, 'days'), moment()],
-                    'Last 90 Days': [moment().subtract(89, 'days'), moment()],
-                    'This Month': [moment().startOf('month'), moment().endOf('month')],
-                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 15 Days': [moment().subtract(14, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29, 'days'), moment()]
                 },
                 autoUpdateInput: false,
                 locale: {
@@ -143,28 +148,35 @@
                 }
             });
 
-            // Load initial data with default date range (last 28 days)
-            loadInstagramData(id, moment().subtract(28, 'days').format('YYYY-MM-DD'), moment().format('YYYY-MM-DD'));
+            // 🔹 Load initial data (default: last 30 days)
+            loadInstagramData(
+                id,
+                moment().subtract(30, 'days').format('YYYY-MM-DD'),
+                moment().format('YYYY-MM-DD')
+            );
 
-            // Date range change event
+            // 🔹 On apply (user selects new date range)
             $('.daterange').on('apply.daterangepicker', function(ev, picker) {
                 const startDate = picker.startDate.format('YYYY-MM-DD');
                 const endDate = picker.endDate.format('YYYY-MM-DD');
 
-                // Update input field
-                $(this).val(picker.startDate.format('YYYY-MM-DD') + ' - ' + picker.endDate.format('YYYY-MM-DD'));
+                $(this).val(`${startDate} - ${endDate}`);
 
-                // Load data with selected date range
+                // Load Instagram data for the selected range
                 loadInstagramData(id, startDate, endDate);
             });
 
-            // Clear date range
+            // 🔹 On cancel (reset to last 30 days)
             $('.daterange').on('cancel.daterangepicker', function(ev, picker) {
                 $(this).val('');
-                // Reset to default date range
-                loadInstagramData(id, moment().subtract(28, 'days').format('YYYY-MM-DD'), moment().format('YYYY-MM-DD'));
+                loadInstagramData(
+                    id,
+                    moment().subtract(30, 'days').format('YYYY-MM-DD'),
+                    moment().format('YYYY-MM-DD')
+                );
             });
         });
+
 
         function loadInstagramData(accountId, startDate, endDate) {
             const loadingHtml = `
