@@ -57,6 +57,7 @@ class FacebookController extends Controller
                 ])->with('error', 'Facebook connection expired. Please reconnect your account.');
             }
             $dashboardData = $this->getDashboardData($mainAccount);
+            //dd($dashboardData);
             return view('backend.pages.facebook.index', [
                 'mainAccount' => $mainAccount,
                 'dashboardData' => $dashboardData,
@@ -173,6 +174,7 @@ class FacebookController extends Controller
             
             /* Get analytics data*/
             $analytics = $this->getQuickAnalytics($token);
+            //dd($analytics);
             return [
                 'profile' => $profile,
                 'pages' => $pagesData['pages'],
@@ -292,10 +294,10 @@ class FacebookController extends Controller
             $response = Http::timeout(8)
                 ->get($this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/me/adaccounts', [
                     'fields' => 'id,name,account_status,amount_spent,currency',
-                    'limit' => 5,
+                    'limit' => 20,
                     'access_token' => $token,
                 ]);
-
+             Log::info('Get adds account details: ' . print_r($response, true));           
             if ($response->successful()) {
                 $analytics['ad_accounts'] = $response->json()['data'] ?? [];
             } else {

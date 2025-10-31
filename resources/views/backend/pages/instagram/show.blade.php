@@ -3,84 +3,129 @@
 @push('styles')
 <style>
     .metric-card {
-        border-radius: 10px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
         background: #fff;
-        text-align: center;
+        border-radius: 16px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        padding: 10px;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
     }
 
     .metric-header {
-        background-color: #c2185b;
-        color: #fff;
-        padding: 6px;
+        font-size: 22px;
         font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .metric-subheader {
-        background-color: #7b1fa2;
-        color: #fff;
-        font-weight: 500;
-        padding: 4px;
-    }
-
-    .metric-body {
-        padding: 10px;
+        color: #313b5e;
+        border-bottom: 2px solid #f1f1f1;
     }
 
     .metric-body h3 {
         font-weight: 700;
-        font-size: 1.6rem;
+        font-size: 1.5rem;
     }
 
-    .label-row {
-        display: flex;
-        justify-content: space-between;
-        background: #000;
-        color: #fff;
-        font-size: 0.85rem;
-        padding: 3px 8px;
+    .metric-body h4 {
+        font-weight: 600;
+        font-size: 1.2rem;
     }
 
-    .percent {
-        font-weight: bold;
-        color: #000000;
-        padding: 6px;
-        margin-top: 4px;
-        font-size: 1rem;
+    .metric-body table {
+        width: 100%;
+        border-collapse: collapse;
     }
 
-    .percent.red {
-        background-color: #dc3545;
+    .metric-body table td,
+    .metric-body table th {
+        padding: 8px;
     }
 
-    .percent.green {
-        background-color: #28a745;
-    }
+
 
     .stats-row {
         display: flex;
         justify-content: space-between;
-        font-size: 0.85rem;
-        margin-top: 5px;
-        padding: 6px;
-        gap: 5px;
+        align-items: center;
+        text-align: center;
     }
 
-    .stats-row .account-enga {
-        background: #dde4eba4;
-        padding: 5px;
-        border-radius: 5px;
-    }
-
-    .stats-row div {
+    .account-enga {
         flex: 1;
+        padding: 8px;
     }
 
-    .icon-metric {
-        font-size: 22px;
-        color: #c2185b;
+    .account-enga h4 {
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    .account-enga p {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .positive {
+        background-color: #28a745 !important;
+        color: #fff !important;
+    }
+
+    .positive h4,
+    .negative h4 {
+        color: #fff;
+    }
+
+    .negative {
+        background-color: #dc3545 !important;
+        color: #fff !important;
+    }
+
+    .neutral {
+        background-color: #f1f3f5 !important;
+        color: #333 !important;
+        border-radius: 8px;
+    }
+
+    .metrics-table {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        background: #fff;
+    }
+
+    .metrics-table th {
+        background: linear-gradient(135deg, #111, #333);
+        color: #fff;
+        font-weight: 600;
+        /* text-transform: uppercase; */
+        /* font-size: 13px; */
+        padding: 5px;
+    }
+
+    .metrics-table td {
+        vertical-align: middle;
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    .metrics-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .metric-section-header {
+        background: #222;
+        color: #fff;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 500;
+        letter-spacing: .5px;
+    }
+
+    .highlight {
+        font-weight: 600;
+        color: #007bff;
     }
 </style>
 @endpush
@@ -114,59 +159,110 @@
         </div>
     </div>
 
-    <div class="row mb-4">
+    <div class="row mb-2">
         <div class="col-xxl-12">
             <div id="insta_face_dashboard">
 
             </div>
-        </div>
+        </div>        
+    </div>
+    <div class="row mb-2">
+        <div class="col-xxl-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center gap-1">
+                    <h4 class="card-title mb-0">Top 10 Cities Audience</h4>
+                    <select id="timeframe" class="form-select form-select-sm w-auto">
+                        <option value="this_month" selected>This Month</option>
+                        <option value="this_week">This Week</option>
+                    </select>
+                </div>
+                <div class="card-body">
+                    <div id="topLocationsContainer">
+                        <canvas id="topLocationsChart" height="450"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div> 
+        <div class="col-xxl-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center gap-1">
+                    <h4 class="card-title mb-0">Audience By Age Group</h4>
+                    <select id="ageTimeframe" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="this_week">This Week</option>
+                        <option value="this_month" selected>This Month</option>
+                    </select>                   
+                </div>
+                <div class="card-body">
+                    <div id="audienceAgeGroupContainer">
+                        <canvas id="audienceAgeGroupChart" height="450"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>        
+    </div>
+    <div class="row mb-2">
+        <div class="col-xxl-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center gap-1">
+                    <h4 class="card-title mb-0">Instagram Ads</h4>                    
+                </div>
+                <div class="card-body">
+                    <div class="instagram_ads">
+
+                    </div>
+                </div>
+            </div>
+        </div>              
     </div>
     @endsection
 
     @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script>
+        window.instagramTopLocationUrl = "{{ url('/instagram/top-locations/' . $instagram['id']) }}";
+    </script>
+    <script>
+        window.instagramAudienceAgeUrl = "{{ route('instagram.audienceAgeGender', $instagram['id']) }}";
+    </script>
+    <script src="{{ asset('backend/assets/js/pages/instagram-top-location.js') }}"></script>
+    <script src="{{ asset('backend/assets/js/pages/instagram-audience-age.js') }}"></script>
     <script>
         $(document).ready(function() {
             const id = "{{ $instagram['id'] }}";
+            const defaultStart = moment().subtract(30, 'days');
+            const defaultEnd = moment();
             $('.daterange').daterangepicker({
                 opens: 'right',
-                startDate: moment().subtract(28, 'days'),
-                endDate: moment(),
-                maxDate: moment(), // 🚫 Prevent future dates
+                startDate: defaultStart,
+                endDate: defaultEnd,
+                maxDate: moment(),
                 dateLimit: {
                     days: 30
-                }, // ✅ Limit to 30 days max
+                },
                 ranges: {
                     'Today': [moment(), moment()],
                     'Last 7 Days': [moment().subtract(6, 'days'), moment()],
                     'Last 15 Days': [moment().subtract(14, 'days'), moment()],
                     'Last 30 Days': [moment().subtract(29, 'days'), moment()]
                 },
-                autoUpdateInput: false,
+                autoUpdateInput: true,
                 locale: {
                     format: 'YYYY-MM-DD',
                     cancelLabel: 'Clear',
                 }
+            }, function(start, end) {
+                $('.daterange').val(`${start.format('YYYY-MM-DD')} - ${end.format('YYYY-MM-DD')}`);
             });
+            $('.daterange').val(`${defaultStart.format('YYYY-MM-DD')} - ${defaultEnd.format('YYYY-MM-DD')}`);
 
-            // 🔹 Load initial data (default: last 30 days)
-            loadInstagramData(
-                id,
-                moment().subtract(30, 'days').format('YYYY-MM-DD'),
-                moment().format('YYYY-MM-DD')
-            );
-
-            // 🔹 On apply (user selects new date range)
+            loadInstagramData(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
             $('.daterange').on('apply.daterangepicker', function(ev, picker) {
                 const startDate = picker.startDate.format('YYYY-MM-DD');
                 const endDate = picker.endDate.format('YYYY-MM-DD');
-
                 $(this).val(`${startDate} - ${endDate}`);
-
-                // Load Instagram data for the selected range
                 loadInstagramData(id, startDate, endDate);
             });
-
-            // 🔹 On cancel (reset to last 30 days)
             $('.daterange').on('cancel.daterangepicker', function(ev, picker) {
                 $(this).val('');
                 loadInstagramData(
@@ -180,16 +276,13 @@
 
         function loadInstagramData(accountId, startDate, endDate) {
             const loadingHtml = `
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2">Loading performance data...</p>
-        </div>
-    `;
-
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading performance data...</p>
+                </div>`;
             $('#insta_face_dashboard').html(loadingHtml);
-
             $.ajax({
                 url: `/instagram/fetch/${accountId}`,
                 type: 'GET',
@@ -211,6 +304,7 @@
             });
         }
     </script>
+
     <script>
         /*Pagination */
         $(document).ready(function() {

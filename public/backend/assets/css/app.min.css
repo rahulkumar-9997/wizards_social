@@ -5683,7 +5683,7 @@ textarea.form-control-lg {
 }
 
 .card {
-  --bs-card-spacer-y: 15px;
+  --bs-card-spacer-y: 8px;
   --bs-card-spacer-x: 15px;
   --bs-card-title-spacer-y: 0.75rem;
   --bs-card-title-color: var(--bs-headings-color);
@@ -5693,7 +5693,7 @@ textarea.form-control-lg {
   --bs-card-border-radius: var(--bs-border-radius);
   --bs-card-box-shadow: var(--bs-box-shadow);
   --bs-card-inner-border-radius: calc(var(--bs-border-radius) - 0);
-  --bs-card-cap-padding-y: 15px;
+  --bs-card-cap-padding-y: 8px;
   --bs-card-cap-padding-x: 15px;
   --bs-card-cap-bg: transparent;
   --bs-card-cap-color: ;
