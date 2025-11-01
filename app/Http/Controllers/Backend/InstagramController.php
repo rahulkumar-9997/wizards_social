@@ -896,13 +896,7 @@ class InstagramController extends Controller
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-12 mb-3">
-                    <h4 class="mb-3">Latest Post</h4>
-                </div>
-                <div id="instagram-media-table">
-                    ' . $mediaTableHtml . '
-                </div>
+                </div>                
             </div>
         </div>';
         return $html;
@@ -1042,6 +1036,79 @@ class InstagramController extends Controller
             'unknown' => $unknown,
         ]);
     }
+
+    public function fetchInstagramReachDaysWise(Request $request, $instagramId){
+
+    }
+
+
+    public function fetchInstagramPost(Request $request, $instagramId)
+    {
+        try {
+            $user = Auth::user();
+            $mainAccount = SocialAccount::where('user_id', $user->id)
+                ->where('provider', 'facebook')
+                ->whereNull('parent_account_id')
+                ->first();
+
+            if (!$mainAccount) {
+                return response()->json(['success' => false, 'error' => 'Facebook account not connected']);
+            }
+
+            $token = SocialTokenHelper::getFacebookToken($mainAccount);
+            $startDate = $request->get('start_date', now()->subDays(30)->format('Y-m-d'));
+            $endDate = $request->get('end_date', now()->format('Y-m-d'));
+            $start = \Carbon\Carbon::parse($startDate);
+            $end = \Carbon\Carbon::parse($endDate);
+
+            $since = $start->timestamp;
+            $until = $end->timestamp;
+            $limit = $request->get('limit', 12);
+            $after = $request->get('after');
+            $before = $request->get('before');
+            $params = [
+                'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,media_product_type,boost_ads_list{ad_id,ad_status}',
+                'access_token' => $token,
+                'since' => $since,
+                'until' => $until,
+                'limit' => $limit,
+            ];
+
+            if ($after) $params['after'] = $after;
+            if ($before) $params['before'] = $before;
+
+            $mediaResponse = Http::timeout(10)
+                ->get("https://graph.facebook.com/v24.0/{$instagramId}/media", $params)
+                ->json();
+
+            $media = $mediaResponse['data'] ?? [];
+            $paging = $mediaResponse['paging'] ?? [];
+            $formattedStart = $start->format('d M Y');
+            $formattedEnd = $end->format('d M Y'); 
+            $mediaTableHtml = view('backend.pages.instagram.partials.instagram-media-table', [
+                'media' => $media,
+                'paging' => $paging,
+                'startDate' => $formattedStart,
+                'endDate' => $formattedEnd,
+                'instagram' => ['id' => $instagramId],
+            ])->render();
+            $html = '                
+                <div id="instagram-media-table">
+
+                    ' . $mediaTableHtml . '
+                </div>
+            ';
+            return response()->json(['success' => true, 'html' => $html]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+    
+
 
 
     public function metricsGraph($id, Request $request)

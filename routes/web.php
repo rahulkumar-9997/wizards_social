@@ -76,7 +76,11 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('instagram/{id}', [InstagramController::class, 'show'])->name('instagram.show');
     Route::get('/instagram/fetch/{id}', [InstagramController::class, 'fetchHtml'])
     ->name('instagram.fetch.html');
-    Route::get('/instagram/top-locations/{accountId}', [InstagramController::class, 'getAudienceTopLocations']);
+    Route::get('/instagram/fetchpost/{id}', [InstagramController::class, 'fetchInstagramPost'])
+    ->name('instagram.fetch.post');
+    Route::get('/instagram/reach-day-wise/{id}', [InstagramController::class, 'fetchInstagramReachDaysWise'])->name('instagram.fetch.reach-day-wise');
+    
+    Route::get('/instagram/top-locations/{accountId}', [InstagramController::class, 'getAudienceTopLocations'])->name('instagram.top.location');
     Route::get('/instagram/audience-age-gender/{instagramId}', [InstagramController::class, 'getAudienceAgeGender'])->name('instagram.audienceAgeGender');
     
 
