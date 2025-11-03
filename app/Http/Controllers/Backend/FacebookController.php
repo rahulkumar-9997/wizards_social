@@ -283,7 +283,7 @@ class FacebookController extends Controller
 
         return [];
     }
-
+    
     /**
      * Get quick analytics data
      */

@@ -1,6 +1,7 @@
 @extends('backend.pages.layouts.master')
 @section('title', 'Instagram Dashboard')
 @push('styles')
+
 <style>
     .metric-card {
         background: #fff;
@@ -205,7 +206,8 @@
         <div class="col-xxl-6">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                    <h4 class="card-title mb-0">Reach Days Wise</h4>
+                    <h4 class="card-title mb-0">Profile Reach Per Day</h4>
+                    <small id="reachDateRange" class="text-muted"></small>
                 </div>
                 <div class="card-body">
                     <div id="reachDaysContainer">
@@ -214,22 +216,21 @@
                 </div>
             </div>
         </div>
-        <!-- <div class="col-xxl-6">
+        <div class="col-xxl-6">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                    <h4 class="card-title mb-0">Audience By Age Group</h4>
-                    <select id="ageTimeframe" class="form-select form-select-sm" style="width: 150px;">
-                        <option value="this_week">This Week</option>
-                        <option value="this_month" selected>This Month</option>
-                    </select>
+                    <h5 class="card-title mb-0">
+                        Instagram Views                        
+                    </h5>
+                    <span id="viewDateRange" class="text-muted small"></span>
                 </div>
                 <div class="card-body">
-                    <div id="audienceAgeGroupContainer">
-                        <canvas id="audienceAgeGroupChart" height="450"></canvas>
+                    <div id="viewDaysContainer">
+
                     </div>
                 </div>
             </div>
-        </div> -->
+        </div>
     </div>
     <!--Instagram reach days wise -->
     <div class="row mb-2">
@@ -242,30 +243,20 @@
                     <div class="instagram_post">
                         <div class="col-lg-12">
                             <div id="post-filter" class="filter-box">
-                                <div class="d-flex flex-wrap align-items-center justify-content-between p-3 gap-3">
-                                    <div class="d-flex align-items-center flex-grow-1 flex-md-grow-0">
-                                        <select id="media-type-filter" class="form-select form-select-sm w-100">
+                                <div class="d-flex flex-wrap align-items-center bg-white p-2 gap-1">
+                                    <div class="d-flex align-items-center border-end pe-1">
+                                        <select id="media-type-filter" class="form-select form-select-md">
                                             <option value="">All Types</option>
-                                            <option value="IMAGE">Image</option>
+                                            <option value="CAROUSEL_ALBUM">Photos</option>
                                             <option value="VIDEO">Video</option>
-                                            <option value="CAROUSEL_ALBUM">Carousel</option>
                                             <option value="REELS">Reels</option>
-                                            <!-- <option value="STORY">Story</option> -->
                                         </select>
-                                    </div>
-                                    <div class="d-flex align-items-center flex-grow-1 flex-md-grow-0">
-                                        <label for="post-status" class="me-2 fw-semibold text-dark f-14 mb-0">Status:</label>
-                                        <select id="post-status" class="form-select form-select-sm w-auto">
-                                            <option value="">All Status</option>
-                                            <option value="1">Published</option>
-                                            <option value="0">Not Published</option>
-                                        </select>
-                                    </div>
-                                    <div class="d-flex align-items-center flex-grow-1 flex-md-grow-0">
-                                        <input type="search" id="post-search" class="form-control form-control-sm w-auto" placeholder="Search by ID or Caption">
+                                    </div>                                    
+                                    <div class="d-flex align-items-center">
+                                        <input type="search" id="post-search" class="form-control form-control-md" placeholder="Search by ID or Caption">
                                     </div>
                                     <div class="d-flex gap-2">                                       
-                                        <button id="reset-filters" class="btn btn-sm btn-outline-secondary">
+                                        <button id="reset-filters" class="btn btn-danger">
                                             <i class="bx bx-reset me-1"></i> Reset
                                         </button>
                                     </div>
@@ -293,58 +284,69 @@
         window.instagramAudienceAgeUrl = "{{ route('instagram.audienceAgeGender', $instagram['id']) }}";
         window.instagramFetchPostUrl = "{{ route('instagram.fetch.post', $instagram['id']) }}";
         window.instagramFetchReachDaysWise = "{{ route('instagram.fetch.reach-day-wise', $instagram['id']) }}";
+        window.instagramFetchViewDaysWise = "{{ route('instagram.fetch.view-day-wise', $instagram['id']) }}";
     </script>
 
     <script src="{{ asset('backend/assets/js/pages/instagram-top-location.js') }}"></script>
     <script src="{{ asset('backend/assets/js/pages/instagram-audience-age.js') }}"></script>
     <script src="{{ asset('backend/assets/js/pages/instagram-post.js') }}"></script>
+    <script src="{{ asset('backend/assets/js/pages/reach-days-wize-graphs.js') }}"></script>
+    <script src="{{ asset('backend/assets/js/pages/instagram-view-days-wise.js') }}"></script>
     <script>
         $(document).ready(function() {
             const id = "{{ $instagram['id'] }}";
-            const defaultStart = moment().subtract(30, 'days');
-            const defaultEnd = moment();
+            const defaultStart = moment().subtract(29, 'days');
+            const defaultEnd = moment().subtract(1, 'days');
+            
             $('.daterange').daterangepicker({
                 opens: 'right',
                 startDate: defaultStart,
                 endDate: defaultEnd,
-                maxDate: moment(),
+                maxDate: moment().subtract(1, 'days'),
                 dateLimit: {
                     days: 30
                 },
                 ranges: {
-                    'Yesterday': [moment().subtract(1, 'days'), moment()],
-                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-                    'Last 15 Days': [moment().subtract(14, 'days'), moment()],
-                    'Last 30 Days': [moment().subtract(29, 'days'), moment()]
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(7, 'days'), moment().subtract(1, 'days')],
+                    'Last 15 Days': [moment().subtract(15, 'days'), moment().subtract(1, 'days')],
+                    'Last 30 Days': [moment().subtract(30, 'days'), moment().subtract(1, 'days')]
                 },
                 autoUpdateInput: true,
                 locale: {
                     format: 'YYYY-MM-DD',
                     cancelLabel: 'Clear',
-                }
+                },
+                alwaysShowCalendars: true,
+                showDropdowns: true,
             }, function(start, end) {
                 $('.daterange').val(`${start.format('YYYY-MM-DD')} - ${end.format('YYYY-MM-DD')}`);
             });
 
             $('.daterange').val(`${defaultStart.format('YYYY-MM-DD')} - ${defaultEnd.format('YYYY-MM-DD')}`);
             loadInstagramPostData(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+            loadReachGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+            loadViewGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
             loadInstagramData(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+        
             $('.daterange').on('apply.daterangepicker', function(ev, picker) {
                 const startDate = picker.startDate.format('YYYY-MM-DD');
                 const endDate = picker.endDate.format('YYYY-MM-DD');
                 $(this).val(`${startDate} - ${endDate}`);
                 loadInstagramPostData(id, startDate, endDate);
+                loadReachGraph(id, startDate, endDate);
+                loadViewGraph(id, startDate, endDate);
                 loadInstagramData(id, startDate, endDate);
-                
             });
 
             $('.daterange').on('cancel.daterangepicker', function(ev, picker) {
                 $(this).val('');
-                const defaultStart = moment().subtract(30, 'days').format('YYYY-MM-DD');
-                const defaultEnd = moment().format('YYYY-MM-DD');
+                const defaultStart = moment().subtract(29, 'days').format('YYYY-MM-DD');
+                const defaultEnd = moment().subtract(1, 'days').format('YYYY-MM-DD');
                 loadInstagramPostData(id, defaultStart, defaultEnd);
+                loadReachGraph(id, defaultStart, defaultEnd);
+                loadViewGraph(id, defaultStart, defaultEnd);
                 loadInstagramData(id, defaultStart, defaultEnd);
-                
             });
         });
 

@@ -373,7 +373,7 @@ class InstagramController extends Controller
                 'access_token' => $token,
             ])->json();
             //Log::info("Current Month Reach Response: " . print_r($response, true));
-            Log::info("Current Month Reach log : https://graph.facebook.com/v24.0/{$accountId}/insights?metric=reach&period=day&breakdown=media_product_type,follow_type&metric_type=total_value&since={$since}&until={$until}&access_token={$token}");
+            //Log::info("Current Month Reach log : https://graph.facebook.com/v24.0/{$accountId}/insights?metric=reach&period=day&breakdown=media_product_type,follow_type&metric_type=total_value&since={$since}&until={$until}&access_token={$token}");
 
 
             if (isset($response['data'][0]['total_value']['breakdowns'][0]['results'])) {
@@ -408,7 +408,7 @@ class InstagramController extends Controller
                 'until' => $previousUntil,
                 'access_token' => $token,
             ])->json();
-            Log::info("Previous Month Reach log : https://graph.facebook.com/v24.0/{$accountId}/insights?metric=reach&period=day&breakdown=media_product_type,follow_type&metric_type=total_value&since={$previousSince}&until={$previousUntil}&access_token={$token}");
+            //Log::info("Previous Month Reach log : https://graph.facebook.com/v24.0/{$accountId}/insights?metric=reach&period=day&breakdown=media_product_type,follow_type&metric_type=total_value&since={$previousSince}&until={$previousUntil}&access_token={$token}");
             //Log::info("Previous Month Reach: ({$prevStart} - {$prevEnd})", $prevResponse);
             //Log::info("Previous Month Reach Response: " . print_r($prevResponse, true));
             if (isset($prevResponse['data'][0]['total_value']['breakdowns'][0]['results'])) {
@@ -926,7 +926,7 @@ class InstagramController extends Controller
 
     public function getAudienceTopLocations(Request $request, $instagramId)
     {
-        $timeframe = $request->get('timeframe', 'this_month');
+        $timeframe = $request->get('timeframe', 'this_month');       
         $user = Auth::user();
         $mainAccount = SocialAccount::where('user_id', $user->id)
             ->where('provider', 'facebook')
@@ -947,6 +947,8 @@ class InstagramController extends Controller
             'timeframe' => $timeframe,
             'access_token' => $token,
         ])->json();
+
+        //Log::info("Top Location : https://graph.facebook.com/v24.0/{$instagramId}/insights?metric=engaged_audience_demographics&period=lifetime&breakdown=city&metric_type=total_value&timeframe={$timeframe}&access_token={$token}");
         //Log::info('Instagram Top Locations API Response:', $response);
         if (isset($response['error'])) {
             return response()->json([
@@ -1037,10 +1039,164 @@ class InstagramController extends Controller
         ]);
     }
 
-    public function fetchInstagramReachDaysWise(Request $request, $instagramId){
+    public function fetchInstagramReachDaysWise(Request $request, $instagramId)
+    {
+        $user = Auth::user();
+        $mainAccount = SocialAccount::where('user_id', $user->id)
+            ->where('provider', 'facebook')
+            ->whereNull('parent_account_id')
+            ->first();
 
+        if (!$mainAccount) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Facebook account not connected',
+            ]);
+        }
+        
+        $token = SocialTokenHelper::getFacebookToken($mainAccount);
+        $startDate = $request->get('start_date', now()->subDays(30)->format('Y-m-d'));
+        $endDate = $request->get('end_date', now()->format('Y-m-d'));
+        $start = \Carbon\Carbon::parse($startDate)->startOfDay();
+        $end = \Carbon\Carbon::parse($endDate)->endOfDay();
+        $since = $start->timestamp;
+        $until = $end->timestamp;
+        $igId = $instagramId;
+        //Log::info('Profile Reach date range:', ['start' =>$startDate, 'end' => $endDate]);
+        $url = "https://graph.facebook.com/v24.0/{$igId}/insights";
+        
+        try {
+            $response = Http::timeout(15)->get($url, [
+                'metric' => 'reach',
+                'metric_type' => 'time_series',
+                'period' => 'day',
+                'since' => $since,
+                'until' => $until,
+                'access_token' => $token,
+            ]);            
+            $data = $response->json();
+            //Log::info("Reach days wise: " . print_r($data, true));
+            
+            if (!$response->successful() || empty($data['data'][0]['values'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $data['error']['message'] ?? 'Unable to fetch reach data',
+                ]);
+            }
+            
+            $chartData = collect($data['data'][0]['values'])->map(function ($item) {
+                return [
+                    'date' => date('Y-m-d', strtotime($item['end_time'])),
+                    'value' => $item['value'],
+                ];
+            })->values()->toArray();            
+            //Log::info("Reach days wise return: " . print_r($chartData, true));            
+            return response()->json($chartData);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching data: ' . $e->getMessage(),
+            ]);
+        }
     }
 
+    public function fetchInstagramViewDaysWise(Request $request, $instagramId)
+    {
+        $user = Auth::user();
+        $mainAccount = SocialAccount::where('user_id', $user->id)
+            ->where('provider', 'facebook')
+            ->whereNull('parent_account_id')
+            ->first();
+
+        if (!$mainAccount) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Facebook account not connected',
+            ]);
+        }
+        
+        $token = SocialTokenHelper::getFacebookToken($mainAccount);
+        $startDate = $request->get('start_date', now()->subDays(30)->format('Y-m-d'));
+        $endDate = $request->get('end_date', now()->format('Y-m-d'));
+        $start = \Carbon\Carbon::parse($startDate)->startOfDay();
+        $end = \Carbon\Carbon::parse($endDate)->endOfDay();
+        $since = $start->timestamp;
+        $until = $end->timestamp;
+        $igId = $instagramId;
+        $url = "https://graph.facebook.com/v24.0/{$igId}/insights";
+        
+        try {
+            $response = Http::timeout(15)->get($url, [
+                'metric' => 'views',
+                'metric_type' => 'total_value',
+                'period' => 'day',
+                'breakdown' => 'media_product_type',
+                'since' => $since,
+                'until' => $until,
+                'access_token' => $token,
+            ]);            
+            $data = $response->json();
+            
+            if (!$response->successful() || empty($data['data'][0]['total_value'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $data['error']['message'] ?? 'Unable to fetch views data',
+                ]);
+            }
+            $breakdowns = $data['data'][0]['total_value']['breakdowns'][0]['results'];
+            $categories = [];
+            $values = [];
+
+            foreach ($breakdowns as $item) {
+                $mediaType = $item['dimension_values'][0];
+                $value = $item['value'];
+                if ($value < 1) continue;
+                switch($mediaType) {
+                    case 'POST':
+                        $label = 'Posts';
+                        break;
+                    case 'STORY':
+                        $label = 'Stories';
+                        break;
+                    case 'REEL':
+                        $label = 'Reels';
+                        break;
+                    case 'AD':
+                        $label = 'Ads';
+                        break;
+                    case 'CAROUSEL_CONTAINER':
+                        $label = 'Carousels';
+                        break;
+                    case 'IGTV':
+                        $label = 'IGTV';
+                        break;
+                    case 'DEFAULT_DO_NOT_USE':
+                        $label = 'Others';
+                        break;
+                    default:
+                        $label = $mediaType;
+                }
+                
+                $categories[] = $label;
+                $values[] = $value;
+            }
+            return response()->json([
+                'success' => true,
+                'total_views' => $data['data'][0]['total_value']['value'],
+                'categories' => $categories,
+                'values' => $values,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching data: ' . $e->getMessage(),
+            ]);
+        }
+    }
 
     public function fetchInstagramPost(Request $request, $instagramId)
     {
@@ -1066,38 +1222,67 @@ class InstagramController extends Controller
             $limit = $request->get('limit', 12);
             $after = $request->get('after');
             $before = $request->get('before');
+            $sortField = $request->get('sort', 'timestamp');
+            $sortOrder = $request->get('order', 'desc');
+            $mediaTypeFilter = $request->get('media_type', '');
+            $searchFilter = $request->get('search', '');
             $params = [
                 'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,media_product_type,boost_ads_list{ad_id,ad_status}',
                 'access_token' => $token,
                 'since' => $since,
                 'until' => $until,
-                'limit' => $limit,
             ];
-
             if ($after) $params['after'] = $after;
             if ($before) $params['before'] = $before;
-
             $mediaResponse = Http::timeout(10)
                 ->get("https://graph.facebook.com/v24.0/{$instagramId}/media", $params)
                 ->json();
-
             $media = $mediaResponse['data'] ?? [];
             $paging = $mediaResponse['paging'] ?? [];
+            $filteredMedia = $this->applyFilters($media, $mediaTypeFilter, $searchFilter);
+            $sortedMedia = $this->applySorting($filteredMedia, $sortField, $sortOrder);
+            $currentPage = $request->get('page', 1);
+            $perPage = $limit;
+            $offset = ($currentPage - 1) * $perPage;
+            $paginatedMedia = array_slice($sortedMedia, $offset, $perPage);
+            $totalMedia = count($sortedMedia);
+            $totalPages = ceil($totalMedia / $perPage);
+
             $formattedStart = $start->format('d M Y');
             $formattedEnd = $end->format('d M Y'); 
+            
             $mediaTableHtml = view('backend.pages.instagram.partials.instagram-media-table', [
-                'media' => $media,
+                'media' => $paginatedMedia, 
                 'paging' => $paging,
                 'startDate' => $formattedStart,
                 'endDate' => $formattedEnd,
                 'instagram' => ['id' => $instagramId],
+                'currentSort' => [
+                    'field' => $sortField,
+                    'order' => $sortOrder
+                ],
+                'currentFilters' => [
+                    'media_type' => $mediaTypeFilter,
+                    'search' => $searchFilter
+                ],
+                'pagination' => [
+                    'current_page' => $currentPage,
+                    'per_page' => $perPage,
+                    'total' => $totalMedia,
+                    'total_pages' => $totalPages,
+                    'has_previous' => $currentPage > 1,
+                    'has_next' => $currentPage < $totalPages,
+                    'previous_page_url' => $this->buildPageUrl($request, $currentPage - 1),
+                    'next_page_url' => $this->buildPageUrl($request, $currentPage + 1),
+                ]
             ])->render();
+            
             $html = '                
                 <div id="instagram-media-table">
-
                     ' . $mediaTableHtml . '
                 </div>
             ';
+            
             return response()->json(['success' => true, 'html' => $html]);
 
         } catch (\Exception $e) {
@@ -1105,6 +1290,77 @@ class InstagramController extends Controller
                 'success' => false,
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    private function applyFilters($media, $mediaTypeFilter, $searchFilter)
+    {
+        return collect($media)->filter(function($post) use ($mediaTypeFilter, $searchFilter) {
+            $matchesMediaType = true;
+            $matchesSearch = true;
+            if (!empty($mediaTypeFilter)) {
+                $matchesMediaType = isset($post['media_type']) && 
+                                strtolower($post['media_type']) === strtolower($mediaTypeFilter);
+            }
+            if (!empty($searchFilter)) {
+                $searchTerm = strtolower($searchFilter);
+                $caption = isset($post['caption']) ? strtolower($post['caption']) : '';
+                $postId = isset($post['id']) ? strtolower($post['id']) : '';
+                
+                $matchesSearch = str_contains($caption, $searchTerm) || 
+                            str_contains($postId, $searchTerm);
+            }
+
+            return $matchesMediaType && $matchesSearch;
+        })->values()->toArray();
+    }
+
+    private function applySorting($media, $sortField, $sortOrder)
+    {
+        usort($media, function($a, $b) use ($sortField, $sortOrder) {
+            $aValue = $a[$sortField] ?? '';
+            $bValue = $b[$sortField] ?? '';
+            switch ($sortField) {
+                case 'timestamp':
+                    $aValue = strtotime($aValue);
+                    $bValue = strtotime($bValue);
+                    $result = $aValue - $bValue;
+                    break;
+                    
+                case 'like_count':
+                case 'comments_count':
+                    $aValue = intval($aValue);
+                    $bValue = intval($bValue);
+                    $result = $aValue - $bValue;
+                    break;
+                    
+                case 'media_type':
+                    $aValue = strtolower($aValue);
+                    $bValue = strtolower($bValue);
+                    $result = strcmp($aValue, $bValue);
+                    break;
+                    
+                default:
+                    $result = strcmp($aValue, $bValue);
+            }
+
+            return $sortOrder === 'asc' ? $result : -$result;
+        });
+
+        return $media;
+    }
+
+    private function buildPageUrl($request, $page)
+    {
+        if ($page < 1) return null;
+        
+        $currentUrl = $request->fullUrl();
+        $url = preg_replace('/[?&]page=\d+/', '', $currentUrl);
+        
+        if (str_contains($url, '?')) {
+            return $url . '&page=' . $page;
+        } else {
+            return $url . '?page=' . $page;
         }
     }
     

@@ -10,8 +10,9 @@
       <img src="{{asset('backend/assets/logo.png')}}" style="width: 177px; height: 45px;" class="logo-lg" alt="logo light">
       </a>
    </div>
+   
    <button type="button" class="button-sm-hover" aria-label="Show Full Sidebar">
-      <iconify-icon icon="solar:double-alt-arrow-right-bold-duotone" class="button-sm-hover-icon"></iconify-icon>
+         <iconify-icon icon="solar:double-alt-arrow-right-bold-duotone" class="button-sm-hover-icon"></iconify-icon>
    </button>
    <div class="scrollbar" data-simplebar>
       <ul class="navbar-nav" id="navbar-nav">

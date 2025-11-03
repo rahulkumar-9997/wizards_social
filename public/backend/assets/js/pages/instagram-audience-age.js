@@ -95,11 +95,7 @@ $(document).ready(function () {
             },
         });
     }
-
-    // Load default (this month)
     loadAudienceAgeGroup();
-
-    // Reload when timeframe changes
     $('#ageTimeframe').on('change', function () {
         loadAudienceAgeGroup($(this).val());
     });

@@ -894,12 +894,14 @@ class ThemeLayout {
                });
           }
 
-          var hoverBtn = document.querySelectorAll('.button-sm-hover');
-          hoverBtn.forEach(function (element) {
+          var hoverBtn = document.querySelectorAll('.button-sm-hover'); 
+           alert(JSON.stringify(hoverBtn));        
+          hoverBtn.forEach(function (element) {            
                element.addEventListener('click', function () {
+                   
                     var configSize = self.config.menu.size;
                     var size = self.html.getAttribute('data-menu-size', configSize);
-
+                    //alert(configSize);
                     if (configSize === 'sm-hover-active') {
                          if (size === 'sm-hover-active') {
                               self.changeMenuSize('sm-hover', true);
@@ -918,7 +920,6 @@ class ThemeLayout {
                });
           })
      }
-
      showBackdrop() {
           const backdrop = document.createElement('div');
           backdrop.classList = 'offcanvas-backdrop fade show';

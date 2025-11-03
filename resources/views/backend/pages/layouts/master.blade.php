@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-menu-size="sm-hover">
     <head>
         @include('backend.pages.layouts.head')
         @stack('styles')
     </head>
-    <body class="theme-3">
+    <body class="">
         <div class="wrapper">
             @include('backend.pages.layouts.header')
             @include('backend.pages.layouts.sidebar')

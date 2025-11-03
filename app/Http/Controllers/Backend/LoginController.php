@@ -40,10 +40,10 @@ class LoginController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'You have successfully signed in!',
-                    'redirect' => url('dashboard')
+                    'redirect' => url('facebook')
                 ]);
             }
-            return redirect()->intended('dashboard')->withSuccess('You have successfully signed in!');
+            return redirect()->intended('facebook')->withSuccess('You have successfully signed in!');
         } else {
             if ($request->expectsJson()) {
                 return response()->json([
