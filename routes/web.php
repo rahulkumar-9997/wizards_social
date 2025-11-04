@@ -12,8 +12,7 @@ use App\Http\Controllers\Backend\PermissionsController;
 use App\Http\Controllers\Backend\DatabaseController;
 use App\Http\Controllers\Backend\CacheController;
 use App\Http\Controllers\Backend\SocialController;
-use App\Http\Controllers\Backend\DataController;
-use App\Http\Controllers\Backend\AdsController;
+use App\Http\Controllers\Backend\AdsFacebookController;
 use App\Http\Controllers\Backend\FacebookController;
 use App\Http\Controllers\Backend\InstagramController;
 use App\Http\Controllers\Backend\YoutubeController;
@@ -55,7 +54,8 @@ Route::group(['middleware' => ['auth']], function() {
     Route::resource('roles', RolesController::class);
     Route::resource('permissions', PermissionsController::class);
     
-    Route::get('/facebook', [FacebookController::class, 'index'])->name('facebook.index');    
+    Route::get('/facebook', [FacebookController::class, 'index'])->name('facebook.index');
+    Route::get('fb-user-profile', [FacebookController::class, 'fbUserProfileDataHtml'])->name('facebook.user.profile');
 
     Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube.index');
     Route::prefix('social')->name('social.')->group(function () {
@@ -82,40 +82,12 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('/instagram/view-day-wise/{id}', [InstagramController::class, 'fetchInstagramViewDaysWise'])->name('instagram.fetch.view-day-wise');
     
     Route::get('/instagram/top-locations/{accountId}', [InstagramController::class, 'getAudienceTopLocations'])->name('instagram.top.location');
-    Route::get('/instagram/audience-age-gender/{instagramId}', [InstagramController::class, 'getAudienceAgeGender'])->name('instagram.audienceAgeGender');
-    
+    Route::get('/instagram/audience-age-gender/{instagramId}', [InstagramController::class, 'getAudienceAgeGender'])->name('instagram.audienceAgeGender'); 
 
-
-    Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])->name('instagram.post.insights.page');
-
-    
+    Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])->name('instagram.post.insights.page');    
     Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');
-   
-    Route::get('/instagram/{id}/metrics-graph', [InstagramController::class, 'metricsGraph'])
-    ->name('instagram.metrics.graph');
-
-    Route::get('instagram/{id}/insights', [InstagramController::class, 'insights'])->name('instagram.insights');
-
-    // Platform Specific Data Routes
-    // Route::prefix('platform')->name('platform.')->group(function () {
-    //     Route::get('/facebook/accounts', [FacebookController::class, 'getAccounts'])->name('facebook.accounts');
-    //     Route::get('/facebook/posts', [FacebookController::class, 'getPosts'])->name('facebook.posts');
-    //     Route::get('/facebook/insights', [FacebookController::class, 'getInsights'])->name('facebook.insights');
-    //     Route::get('/instagram/accounts', [InstagramController::class, 'getAccounts'])->name('instagram.accounts');
-    //     Route::get('/instagram/posts', [InstagramController::class, 'getPosts'])->name('instagram.posts');
-    //     Route::get('/instagram/insights', [InstagramController::class, 'getInsights'])->name('instagram.insights');
-    //     Route::get('/youtube/channels', [YoutubeController::class, 'getChannels'])->name('youtube.channels');
-    //     Route::get('/youtube/videos', [YoutubeController::class, 'getVideos'])->name('youtube.videos');
-    //     Route::get('/youtube/analytics', [YoutubeController::class, 'getAnalytics'])->name('youtube.analytics');
-    // });
-
-    // Insights & Analytics Routes
-    Route::prefix('analytics')->name('analytics.')->group(function () {
-        Route::get('/ads/{adAccountId}/insights', [AdsController::class, 'insights'])->name('ads.insights');
-        Route::get('/instagram/{socialAccountId}/insights', [FacebookController::class, 'getInstagramInsights'])->name('instagram.insights');
-        Route::get('/youtube/{socialAccountId}/demographics', [YoutubeController::class, 'getDemographics'])->name('youtube.demographics');
-    });
-
+        
+    Route::get('face-ads', [AdsFacebookController::class, 'mainIndex'])->name('face.ads');
     
 
 });

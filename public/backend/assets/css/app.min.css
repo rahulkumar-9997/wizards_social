@@ -22498,4 +22498,12 @@ text-dark {
     box-shadow: none;
     height: 42px;
 }
+.sidebar-menu-second{
+    box-shadow: 0 1px 0 0 #e8eef3;
+    width: 100%;
+    top: 70px;
+    position: sticky;
+    z-index: 1;
+    background-color: white;
+}
 /*rahul css*/

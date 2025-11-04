@@ -39,34 +39,21 @@ class FacebookController extends Controller
                 ->whereNull('parent_account_id')
                 ->first();
 
-            if (!$mainAccount) {
-                return view('backend.pages.facebook.index', [
-                    'mainAccount' => null,
-                    'dashboardData' => [],
-                    'stats' => $this->getEmptyStats()
-                ]);
+            $checkRefreshToken = false;
+            $dashboardData = [];            
+            if ($mainAccount) {
+                $checkRefreshToken = $this->checkAndRefreshToken($mainAccount);
             }
 
-            /* Check and refresh token*/
-            $tokenRefreshed = $this->checkAndRefreshToken($mainAccount);
-            if ($tokenRefreshed === false) {
-                return view('backend.pages.facebook.index', [
-                    'mainAccount' => null,
-                    'dashboardData' => [],
-                    'stats' => $this->getEmptyStats()
-                ])->with('error', 'Facebook connection expired. Please reconnect your account.');
-            }
-            $dashboardData = $this->getDashboardData($mainAccount);
-            //dd($dashboardData);
             return view('backend.pages.facebook.index', [
                 'mainAccount' => $mainAccount,
                 'dashboardData' => $dashboardData,
-                'stats' => $this->calculateStats($dashboardData)
+                'stats' => $this->getEmptyStats(),
+                'checkRefreshToken' => $checkRefreshToken
             ]);
         } catch (\Exception $e) {
             Log::error('Facebook index error: ' . $e->getMessage());
-            return redirect()->route('dashboard')
-                ->with('error', 'Failed to load Facebook data: ' . $e->getMessage());
+            return redirect()->route('facebook')->with('error', 'Failed to load Facebook data: ' . $e->getMessage());
         }
     }
 
@@ -157,32 +144,29 @@ class FacebookController extends Controller
      */
     private function getDashboardData($account)
     {
-        $cacheKey = 'fb_dashboard_' . $account->id;        
-        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($account) {
-            $token = $this->decryptToken($account->access_token);            
-            if (!$this->isTokenValid($token)) {
-                throw new Exception('Facebook token is invalid or expired');
-            }
-            /* Get basic profile data */
-            $profile = $this->getBasicProfile($token);            
-            
-            /* Get pages and Instagram accounts */
-            $pagesData = $this->getPagesWithInstagram($token);            
-            
-            /* Get permissions */
-            $permissions = $this->getEssentialPermissions($token);            
-            
-            /* Get analytics data*/
-            $analytics = $this->getQuickAnalytics($token);
-            //dd($analytics);
-            return [
-                'profile' => $profile,
-                'pages' => $pagesData['pages'],
-                'instagram_accounts' => $pagesData['instagram_accounts'],
-                'permissions' => $permissions,
-                'analytics' => $analytics,
-            ];
-        });
+        $token = $this->decryptToken($account->access_token);            
+        if (!$this->isTokenValid($token)) {
+            throw new Exception('Facebook token is invalid or expired');
+        }
+        /* Get basic profile data */
+        $profile = $this->getBasicProfile($token);            
+        
+        /* Get pages and Instagram accounts */
+        $pagesData = $this->getPagesWithInstagram($token);            
+        //return response()->json($pagesData);
+        /* Get permissions */
+        $permissions = $this->getEssentialPermissions($token);            
+        
+        /* Get analytics data*/
+        $analytics = $this->getQuickAnalytics($token);
+        //dd($analytics);
+        return [
+            'profile' => $profile,
+            'pages' => $pagesData['pages'],
+            'instagram_accounts' => $pagesData['instagram_accounts'],
+            'permissions' => $permissions,
+            'analytics' => $analytics,
+        ];
     }
 
     /**
@@ -224,7 +208,7 @@ class FacebookController extends Controller
                     'limit' => 60,
                     'access_token' => $token,
                 ]);
-
+            
             if ($response->successful()) {
                 $pagesData = $response->json()['data'] ?? [];
 
@@ -420,4 +404,47 @@ class FacebookController extends Controller
                 ->with('error', 'Token refresh failed: ' . $e->getMessage());
         }
     }
+
+    public function fbUserProfileDataHtml(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $mainAccount = SocialAccount::where('user_id', $user->id)
+                ->where('provider', 'facebook')
+                ->whereNull('parent_account_id')
+                ->first();
+
+            if (!$mainAccount) {
+                return response()->json([
+                    'status' => 'error',
+                    'html' => '<div class="alert alert-warning">No Facebook account connected.</div>'
+                ]);
+            }
+
+            if (!$this->checkAndRefreshToken($mainAccount)) {
+                return response()->json([
+                    'status' => 'error',
+                    'html' => '<div class="alert alert-danger">Facebook token expired. Please reconnect.</div>'
+                ]);
+            }
+
+            $dashboardData = $this->getDashboardData($mainAccount);
+            $stats = $this->calculateStats($dashboardData);
+
+            $html = view('backend.pages.facebook.partials.profile-data', [
+                'mainAccount' => $mainAccount,
+                'dashboardData' => $dashboardData,
+                'stats' => $stats
+            ])->render();
+
+            return response()->json(['status' => 'success', 'html' => $html]);
+        } catch (\Exception $e) {
+            Log::error('fbUserProfileDataHtml error: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'html' => '<div class="alert alert-danger">Error loading Facebook data.</div>'
+            ]);
+        }
+    }
+
 }

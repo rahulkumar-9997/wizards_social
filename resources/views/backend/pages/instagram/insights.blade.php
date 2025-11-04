@@ -2,7 +2,6 @@
 @section('title', 'Post Insights - ' . ($instagram['username'] ?? ''))
 
 @push('styles')
-
 <style>
     .stat-card {
         background: #f8f9fa;
@@ -71,16 +70,11 @@
 
 @section('main-content')
 <div class="container-fluid">
-    <div class="row mb-2">
-        <div id="example-2_wrapper" class="filter-box">
-            <div class="d-flex flex-wrap align-items-center bg-white p-2 gap-1 client-list-filter">
-                <div class="d-flex align-items-center border-end pe-1">
-                    <p class="mb-0 me-2 text-dark-grey f-16">Duration:</p>
-                    <input type="text" class="form-control form-control-sm text-dark border-0 f-14" id="daterange" name="daterange" placeholder="Start Date To End Date" autocomplete="off">
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-12">
+    <div class="row">
+        @include('backend.pages.layouts.second-sidebar', [
+        'selectedInstagramId' => $instagram['id'] ?? null
+        ])
+        <div class="col-xl-9">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center gap-1">
                     <h4 class="card-title flex-grow-1">
@@ -281,143 +275,42 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+            <div class="row mb-2">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Post: Views / Reach</h5>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="period">
+                                <button class="btn btn-outline-primary period-btn active" data-period="day">Day</button>
+                                <button class="btn btn-outline-primary period-btn" data-period="week">Week</button>
+                                <button class="btn btn-outline-primary period-btn" data-period="month">Month</button>
+                            </div>
+                        </div>
 
-    <!-- Simple Graphs view Section -->
-    <div class="row mb-2">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Post: Views / Reach</h5>
-                    <div class="btn-group btn-group-sm" role="group" aria-label="period">
-                    <button class="btn btn-outline-primary period-btn active" data-period="day">Day</button>
-                    <button class="btn btn-outline-primary period-btn" data-period="week">Week</button>
-                    <button class="btn btn-outline-primary period-btn" data-period="month">Month</button>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <strong>Total Reach:</strong> <span id="total_reach">--</span>
+                                </div>
+                                <div>
+                                    <strong>Total Impr:</strong> <span id="total_impr">--</span>
+                                </div>
+                            </div>
+
+                            <div id="insights_chart" style="height: 320px;"></div>
+
+                            <div id="insights_list" class="mt-3"></div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                        <strong>Total Reach:</strong> <span id="total_reach">--</span>
-                    </div>
-                    <div>
-                        <strong>Total Impr:</strong> <span id="total_impr">--</span>
-                    </div>
-                    </div>
-
-                    <div id="insights_chart" style="height: 320px;"></div>
-
-                    <div id="insights_list" class="mt-3"></div>
-                </div>
-                </div>
+            </div>
         </div>
     </div>
 </div>
-<!-- <div class="chart-container">
-    <h6>Engagement Metrics</h6>
-    <div id="engagement-chart" style="height: 300px;"></div>
-</div> -->
 @endsection
-
 @push('scripts')
-
-<!-- <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script> -->
 <script>
-$(function() {
-  const mediaId = "{{ $postData['id']}}";
-  const mediaType = "{{ $postData['media_type']}}";
-  const route = "{{ route('instagram.post.graph.data.view') }}";
-  let chart = null;
-
-  function load(period = 'day') {
-    $('.period-btn').removeClass('active');
-    $(`.period-btn[data-period="${period}"]`).addClass('active');
-
-    $('#insights_chart').html('<div class="text-center p-4"><div class="spinner-border"></div></div>');
-    $('#insights_list').html('');
-    $('#total_reach').text('--');
-    $('#total_impr').text('--');
-
-    $.ajax({
-      url: route,
-      method: 'GET',
-      data: { media_id: mediaId, period: period, mediaType: mediaType },
-      success: function(res) {
-        if (!res.success) {
-          $('#insights_chart').html(`<div class="alert alert-danger">${res.error||'Error'}</div>`);
-          return;
-        }
-        render(res.data);
-      },
-      error: function() {
-        $('#insights_chart').html('<div class="alert alert-danger">Failed to load data</div>');
-      }
-    });
-  }
-
-  function render(data) {
-    // totals
-    $('#total_reach').text((data.total_reach || 0).toLocaleString());
-    $('#total_impr').text((data.total_impressions || 0).toLocaleString());
-
-    if (!data.timeline || data.timeline.length === 0) {
-      $('#insights_chart').html('<div class="alert alert-warning text-center mb-3">No data available for selected period</div>');
-      $('#insights_list').html('');
-      return;
-    }
-
-    const labels = data.timeline.map(t => t.label);
-    const reachSeries = data.timeline.map(t => t.reach);
-    const imprSeries = data.timeline.map(t => t.impressions);
-
-    // destroy previous chart
-    if (chart) chart.destroy();
-
-    chart = new ApexCharts(document.querySelector("#insights_chart"), {
-      series: [
-        { name: 'Reach', data: reachSeries },
-        { name: 'Impressions', data: imprSeries }
-      ],
-      chart: { type: 'line', height: 320, toolbar: { show: false } },
-      stroke: { curve: 'smooth', width: 3 },
-      xaxis: { categories: labels },
-      markers: { size: 4 },
-      colors: ['#3b82f6','#10b981'],
-      tooltip: { shared: true, y: { formatter: v => v.toLocaleString() } },
-      legend: { position: 'top' }
-    });
-
-    chart.render();
-
-    // list below chart
-    let html = '<div class="list-group">';
-    data.timeline.forEach(item => {
-      html += `<div class="list-group-item d-flex justify-content-between align-items-center">
-        <div><strong>${item.label}</strong><div class="text-muted">${item.time}</div></div>
-        <div class="text-end">
-          <div>Reach: <strong>${item.reach.toLocaleString()}</strong></div>
-          <div>Impr: <strong>${item.impressions.toLocaleString()}</strong></div>
-        </div>
-      </div>`;
-    });
-    html += '</div>';
-    $('#insights_list').html(html);
-  }
-
-  // click handlers
-  $('.period-btn').on('click', function(){ load($(this).data('period')); });
-
-  // initial load
-  load('day');
-});
-</script>
-
-<script>
-    
     $(document).ready(function() {
-        // Read More/Less functionality
         $(document).on('click', '.read-more-btn', function() {
             const $btn = $(this);
             const $container = $btn.closest('.caption-container');
@@ -434,7 +327,7 @@ $(function() {
                 $btn.data('state', 'more');
             }
         });
-        
+
     });
 </script>
 <script>
@@ -445,7 +338,6 @@ $(function() {
         const form = document.getElementById('ig-comment-form');
         const token = document.querySelector('meta[name="csrf-token"]').content;
 
-        // 🔹 Load comments from controller (HTML)
         function loadComments() {
             commentsList.innerHTML = '<p class="text-muted">Loading comments...</p>';
             fetch(`/instagram/${mediaId}/comments/html`)
@@ -460,5 +352,4 @@ $(function() {
         loadComments();
     });
 </script>
-
 @endpush

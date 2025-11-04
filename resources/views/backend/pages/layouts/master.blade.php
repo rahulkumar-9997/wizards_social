@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-menu-size="sm-hover">
+<html lang="en">
     <head>
         @include('backend.pages.layouts.head')
         @stack('styles')

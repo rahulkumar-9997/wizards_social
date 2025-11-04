@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Http;
 use App\Helpers\SocialTokenHelper;
 use Carbon\Carbon;
@@ -1367,7 +1365,7 @@ class InstagramController extends Controller
 
 
 
-    public function metricsGraph($id, Request $request)
+    public function metricsGraph_remove($id, Request $request)
     {
         try {
             $user = Auth::user();
