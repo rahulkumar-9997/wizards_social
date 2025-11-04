@@ -159,7 +159,6 @@ class SocialController extends Controller
     private function handleFacebookCallback(Request $request)
     {
         try {
-            // Exchange code for access token
             $tokenResponse = Http::asForm()->post('https://graph.facebook.com/v24.0/oauth/access_token', [
                 'client_id' => $this->facebookConfig['client_id'],
                 'client_secret' => $this->facebookConfig['client_secret'],
@@ -169,14 +168,26 @@ class SocialController extends Controller
 
             if (!$tokenResponse->successful()) {
                 $errorData = $tokenResponse->json();
-                throw new Exception($errorData['error']['message'] ?? 'Failed to get access token');
+                throw new Exception($errorData['error']['message'] ?? 'Failed to get access token.');
             }
 
             $tokenData = $tokenResponse->json();
-            $accessToken = $tokenData['access_token'];
-            $expiresIn = $tokenData['expires_in'] ?? null;
+            $shortToken = $tokenData['access_token'];
+            $longTokenResponse = Http::get('https://graph.facebook.com/v24.0/oauth/access_token', [
+                'grant_type' => 'fb_exchange_token',
+                'client_id' => $this->facebookConfig['client_id'],
+                'client_secret' => $this->facebookConfig['client_secret'],
+                'fb_exchange_token' => $shortToken,
+            ]);
 
-            // Get user info
+            if (!$longTokenResponse->successful()) {
+                $errorData = $longTokenResponse->json();
+                throw new Exception($errorData['error']['message'] ?? 'Failed to exchange for long-lived token.');
+            }
+
+            $longTokenData = $longTokenResponse->json();
+            $accessToken = $longTokenData['access_token'] ?? $shortToken;
+            $expiresIn = $longTokenData['expires_in'] ?? 5184000; /**60 days default */
             $userResponse = Http::get('https://graph.facebook.com/v24.0/me', [
                 'fields' => 'id,name,email,first_name,last_name,picture',
                 'access_token' => $accessToken,
@@ -184,25 +195,24 @@ class SocialController extends Controller
 
             if (!$userResponse->successful()) {
                 $errorData = $userResponse->json();
-                throw new Exception($errorData['error']['message'] ?? 'Failed to get user info');
+                throw new Exception($errorData['error']['message'] ?? 'Failed to get user info.');
             }
 
             $userData = $userResponse->json();
             $user = Auth::user();
-
-            // Save social account
+            $encryptedToken = Crypt::encryptString(json_encode([
+                'token' => $accessToken,
+                'expires_at' => now()->addSeconds($expiresIn)->toDateTimeString(),
+            ]));
             $sa = SocialAccount::updateOrCreate(
                 [
                     'user_id' => $user->id,
                     'provider' => 'facebook',
-                    'account_id' => null
+                    'account_id' => null,
                 ],
                 [
-                    'access_token' => Crypt::encryptString(json_encode([
-                        'token' => $accessToken,
-                        'expires_in' => $expiresIn
-                    ])),
-                    'token_expires_at' => $expiresIn ? Carbon::now()->addSeconds($expiresIn) : null,
+                    'access_token' => $encryptedToken,
+                    'token_expires_at' => now()->addSeconds($expiresIn),
                     'account_name' => $userData['name'] ?? 'Unknown',
                     'account_email' => $userData['email'] ?? null,
                     'avatar' => $userData['picture']['data']['url'] ?? null,
@@ -210,20 +220,20 @@ class SocialController extends Controller
                     'meta_data' => json_encode($userData),
                 ]
             );
-
-            // Extract Facebook data in background
             dispatch(function () use ($accessToken, $user, $sa) {
                 $this->extractFacebookData($accessToken, $user, $sa);
             });
 
             return redirect()->route('facebook.index')
-                ->with('success', '🚀 Facebook connected successfully!')
+                ->with('success', 'Facebook connected successfully!')
                 ->with('info', 'All accounts and data are being synchronized in the background.');
+
         } catch (Exception $e) {
             Log::error("Facebook callback error: " . $e->getMessage());
             return redirect()->route('dashboard')->with('error', 'Facebook connection failed: ' . $e->getMessage());
         }
     }
+
 
     /**
      * Handle Google OAuth Callback
@@ -350,245 +360,245 @@ class SocialController extends Controller
     /**
  * Extract Facebook Data using Direct API Calls - Enhanced to get ALL pages
  */
-private function extractFacebookData($accessToken, $user, $socialAccount)
-{
-    try {
-        $extractedData = [];
-        $connectedAssets = [];
-
-        Log::info("🚀 Starting Facebook data extraction for user: " . $user->id);
-
-        // 1. Get User Profile
+    private function extractFacebookData($accessToken, $user, $socialAccount)
+    {
         try {
-            $response = Http::timeout(30)->get('https://graph.facebook.com/v24.0/me', [
-                'fields' => 'id,name,email,first_name,last_name,picture,cover,age_range,link,location,gender',
-                'access_token' => $accessToken,
-            ]);
+            $extractedData = [];
+            $connectedAssets = [];
 
-            if ($response->successful()) {
-                $extractedData['profile'] = $response->json();
-                Log::info("✅ User profile extracted");
-            }
-        } catch (\Exception $e) {
-            Log::warning("Profile extraction failed: " . $e->getMessage());
-        }
+            Log::info("🚀 Starting Facebook data extraction for user: " . $user->id);
 
-        // 2. Get ALL Facebook Pages with Pagination
-        try {
-            $allPages = [];
-            $nextUrl = 'https://graph.facebook.com/v24.0/me/accounts?fields=id,name,username,access_token,category,fan_count,cover,link,location,phone,website,emails,instagram_business_account{id,name,username,profile_picture_url,followers_count,media_count,biography,website,follows_count,ig_id}&limit=100&access_token=' . $accessToken;
-            
-            $pageCount = 0;
-            
-            // Paginate through all pages
-            while ($nextUrl && $pageCount < 500) { // Safety limit of 500 pages
-                $response = Http::timeout(60)->get($nextUrl);
-                
-                if (!$response->successful()) {
-                    Log::error("Failed to fetch pages batch: " . $response->body());
-                    break;
+            // 1. Get User Profile
+            try {
+                $response = Http::timeout(30)->get('https://graph.facebook.com/v24.0/me', [
+                    'fields' => 'id,name,email,first_name,last_name,picture,cover,age_range,link,location,gender',
+                    'access_token' => $accessToken,
+                ]);
+
+                if ($response->successful()) {
+                    $extractedData['profile'] = $response->json();
+                    Log::info("✅ User profile extracted");
                 }
-
-                $data = $response->json();
-                $pages = $data['data'] ?? [];
-                $allPages = array_merge($allPages, $pages);
-                $pageCount += count($pages);
-                
-                Log::info("Fetched batch of " . count($pages) . " pages. Total so far: " . count($allPages));
-                $nextUrl = $data['paging']['next'] ?? null;
-                if (!$nextUrl) {
-                    break;
-                }
-                sleep(1);
+            } catch (\Exception $e) {
+                Log::warning("Profile extraction failed: " . $e->getMessage());
             }
 
-            $extractedData['pages'] = $allPages;
-            Log::info("🎯 COMPLETED: Extracted " . count($allPages) . " Facebook pages in total");
-
-            $instagramCount = 0;
-
-            foreach ($allPages as $page) {
-                // Save Facebook Page with detailed information
-                $pageAccount = SocialAccount::updateOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'provider' => 'facebook',
-                        'account_id' => $page['id']
-                    ],
-                    [
-                        'account_name' => $page['name'],
-                        'account_email' => $page['emails'][0] ?? null,
-                        'access_token' => Crypt::encryptString(json_encode(['token' => $page['access_token']])),
-                        'parent_account_id' => $socialAccount->id,
-                        'meta_data' => json_encode([
-                            'username' => $page['username'] ?? null,
-                            'category' => $page['category'] ?? null,
-                            'fan_count' => $page['fan_count'] ?? 0,
-                            'cover_photo' => $page['cover']['source'] ?? null,
-                            'link' => $page['link'] ?? null,
-                            'location' => $page['location'] ?? null,
-                            'phone' => $page['phone'] ?? null,
-                            'website' => $page['website'] ?? null,
-                            'verified' => $page['is_verified'] ?? false,
-                            'emails' => $page['emails'] ?? [],
-                            'page_insights' => $this->getPageInsights($page['access_token'], $page['id'])
-                        ]),
-                        'permission_level' => 'page',
-                        'avatar' => $page['cover']['source'] ?? null,
-                    ]
-                );
-
-                $connectedAssets[] = [
-                    'type' => 'facebook_page',
-                    'id' => $page['id'],
-                    'name' => $page['name'],
-                    'category' => $page['category'] ?? 'Unknown',
-                    'fans' => $page['fan_count'] ?? 0,
-                    'username' => $page['username'] ?? null,
-                    'link' => $page['link'] ?? null
-                ];
-
-                // Save Instagram Account if connected
-                if (isset($page['instagram_business_account']['id'])) {
-                    $instagramCount++;
-                    $igData = $page['instagram_business_account'];
+            // 2. Get ALL Facebook Pages with Pagination
+            try {
+                $allPages = [];
+                $nextUrl = 'https://graph.facebook.com/v24.0/me/accounts?fields=id,name,username,access_token,category,fan_count,cover,link,location,phone,website,emails,instagram_business_account{id,name,username,profile_picture_url,followers_count,media_count,biography,website,follows_count,ig_id}&limit=100&access_token=' . $accessToken;
+                
+                $pageCount = 0;
+                
+                // Paginate through all pages
+                while ($nextUrl && $pageCount < 500) { // Safety limit of 500 pages
+                    $response = Http::timeout(60)->get($nextUrl);
                     
-                    $igAccount = SocialAccount::updateOrCreate(
+                    if (!$response->successful()) {
+                        Log::error("Failed to fetch pages batch: " . $response->body());
+                        break;
+                    }
+
+                    $data = $response->json();
+                    $pages = $data['data'] ?? [];
+                    $allPages = array_merge($allPages, $pages);
+                    $pageCount += count($pages);
+                    
+                    Log::info("Fetched batch of " . count($pages) . " pages. Total so far: " . count($allPages));
+                    $nextUrl = $data['paging']['next'] ?? null;
+                    if (!$nextUrl) {
+                        break;
+                    }
+                    sleep(1);
+                }
+
+                $extractedData['pages'] = $allPages;
+                Log::info("🎯 COMPLETED: Extracted " . count($allPages) . " Facebook pages in total");
+
+                $instagramCount = 0;
+
+                foreach ($allPages as $page) {
+                    // Save Facebook Page with detailed information
+                    $pageAccount = SocialAccount::updateOrCreate(
                         [
                             'user_id' => $user->id,
-                            'provider' => 'instagram',
-                            'account_id' => $igData['id']
+                            'provider' => 'facebook',
+                            'account_id' => $page['id']
                         ],
                         [
-                            'account_name' => $igData['username'] ?? 'Instagram Account',
+                            'account_name' => $page['name'],
+                            'account_email' => $page['emails'][0] ?? null,
                             'access_token' => Crypt::encryptString(json_encode(['token' => $page['access_token']])),
                             'parent_account_id' => $socialAccount->id,
                             'meta_data' => json_encode([
-                                'name' => $igData['name'] ?? null,
-                                'username' => $igData['username'] ?? null,
-                                'profile_picture_url' => $igData['profile_picture_url'] ?? null,
-                                'followers_count' => $igData['followers_count'] ?? 0,
-                                'media_count' => $igData['media_count'] ?? 0,
-                                'biography' => $igData['biography'] ?? null,
-                                'website' => $igData['website'] ?? null,
-                                'follows_count' => $igData['follows_count'] ?? 0,
-                                'ig_id' => $igData['ig_id'] ?? null,
-                                'connected_facebook_page' => $page['name'],
-                                'instagram_insights' => $this->getInstagramBasicInsights($page['access_token'], $igData['id'])
+                                'username' => $page['username'] ?? null,
+                                'category' => $page['category'] ?? null,
+                                'fan_count' => $page['fan_count'] ?? 0,
+                                'cover_photo' => $page['cover']['source'] ?? null,
+                                'link' => $page['link'] ?? null,
+                                'location' => $page['location'] ?? null,
+                                'phone' => $page['phone'] ?? null,
+                                'website' => $page['website'] ?? null,
+                                'verified' => $page['is_verified'] ?? false,
+                                'emails' => $page['emails'] ?? [],
+                                'page_insights' => $this->getPageInsights($page['access_token'], $page['id'])
                             ]),
-                            'permission_level' => 'business',
-                            'avatar' => $igData['profile_picture_url'] ?? null,
+                            'permission_level' => 'page',
+                            'avatar' => $page['cover']['source'] ?? null,
                         ]
                     );
 
                     $connectedAssets[] = [
-                        'type' => 'instagram_business',
-                        'id' => $igData['id'],
-                        'name' => $igData['username'] ?? $igData['id'],
-                        'username' => $igData['username'] ?? null,
-                        'followers' => $igData['followers_count'] ?? 0,
-                        'posts' => $igData['media_count'] ?? 0,
-                        'connected_to_page' => $page['name']
+                        'type' => 'facebook_page',
+                        'id' => $page['id'],
+                        'name' => $page['name'],
+                        'category' => $page['category'] ?? 'Unknown',
+                        'fans' => $page['fan_count'] ?? 0,
+                        'username' => $page['username'] ?? null,
+                        'link' => $page['link'] ?? null
                     ];
 
-                    Log::info("✅ Connected Instagram: " . ($igData['username'] ?? $igData['id']));
+                    // Save Instagram Account if connected
+                    if (isset($page['instagram_business_account']['id'])) {
+                        $instagramCount++;
+                        $igData = $page['instagram_business_account'];
+                        
+                        $igAccount = SocialAccount::updateOrCreate(
+                            [
+                                'user_id' => $user->id,
+                                'provider' => 'instagram',
+                                'account_id' => $igData['id']
+                            ],
+                            [
+                                'account_name' => $igData['username'] ?? 'Instagram Account',
+                                'access_token' => Crypt::encryptString(json_encode(['token' => $page['access_token']])),
+                                'parent_account_id' => $socialAccount->id,
+                                'meta_data' => json_encode([
+                                    'name' => $igData['name'] ?? null,
+                                    'username' => $igData['username'] ?? null,
+                                    'profile_picture_url' => $igData['profile_picture_url'] ?? null,
+                                    'followers_count' => $igData['followers_count'] ?? 0,
+                                    'media_count' => $igData['media_count'] ?? 0,
+                                    'biography' => $igData['biography'] ?? null,
+                                    'website' => $igData['website'] ?? null,
+                                    'follows_count' => $igData['follows_count'] ?? 0,
+                                    'ig_id' => $igData['ig_id'] ?? null,
+                                    'connected_facebook_page' => $page['name'],
+                                    'instagram_insights' => $this->getInstagramBasicInsights($page['access_token'], $igData['id'])
+                                ]),
+                                'permission_level' => 'business',
+                                'avatar' => $igData['profile_picture_url'] ?? null,
+                            ]
+                        );
+
+                        $connectedAssets[] = [
+                            'type' => 'instagram_business',
+                            'id' => $igData['id'],
+                            'name' => $igData['username'] ?? $igData['id'],
+                            'username' => $igData['username'] ?? null,
+                            'followers' => $igData['followers_count'] ?? 0,
+                            'posts' => $igData['media_count'] ?? 0,
+                            'connected_to_page' => $page['name']
+                        ];
+
+                        Log::info("✅ Connected Instagram: " . ($igData['username'] ?? $igData['id']));
+                    }
                 }
+
+                Log::info("🎯 Total Summary: " . count($allPages) . " Facebook pages, " . $instagramCount . " Instagram accounts connected");
+
+            } catch (\Exception $e) {
+                Log::error("Pages extraction failed: " . $e->getMessage());
             }
 
-            Log::info("🎯 Total Summary: " . count($allPages) . " Facebook pages, " . $instagramCount . " Instagram accounts connected");
+            // 3. Get User Posts (Optional - can be removed if not needed)
+            try {
+                $response = Http::timeout(30)->get('https://graph.facebook.com/v24.0/me/posts', [
+                    'fields' => 'id,message,created_time,permalink_url,attachments,likes.summary(true),comments.summary(true),shares',
+                    'limit' => 10,
+                    'access_token' => $accessToken,
+                ]);
 
-        } catch (\Exception $e) {
-            Log::error("Pages extraction failed: " . $e->getMessage());
-        }
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $extractedData['posts'] = $data['data'] ?? [];
+                    Log::info("✅ Extracted " . count($extractedData['posts']) . " posts");
+                }
+            } catch (\Exception $e) {
+                Log::info("Posts extraction failed: " . $e->getMessage());
+            }
 
-        // 3. Get User Posts (Optional - can be removed if not needed)
-        try {
-            $response = Http::timeout(30)->get('https://graph.facebook.com/v24.0/me/posts', [
-                'fields' => 'id,message,created_time,permalink_url,attachments,likes.summary(true),comments.summary(true),shares',
-                'limit' => 10,
-                'access_token' => $accessToken,
+            // 4. Get Ad Accounts
+            try {
+                $response = Http::timeout(30)->get('https://graph.facebook.com/v24.0/me/adaccounts', [
+                    'fields' => 'id,name,account_status,currency,amount_spent,balance,timezone,business{id,name}',
+                    'limit' => 100,
+                    'access_token' => $accessToken,
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $adAccounts = $data['data'] ?? [];
+                    $extractedData['ad_accounts'] = $adAccounts;
+                    Log::info("✅ Extracted " . count($adAccounts) . " ad accounts");
+
+                    foreach ($adAccounts as $adAccount) {
+                        AdAccount::updateOrCreate(
+                            [
+                                'user_id' => $user->id,
+                                'ad_account_id' => $adAccount['id']
+                            ],
+                            [
+                                'social_account_id' => $socialAccount->id,
+                                'provider' => 'facebook',
+                                'ad_account_name' => $adAccount['name'],
+                                'account_status' => $adAccount['account_status'] ?? 'unknown',
+                                'currency' => $adAccount['currency'] ?? 'USD',
+                                'amount_spent' => $adAccount['amount_spent'] ?? 0,
+                                'balance' => $adAccount['balance'] ?? 0,
+                                'meta_data' => json_encode($adAccount),
+                            ]
+                        );
+
+                        $connectedAssets[] = [
+                            'type' => 'ad_account',
+                            'id' => $adAccount['id'],
+                            'name' => $adAccount['name'],
+                            'status' => $adAccount['account_status'] ?? 'unknown',
+                            'spent' => $adAccount['amount_spent'] ?? 0
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("Ad accounts extraction failed: " . $e->getMessage());
+            }
+
+            // Update main account with comprehensive data
+            $socialAccount->update([
+                'meta_data' => json_encode($extractedData),
+                'connected_assets' => json_encode($connectedAssets),
+                'asset_count' => count($connectedAssets),
+                'last_synced_at' => now(),
+                'granted_permissions' => json_encode([
+                    'pages_access' => count($allPages ?? []) > 0,
+                    'instagram_access' => $instagramCount > 0,
+                    'ads_access' => count($adAccounts ?? []) > 0,
+                    'total_pages' => count($allPages ?? []),
+                    'total_instagram_accounts' => $instagramCount
+                ]),
             ]);
 
-            if ($response->successful()) {
-                $data = $response->json();
-                $extractedData['posts'] = $data['data'] ?? [];
-                Log::info("✅ Extracted " . count($extractedData['posts']) . " posts");
-            }
-        } catch (\Exception $e) {
-            Log::info("Posts extraction failed: " . $e->getMessage());
+            Log::info("🎯 Facebook data extraction COMPLETED. Total Assets: " . count($connectedAssets));
+            Log::info("📊 FINAL SUMMARY:");
+            Log::info("   - Facebook Pages: " . count($allPages ?? []));
+            Log::info("   - Instagram Accounts: " . $instagramCount);
+            Log::info("   - Ad Accounts: " . count($adAccounts ?? []));
+            Log::info("   - Total Assets: " . count($connectedAssets));
+
+        } catch (Exception $e) {
+            Log::error('Facebook data extraction error: ' . $e->getMessage());
         }
-
-        // 4. Get Ad Accounts
-        try {
-            $response = Http::timeout(30)->get('https://graph.facebook.com/v24.0/me/adaccounts', [
-                'fields' => 'id,name,account_status,currency,amount_spent,balance,timezone,business{id,name}',
-                'limit' => 100,
-                'access_token' => $accessToken,
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                $adAccounts = $data['data'] ?? [];
-                $extractedData['ad_accounts'] = $adAccounts;
-                Log::info("✅ Extracted " . count($adAccounts) . " ad accounts");
-
-                foreach ($adAccounts as $adAccount) {
-                    AdAccount::updateOrCreate(
-                        [
-                            'user_id' => $user->id,
-                            'ad_account_id' => $adAccount['id']
-                        ],
-                        [
-                            'social_account_id' => $socialAccount->id,
-                            'provider' => 'facebook',
-                            'ad_account_name' => $adAccount['name'],
-                            'account_status' => $adAccount['account_status'] ?? 'unknown',
-                            'currency' => $adAccount['currency'] ?? 'USD',
-                            'amount_spent' => $adAccount['amount_spent'] ?? 0,
-                            'balance' => $adAccount['balance'] ?? 0,
-                            'meta_data' => json_encode($adAccount),
-                        ]
-                    );
-
-                    $connectedAssets[] = [
-                        'type' => 'ad_account',
-                        'id' => $adAccount['id'],
-                        'name' => $adAccount['name'],
-                        'status' => $adAccount['account_status'] ?? 'unknown',
-                        'spent' => $adAccount['amount_spent'] ?? 0
-                    ];
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error("Ad accounts extraction failed: " . $e->getMessage());
-        }
-
-        // Update main account with comprehensive data
-        $socialAccount->update([
-            'meta_data' => json_encode($extractedData),
-            'connected_assets' => json_encode($connectedAssets),
-            'asset_count' => count($connectedAssets),
-            'last_synced_at' => now(),
-            'granted_permissions' => json_encode([
-                'pages_access' => count($allPages ?? []) > 0,
-                'instagram_access' => $instagramCount > 0,
-                'ads_access' => count($adAccounts ?? []) > 0,
-                'total_pages' => count($allPages ?? []),
-                'total_instagram_accounts' => $instagramCount
-            ]),
-        ]);
-
-        Log::info("🎯 Facebook data extraction COMPLETED. Total Assets: " . count($connectedAssets));
-        Log::info("📊 FINAL SUMMARY:");
-        Log::info("   - Facebook Pages: " . count($allPages ?? []));
-        Log::info("   - Instagram Accounts: " . $instagramCount);
-        Log::info("   - Ad Accounts: " . count($adAccounts ?? []));
-        Log::info("   - Total Assets: " . count($connectedAssets));
-
-    } catch (Exception $e) {
-        Log::error('Facebook data extraction error: ' . $e->getMessage());
     }
-}
 
 
     private function getInstagramBasicInsights($pageAccessToken, $instagramId)

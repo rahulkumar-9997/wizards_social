@@ -50,7 +50,7 @@
                     </button>
                 </form>
             </div>
-            @if($tokenStatus !== 'valid')
+            <!-- @if($tokenStatus !== 'valid')
             <div class="alert alert-{{ $tokenStatus === 'expired' ? 'danger' : 'warning' }} alert-dismissible fade show mb-3" role="alert">
                 <div class="d-flex align-items-center">
                     <i class="fas {{ $iconClass }} me-2"></i>
@@ -69,7 +69,7 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-            @endif
+            @endif -->
         </div>
         <div class="card-body">
             <div class="profile-item d-flex align-items-center mb-2 p-3 bg-light rounded">
