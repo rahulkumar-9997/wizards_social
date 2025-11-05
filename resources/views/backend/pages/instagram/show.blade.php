@@ -1,7 +1,9 @@
 @extends('backend.pages.layouts.master')
 @section('title', 'Instagram Dashboard')
 @push('styles')
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin="anonymous"/>
 <style>
     .metric-card {
         background: #fff;
@@ -173,7 +175,7 @@
                 </div>
             </div>
             <div class="row mb-2">
-                <div class="col-xxl-6">
+                <div class="col-xxl-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
                             <h4 class="card-title mb-0">Top 10 Cities Audience</h4>
@@ -183,13 +185,12 @@
                             </select>
                         </div>
                         <div class="card-body">
-                            <div id="topLocationsContainer">
-                                <canvas id="topLocationsChart" height="450"></canvas>
+                            <div id="geolocationContainer">
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-xxl-6">
+                <div class="col-xxl-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
                             <h4 class="card-title mb-0">Audience By Age Group</h4>
@@ -283,6 +284,9 @@
     @endsection
 
     @push('scripts')
+     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <script>

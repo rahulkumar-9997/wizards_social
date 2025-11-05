@@ -920,7 +920,7 @@ class InstagramController extends Controller
     }
 
 
-    public function getAudienceTopLocations(Request $request, $instagramId)
+    public function getAudienceTopLocationsOld(Request $request, $instagramId)
     {
         $timeframe = $request->get('timeframe', 'this_month');       
         $user = Auth::user();
@@ -972,6 +972,64 @@ class InstagramController extends Controller
             'success' => true,
             'labels' => $labels,
             'values' => $percentages,
+        ]);
+    }
+
+    public function getAudienceTopLocations(Request $request, $instagramId)
+    {
+        $timeframe = $request->get('timeframe', 'this_month');       
+        $user = Auth::user();
+        $mainAccount = SocialAccount::where('user_id', $user->id)
+            ->where('provider', 'facebook')
+            ->whereNull('parent_account_id')
+            ->first();
+        if (!$mainAccount) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Facebook account not connected.'
+            ], 400);
+        }
+        $token = SocialTokenHelper::getFacebookToken($mainAccount);
+        $response = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$instagramId}/insights", [
+            'metric' => 'engaged_audience_demographics',
+            'period' => 'lifetime',
+            'metric_type' => 'total_value',
+            'breakdown' => 'city',
+            'timeframe' => $timeframe,
+            'access_token' => $token,
+        ])->json();
+
+        if (isset($response['error'])) {
+            return response()->json([
+                'success' => false,
+                'message' => $response['error']['message']
+            ]);
+        }
+        $results = data_get($response, 'data.0.total_value.breakdowns.0.results', []);
+        
+        // All cities with percentage calculation
+        $topCities = collect($results)
+            ->sortByDesc('value')
+            ->take(10)
+            ->values();
+        $total = $topCities->sum('value');
+        
+        $locations = $topCities->map(function ($item) use ($total) {
+            $cityName = $item['dimension_values'][0] ?? 'Unknown';
+            $value = $item['value'];
+            $percentage = $total ? round(($value / $total) * 100, 2) : 0;
+            
+            return [
+                'name' => $cityName,
+                'value' => $value,
+                'percentage' => $percentage
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'locations' => $locations,
+            'total' => $total
         ]);
     }
 
