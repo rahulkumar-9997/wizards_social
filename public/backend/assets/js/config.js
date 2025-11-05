@@ -6,9 +6,9 @@
 
 
 (function () {
-
+     //sessionStorage.removeItem('__LARKON_CONFIG__');
      var savedConfig = sessionStorage.getItem("__LARKON_CONFIG__");
-
+     
      var html = document.getElementsByTagName("html")[0];
 
      var defaultConfig = {
@@ -19,20 +19,20 @@
           },
 
           menu: {
-               size: "sm-hover-active",   // [ 'default', 'sm-hover-active', 'sm-hover-active', 'condensed', 'full']
+               size: "sm-hover", 
                color: "dark",            // ['light', 'dark']
           },
      };
 
      this.html = document.getElementsByTagName('html')[0];
 
-     config = Object.assign(JSON.parse(JSON.stringify(defaultConfig)), {});
-
+     config = Object.assign(JSON.parse(JSON.stringify(defaultConfig)), {});     
+     
      config.theme = html.getAttribute('data-bs-theme') || defaultConfig.theme;
      config.topbar.color = html.getAttribute('data-topbar-color') || defaultConfig.topbar.color;
      config.menu.color = html.getAttribute('data-menu-color') || defaultConfig.menu.color;
      config.menu.size = html.getAttribute('data-menu-size') || defaultConfig.menu.size;
-
+     //console.log(config.menu.size);
      window.defaultConfig = JSON.parse(JSON.stringify(config));
 
      if (savedConfig !== null) {
@@ -40,7 +40,7 @@
      }
 
      window.config = config;
-
+     //console.log(savedConfig);
      if (config) {
           html.setAttribute("data-bs-theme", config.theme);
           html.setAttribute("data-topbar-color", config.topbar.color);

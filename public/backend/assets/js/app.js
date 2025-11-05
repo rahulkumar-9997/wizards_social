@@ -709,6 +709,7 @@ class ThemeLayout {
     constructor() {
         this.html = document.getElementsByTagName('html')[0]
         this.config = window.config;
+        // console.log(config);
     }
 
     // Main Nav
@@ -898,11 +899,11 @@ class ThemeLayout {
         // alert(JSON.stringify(hoverBtn));        
         hoverBtn.forEach(function (element) {
             element.addEventListener('click', function () {
-                console.log('Button clicked!');
+                //console.log('Button clicked!');
                 var configSize = self.config.menu.size;
                 var size = self.html.getAttribute('data-menu-size', configSize);
                 //alert(configSize);
-                console.log('Current Config:', configSize, 'Current Size:', size);
+                //console.log('Current Config:', configSize, 'Current Size:', size);
                 if (configSize === 'sm-hover-active') {
                     if (size === 'sm-hover-active') {
                         self.changeMenuSize('sm-hover', true);
@@ -959,12 +960,13 @@ class ThemeLayout {
     setSwitchFromConfig() {
 
         sessionStorage.setItem('__LARKON_CONFIG__', JSON.stringify(this.config));
-
+        //sessionStorage.clear();
         document.querySelectorAll('.settings-bar input[type=radio]').forEach(function (checkbox) {
             checkbox.checked = false;
         })
 
-        var config = this.config;
+        //var config = this.config;
+        //console.log(config);
         if (config) {
             var layoutColorSwitch = document.querySelector('input[type=radio][name=data-bs-theme][value=' + config.theme + ']');
             var topbarColorSwitch = document.querySelector('input[type=radio][name=data-topbar-color][value=' + config.topbar.color + ']');

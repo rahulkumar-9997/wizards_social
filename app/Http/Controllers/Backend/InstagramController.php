@@ -57,13 +57,11 @@ class InstagramController extends Controller
             if (request()->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'html' => view('backend.pages.instagram.partials.instagram-media-table', compact('media', 'paging', 'instagram'))->render(),
+                    'html' => view('backend.pages.instagram.partials.instagram-media-table', compact('instagram'))->render(),
                 ]);
             }
             return view('backend.pages.instagram.show', compact(
                 'instagram',
-                'media',
-                'paging',
             ));
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             return request()->ajax()
