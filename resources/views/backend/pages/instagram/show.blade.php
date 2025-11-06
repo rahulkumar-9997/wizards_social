@@ -178,7 +178,15 @@
                 <div class="col-xxl-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                            <h4 class="card-title mb-0">Top 10 Cities Audience</h4>
+                            <h4 class="card-title mb-0">
+                                Top 10 Cities Audience
+                                <i id="audienceByCitiesTitle" 
+                                class="bx bx-question-mark text-primary" 
+                                style="cursor: pointer; font-size: 18px;" 
+                                data-bs-toggle="tooltip" data-bs-placement="top" 
+                                data-bs-custom-class="warning-tooltip">
+                                </i>  
+                            </h4>
                             <select id="timeframe" class="form-select form-select-sm w-auto">
                                 <option value="this_month" selected>This Month</option>
                                 <option value="this_week">This Week</option>
@@ -193,7 +201,15 @@
                 <div class="col-xxl-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                            <h4 class="card-title mb-0">Audience By Age Group</h4>
+                            <h4 class="card-title mb-0">
+                                Audience By Age Group
+                                <i id="audienceByAgeGroup" 
+                                class="bx bx-question-mark text-primary" 
+                                style="cursor: pointer; font-size: 18px;" 
+                                data-bs-toggle="tooltip" data-bs-placement="top" 
+                                data-bs-custom-class="info-tooltip">
+                                </i>  
+                            </h4>
                             <select id="ageTimeframe" class="form-select form-select-sm" style="width: 150px;">
                                 <option value="this_week">This Week</option>
                                 <option value="this_month" selected>This Month</option>
@@ -209,10 +225,17 @@
             </div>
             <!--Instagram reach days wise -->
             <div class="row mb-2">
-                <div class="col-xxl-6">
+                <div class="col-xxl-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                            <h4 class="card-title mb-0">Profile Reach Per Day</h4>
+                            <h5 class="card-title mb-0">Profile Reach Per Day
+                                <i id="profileReachTitle" 
+                                class="bx bx-question-mark text-primary" 
+                                style="cursor: pointer; font-size: 18px;" 
+                                data-bs-toggle="tooltip" data-bs-placement="top" 
+                                data-bs-custom-class="danger-tooltip">
+                                </i>   
+                            </h5>
                             <small id="reachDateRange" class="text-muted"></small>
                         </div>
                         <div class="card-body">
@@ -222,11 +245,17 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xxl-6">
+                <div class="col-xxl-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
                             <h5 class="card-title mb-0">
-                                Instagram Views                        
+                                Instagram Views   
+                                <i id="viewDateRangeTitle" 
+                                class="bx bx-question-mark text-primary" 
+                                style="cursor: pointer; font-size: 18px;" 
+                                data-bs-toggle="tooltip" data-bs-placement="top" 
+                                data-bs-custom-class="success-tooltip">
+                                </i>                     
                             </h5>
                             <span id="viewDateRange" class="text-muted small"></span>
                         </div>
@@ -238,7 +267,6 @@
                     </div>
                 </div>
             </div>
-            <!--Instagram reach days wise -->
             <div class="row mb-2">
                 <div class="col-xxl-12">
                     <div class="card">
@@ -381,6 +409,10 @@
                 success: function(res) {
                     if (res.success) {
                         $('#insta_face_dashboard').html(res.html);
+                        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                            tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                            new bootstrap.Tooltip(tooltipTriggerEl);
+                        });
                     } else {
                         $('#insta_face_dashboard').html(`<div class="alert alert-danger">${res.message}</div>`);
                     }

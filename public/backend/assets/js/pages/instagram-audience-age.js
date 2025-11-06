@@ -17,6 +17,8 @@ $(document).ready(function () {
                 `);
             },
             success: function (res) {
+                const description = res.api_description || '';
+                initTooltipAgeGroup(description);
                 if (!res.success) {
                     $('#audienceAgeGroupContainer').html(
                         `<div class="alert alert-danger">${res.message || 'Unable to load data.'}</div>`
@@ -28,8 +30,6 @@ $(document).ready(function () {
                 const ctx = document.getElementById('audienceAgeGroupChart').getContext('2d');
 
                 if (audienceAgeChart) audienceAgeChart.destroy();
-
-                // Register ChartDataLabels if available
                 if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
                     Chart.register(ChartDataLabels);
                 }
@@ -100,3 +100,16 @@ $(document).ready(function () {
         loadAudienceAgeGroup($(this).val());
     });
 });
+
+function initTooltipAgeGroup(description) {
+    const icon = $('#audienceByAgeGroup');
+     if (icon.length === 0) return;
+
+    const safeDescription = description && description.trim() !== '' 
+        ? description 
+        : 'No description available';
+
+    icon.attr('data-bs-title', safeDescription);
+    icon.attr('data-bs-toggle', 'tooltip');
+    new bootstrap.Tooltip(icon[0]);
+}

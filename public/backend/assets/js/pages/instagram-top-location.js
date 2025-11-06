@@ -1,8 +1,6 @@
 $(document).ready(function () {
     let map = null;
     let markers = [];
-
-    // Check if Leaflet is loaded
     if (typeof L === 'undefined') {
         console.error('Leaflet library not loaded!');
         $('#geolocationContainer').html(`
@@ -13,8 +11,6 @@ $(document).ready(function () {
         `);
         return;
     }
-
-    // Initialize world map
     function initMap() {
         try {
             const mapContainer = document.getElementById('worldMap');
@@ -27,8 +23,6 @@ $(document).ready(function () {
             }
 
             map = L.map('worldMap').setView([20, 0], 2);
-
-            // Use a more colorful tile layer
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap, © CartoDB',
                 maxZoom: 18,
@@ -40,13 +34,9 @@ $(document).ready(function () {
             throw error;
         }
     }
-
-    // Enhanced geocoding function with better language handling
     async function geocodeCity(cityName) {
         try {
             const cleanCityName = cityName.split(',')[0].trim();
-
-            // Enhanced API call with multiple parameters for English results
             const response = await fetch(
                 `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanCityName)}&limit=1&accept-language=en&addressdetails=1&namedetails=1&countrycodes=in,us,gb,ca,au,pk,bd,lk,ae`
             );
@@ -56,14 +46,11 @@ $(document).ready(function () {
             }
 
             const data = await response.json();
-
             if (data && data.length > 0) {
-                // Prefer English name from namedetails if available
                 let englishName = data[0].display_name;
                 if (data[0].namedetails && data[0].namedetails['name:en']) {
                     englishName = data[0].namedetails['name:en'];
-                }
-                
+                }                
                 return {
                     lat: parseFloat(data[0].lat),
                     lng: parseFloat(data[0].lon),
@@ -77,18 +64,12 @@ $(document).ready(function () {
             return { found: false };
         }
     }
-
-    // Batch geocode all locations
     async function geocodeAllLocations(locations) {
         const geocodedLocations = [];
         let successCount = 0;
-
         console.log('Starting geocoding for:', locations.length, 'locations');
-
         for (let i = 0; i < locations.length; i++) {
             const location = locations[i];
-
-            // Update loading message
             $('#geolocationContainer').html(`
                 <div class="text-center py-5">
                     <div class="spinner-border text-primary"></div>
@@ -116,36 +97,28 @@ $(document).ready(function () {
                     fullLocation: location.name
                 });
             }
-
-            // Add delay to respect Nominatim usage policy
             await new Promise(resolve => setTimeout(resolve, 1200));
         }
 
         console.log(`Geocoding completed: ${successCount} out of ${locations.length} locations successfully mapped`);
         return geocodedLocations;
     }
-
-    // Color palette for markers
     const colorPalette = [
         '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
         '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
         '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2',
         '#F9E79F', '#A9DFBF', '#F5B7B1', '#AED6F1', '#D2B4DE'
     ];
-
-    // Get color based on percentage
     function getColorForPercentage(percentage) {
-        if (percentage > 20) return '#FF6B6B'; // Red for high
-        if (percentage > 10) return '#4ECDC4'; // Teal for medium-high
-        if (percentage > 5) return '#45B7D1';  // Blue for medium
-        if (percentage > 2) return '#96CEB4';  // Green for low-medium
-        return '#FFEAA7'; // Yellow for low
+        if (percentage > 20) return '#FF6B6B'; /* Red for high */
+        if (percentage > 10) return '#4ECDC4'; /* Teal for medium-high */
+        if (percentage > 5) return '#45B7D1';  /* Blue for medium */
+        if (percentage > 2) return '#96CEB4';  /* Green for low-medium */
+        return '#FFEAA7'; /* Yellow for low */
     }
 
     async function loadGeolocationData(timeframe = 'this_month') {
         const container = $('#geolocationContainer');
-
-        // Show initial loading state
         container.html(`
             <div class="text-center py-5">
                 <div class="spinner-border text-primary"></div>
@@ -160,6 +133,8 @@ $(document).ready(function () {
                 data: { timeframe },
                 timeout: 30000
             });
+            const description = response.api_description || '';
+            initTooltipCityName(description);
 
             if (!response.success) {
                 container.html(`
@@ -180,8 +155,6 @@ $(document).ready(function () {
                 `);
                 return;
             }
-
-            // Show geocoding progress
             container.html(`
                 <div class="text-center py-5">
                     <div class="spinner-border text-primary"></div>
@@ -189,11 +162,7 @@ $(document).ready(function () {
                     <small class="text-muted">Geocoding ${response.locations.length} cities</small>
                 </div>
             `);
-
-            // Geocode all locations
             const geocodedLocations = await geocodeAllLocations(response.locations);
-
-            // Filter out locations without coordinates
             const locationsWithCoordinates = geocodedLocations.filter(loc => loc.coordinates);
 
             if (locationsWithCoordinates.length === 0) {
@@ -205,8 +174,6 @@ $(document).ready(function () {
                 `);
                 return;
             }
-
-            // Create map container
             container.html(`
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="mb-0">
@@ -216,25 +183,17 @@ $(document).ready(function () {
                 </div>
                 <div id="worldMap" style="height: 500px; border-radius: 8px; border: 1px solid #dee2e6;"></div>
             `);
-
-            // Wait for DOM to update
             await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Initialize map
             initMap();
-
-            // Clear previous markers
             clearMarkers();
-
-            // Calculate marker sizes based on percentage
             const maxPercentage = Math.max(...locationsWithCoordinates.map(loc => loc.percentage));
             const getMarkerSize = (percentage) => {
                 const baseSize = 20;
                 const scale = percentage / maxPercentage;
-                return baseSize + (scale * 40); // 20px to 60px range
+                return baseSize + (scale * 40);
             };
 
-            // Add markers for each location
+            /* Add markers for each location */
             locationsWithCoordinates.forEach((location, index) => {
                 const size = getMarkerSize(location.percentage);
                 const color = getColorForPercentage(location.percentage);
@@ -286,8 +245,6 @@ $(document).ready(function () {
 
                 markers.push(marker);
             });
-
-            // Fit map to show all markers
             if (markers.length > 0) {
                 const group = new L.featureGroup(markers);
                 map.fitBounds(group.getBounds().pad(0.15));
@@ -312,17 +269,11 @@ $(document).ready(function () {
         }
         markers = [];
     }
-
-    // Initialize when page loads
     loadGeolocationData();
-
-    // Handle timeframe change
     $('#timeframe').on('change', function () {
         loadGeolocationData($(this).val());
     });
 });
-
-// Enhanced CSS for colorful map
 const style = document.createElement('style');
 style.textContent = `
     .custom-map-marker {
@@ -363,3 +314,16 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+function initTooltipCityName(description) {
+    const icon = $('#audienceByCitiesTitle');
+    if (icon.length === 0) return;
+
+    const safeDescription = description && description.trim() !== '' 
+        ? description 
+        : 'No description available';
+
+    icon.attr('data-bs-title', safeDescription);
+    icon.attr('data-bs-toggle', 'tooltip');
+    new bootstrap.Tooltip(icon[0]);
+}

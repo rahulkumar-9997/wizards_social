@@ -12,7 +12,7 @@ $(document).ready(function () {
                 <p class="mt-2 mb-0">Loading views data...</p>
             </div>
         `);
-        
+
         $.ajax({
             url: window.instagramFetchViewDaysWise,
             data: { 
@@ -25,148 +25,82 @@ $(document).ready(function () {
             type: "GET",
             success: function (res) {
                 console.log('API Response:', res);
-                
+                initTooltip(res.api_description || '');
                 if (!res.success) {
                     $('#viewDaysContainer').html(
                         `<div class="alert alert-danger mb-0">${res.message}</div>`
                     );
                     return;
                 }
-                
                 if (!res.categories || !res.values || res.categories.length === 0) {
                     $('#viewDaysContainer').html(
                         `<div class="alert alert-warning mb-0">No views data available for this date range.</div>`
                     );
                     return;
                 }
-
                 const categories = res.categories;
                 const seriesData = res.values;
                 const totalViews = res.total_views;
+                const startText = moment(res.start_date).format("DD MMM YYYY");
+                const endText = moment(res.end_date).format("DD MMM YYYY");
                 $('#viewDaysContainer').html('<div id="viewChart"></div>');
-                var colors = ["#4ecac2"];
-                var options = {
+                const colors = [
+                    '#4ecac2', '#36a2eb', '#ffce56',
+                    '#ff6384', '#9966ff', '#00cc99', '#ff9933'
+                ];
+                const options = {
                     chart: {
+                        type: 'pie',
                         height: 380,
-                        type: 'bar',
-                        toolbar: {
-                            show: false
-                        }
+                        toolbar: { show: false }
                     },
-                    plotOptions: {
-                        bar: {
-                            borderRadius: 5,
-                            dataLabels: {
-                                position: 'top',
-                            },
-                        }
-                    },
+                    series: seriesData,
+                    labels: categories,
+                    colors: colors,
                     dataLabels: {
                         enabled: true,
-                        formatter: function (val) {
-                            return val.toLocaleString();
+                        formatter: function (val, opts) {
+                            const value = seriesData[opts.seriesIndex];
+                            return `${value.toLocaleString()} (${val.toFixed(1)}%)`;
                         },
-                        offsetY: -25,
                         style: {
-                            fontSize: '12px',
-                            colors: ["#304758"]
+                            fontSize: '13px',
+                            colors: ['#fff']
                         }
                     },
-                    colors: colors,
                     legend: {
-                        show: true,
-                        horizontalAlign: "center",
-                        offsetX: 0,
-                        offsetY: -5,
-                    },
-                    series: [{
-                        name: 'Views',
-                        data: seriesData
-                    }],
-                    xaxis: {
-                        categories: categories,
                         position: 'bottom',
-                        labels: {
-                            offsetY: 0,
-                        },
-                        axisBorder: {
-                            show: false
-                        },
-                        axisTicks: {
-                            show: false
-                        },
-                        crosshairs: {
-                            fill: {
-                                type: 'gradient',
-                                gradient: {
-                                    colorFrom: '#D8E3F0',
-                                    colorTo: '#BED1E6',
-                                    stops: [0, 100],
-                                    opacityFrom: 0.6,
-                                    opacityTo: 0.5,
-                                }
-                            }
-                        },
-                        tooltip: {
-                            enabled: true,
-                            offsetY: -10,
-                        }
+                        fontSize: '13px',
+                        labels: { colors: '#333' },
+                        itemMargin: { horizontal: 10, vertical: 5 }
                     },
-                    fill: {
-                        gradient: {
-                            enabled: false,
-                            shade: 'light',
-                            type: "horizontal",
-                            shadeIntensity: 0.25,
-                            gradientToColors: undefined,
-                            inverseColors: true,
-                            opacityFrom: 1,
-                            opacityTo: 1,
-                            stops: [50, 0, 100, 100]
-                        },
-                    },
-                    yaxis: {
-                        axisBorder: {
-                            show: false
-                        },
-                        axisTicks: {
-                            show: false,
-                        },
-                        labels: {
-                            show: false,
+                    tooltip: {
+                        y: {
                             formatter: function (val) {
-                                return val;
+                                return val.toLocaleString() + ' views';
                             }
                         }
                     },
                     title: {
-                        text: `Total Views: ${totalViews.toLocaleString()} (${startText} to ${endText})`,
+                        text: `Total Views: ${totalViews.toLocaleString()} (${startText} → ${endText})`,
                         align: 'center',
-                        margin: 20,
-                        offsetY: 10,
                         style: {
-                            color: '#099901ff',
                             fontSize: '16px',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            color: '#099901ff'
                         }
                     },
-                    grid: {
-                        row: {
-                            colors: ['transparent', 'transparent'],
-                            opacity: 0.2
-                        },
-                        borderColor: '#f1f3fa'
-                    }
-                }
-                if (chart) {
-                    chart.destroy();
-                }
-                chart = new ApexCharts(
-                    document.querySelector("#viewChart"),
-                    options
-                );
+                    responsive: [{
+                        breakpoint: 600,
+                        options: {
+                            chart: { height: 300 },
+                            legend: { position: 'bottom' }
+                        }
+                    }]
+                };
+                if (chart) chart.destroy();
+                chart = new ApexCharts(document.querySelector("#viewChart"), options);
                 chart.render();
-
             },
             error: function (xhr, status, error) {
                 let errorMessage = 'Error fetching views data. Please try again later.';
@@ -180,6 +114,16 @@ $(document).ready(function () {
             }
         });
     }
-    
     window.loadViewGraph = loadViewGraph;
 });
+
+function initTooltip(description) {
+    const icon = $('#viewDateRangeTitle');
+    if (description && description.trim() !== '') {
+        icon.attr('data-bs-title', description);
+        new bootstrap.Tooltip(icon[0]);
+    } else {
+        icon.attr('data-bs-title', 'No description available');
+        new bootstrap.Tooltip(icon[0]);
+    }
+}
