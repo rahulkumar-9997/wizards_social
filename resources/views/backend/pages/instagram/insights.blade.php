@@ -252,58 +252,12 @@
                                 </div>
                                 @endforeach
                             </div>
-                            <div class="row">
-                                <div class="col-12">
-                                    <div class="instagram-comment-section mt-1">
-                                        <div id="ig-comments-section" data-media-id="{{ $postData['id'] }}">
-                                            <h4 class="mb-1">Comments</h4>
-                                            <form id="ig-comment-form" class="mb-1">
-                                                @csrf
-                                                <div class="input-group">
-                                                    <input type="text" id="ig-comment-message" class="form-control" placeholder="Write a comment..." required>
-                                                    <button class="btn btn-primary" type="submit">Post</button>
-                                                </div>
-                                            </form>
-                                            <div id="ig-comments-list" class="border rounded p-2" style="max-height:500px;overflow-y:auto;">
-                                                <p class="text-muted">Loading comments...</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="row mb-2">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Post: Views / Reach</h5>
-                            <div class="btn-group btn-group-sm" role="group" aria-label="period">
-                                <button class="btn btn-outline-primary period-btn active" data-period="day">Day</button>
-                                <button class="btn btn-outline-primary period-btn" data-period="week">Week</button>
-                                <button class="btn btn-outline-primary period-btn" data-period="month">Month</button>
-                            </div>
-                        </div>
-
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div>
-                                    <strong>Total Reach:</strong> <span id="total_reach">--</span>
-                                </div>
-                                <div>
-                                    <strong>Total Impr:</strong> <span id="total_impr">--</span>
-                                </div>
-                            </div>
-
-                            <div id="insights_chart" style="height: 320px;"></div>
-
-                            <div id="insights_list" class="mt-3"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
 </div>
@@ -330,26 +284,5 @@
 
     });
 </script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const section = document.getElementById('ig-comments-section');
-        const mediaId = section.dataset.mediaId;
-        const commentsList = document.getElementById('ig-comments-list');
-        const form = document.getElementById('ig-comment-form');
-        const token = document.querySelector('meta[name="csrf-token"]').content;
 
-        function loadComments() {
-            commentsList.innerHTML = '<p class="text-muted">Loading comments...</p>';
-            fetch(`/instagram/${mediaId}/comments/html`)
-                .then(res => res.json())
-                .then(data => {
-                    commentsList.innerHTML = data.html || '<p class="text-danger">Failed to load comments.</p>';
-                })
-                .catch(() => {
-                    commentsList.innerHTML = '<p class="text-danger">Error loading comments.</p>';
-                });
-        }
-        loadComments();
-    });
-</script>
 @endpush

@@ -51,33 +51,65 @@ $(document).ready(function () {
                 const options = {
                     chart: {
                         type: 'pie',
-                        height: 380,
+                        height: 420,
                         toolbar: { show: false }
                     },
                     series: seriesData,
                     labels: categories,
-                    colors: colors,
+                    colors: [
+                        '#4ecac2', '#36a2eb', '#ffce56',
+                        '#ff6384', '#9966ff', '#00cc99', '#ff9933'
+                    ],
                     dataLabels: {
                         enabled: true,
                         formatter: function (val, opts) {
+                            const label = categories[opts.seriesIndex];
                             const value = seriesData[opts.seriesIndex];
-                            return `${value.toLocaleString()} (${val.toFixed(1)}%)`;
+                            const total = seriesData.reduce((a, b) => a + b, 0);
+                            const percent = ((value / total) * 100).toFixed(1);
+                            if (percent < 6) {
+                                return `${label} (${percent}%)`;
+                            } else {
+                                return `${label}\n${value.toLocaleString()}`;
+                            }
                         },
                         style: {
-                            fontSize: '13px',
+                            fontSize: '12px',
+                            fontWeight: '600',
                             colors: ['#fff']
+                        },
+                        background: {
+                            enabled: false
+                        },
+                        dropShadow: { enabled: false },
+                        offset: 0,
+                        connector: {
+                            enabled: true,
+                            length: 15,
+                            strokeWidth: 1.2,
+                            color: '#888'
                         }
                     },
                     legend: {
+                        show: true,
                         position: 'bottom',
+                        horizontalAlign: 'center',
+                        floating: false,
                         fontSize: '13px',
                         labels: { colors: '#333' },
-                        itemMargin: { horizontal: 10, vertical: 5 }
+                        itemMargin: { horizontal: 10, vertical: 4 },
+                        formatter: function (seriesName, opts) {
+                            const val = seriesData[opts.seriesIndex];
+                            const total = seriesData.reduce((a, b) => a + b, 0);
+                            const perc = ((val / total) * 100).toFixed(1);
+                            return `${seriesName}: ${val.toLocaleString()} (${perc}%)`;
+                        }
                     },
                     tooltip: {
                         y: {
-                            formatter: function (val) {
-                                return val.toLocaleString() + ' views';
+                            formatter: function (val, opts) {
+                                const label = categories[opts.seriesIndex];
+                                return `${label}: ${val.toLocaleString()} views`;
                             }
                         }
                     },
@@ -90,14 +122,31 @@ $(document).ready(function () {
                             color: '#099901ff'
                         }
                     },
+                    plotOptions: {
+                        pie: {
+                            startAngle: -90,
+                            endAngle: 270,
+                            dataLabels: {
+                                offset: -10,
+                                minAngleToShowLabel: 10
+                            },
+                            expandOnClick: false
+                        }
+                    },
                     responsive: [{
                         breakpoint: 600,
                         options: {
-                            chart: { height: 300 },
-                            legend: { position: 'bottom' }
+                            chart: { height: 320 },
+                            dataLabels: {
+                                style: { fontSize: '11px' }
+                            },
+                            legend: { fontSize: '11px' }
                         }
                     }]
                 };
+
+
+
                 if (chart) chart.destroy();
                 chart = new ApexCharts(document.querySelector("#viewChart"), options);
                 chart.render();

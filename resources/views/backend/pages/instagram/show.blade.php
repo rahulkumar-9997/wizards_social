@@ -325,6 +325,7 @@
         window.instagramFetchReachDaysWise = "{{ route('instagram.fetch.reach-day-wise', $instagram['id']) }}";
         window.instagramFetchViewDaysWise = "{{ route('instagram.fetch.view-day-wise', $instagram['id']) }}";
         window.INSTAGRAM_BASE_URL = "{{ url('/instagram') }}";
+        const instagramFetchUrl = "{{ route('instagram.fetch.html', $instagram['id']) }}";
     </script>
 
     <script src="{{ asset('backend/assets/js/pages/instagram-top-location.js') }}"></script>
@@ -400,7 +401,7 @@
             </div>`;
             $('#insta_face_dashboard').html(loadingHtml);
             $.ajax({
-                url: `/instagram/fetch/${accountId}`,
+                url: instagramFetchUrl,
                 type: 'GET',
                 data: {
                     start_date: startDate,

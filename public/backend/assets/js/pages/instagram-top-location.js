@@ -1,6 +1,9 @@
 $(document).ready(function () {
     let map = null;
     let markers = [];
+    let currentHighlightedMarker = null;
+    let originalMapView = null;
+    
     if (typeof L === 'undefined') {
         console.error('Leaflet library not loaded!');
         $('#geolocationContainer').html(`
@@ -11,6 +14,7 @@ $(document).ready(function () {
         `);
         return;
     }
+    
     function initMap() {
         try {
             const mapContainer = document.getElementById('worldMap');
@@ -29,11 +33,19 @@ $(document).ready(function () {
             }).addTo(map);
             L.control.scale({imperial: false}).addTo(map);
             console.log('Map initialized successfully');
+            
+            // Store original map view
+            originalMapView = {
+                center: [20, 0],
+                zoom: 2
+            };
+            
         } catch (error) {
             console.error('Error initializing map:', error);
             throw error;
         }
     }
+    
     async function geocodeCity(cityName) {
         try {
             const cleanCityName = cityName.split(',')[0].trim();
@@ -64,6 +76,7 @@ $(document).ready(function () {
             return { found: false };
         }
     }
+    
     async function geocodeAllLocations(locations) {
         const geocodedLocations = [];
         let successCount = 0;
@@ -103,18 +116,199 @@ $(document).ready(function () {
         console.log(`Geocoding completed: ${successCount} out of ${locations.length} locations successfully mapped`);
         return geocodedLocations;
     }
-    const colorPalette = [
-        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-        '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-        '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2',
-        '#F9E79F', '#A9DFBF', '#F5B7B1', '#AED6F1', '#D2B4DE'
-    ];
+
     function getColorForPercentage(percentage) {
         if (percentage > 20) return '#FF6B6B'; /* Red for high */
         if (percentage > 10) return '#4ECDC4'; /* Teal for medium-high */
         if (percentage > 5) return '#45B7D1';  /* Blue for medium */
         if (percentage > 2) return '#96CEB4';  /* Green for low-medium */
         return '#FFEAA7'; /* Yellow for low */
+    }
+    
+    function resetToDefault() {
+        // Remove highlight from table rows
+        $('.location-row').removeClass('table-active');
+        
+        // Remove highlight from markers
+        if (currentHighlightedMarker) {
+            const originalColor = currentHighlightedMarker.originalColor;
+            const originalSize = currentHighlightedMarker.originalSize;
+            
+            const icon = L.divIcon({
+                className: 'custom-map-marker',
+                html: `
+                    <div class="map-marker" style="
+                        width: ${originalSize}px;
+                        height: ${originalSize}px;
+                        background: ${originalColor};
+                        border: 3px solid white;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        font-size: ${Math.max(10, originalSize - 12)}px;
+                        cursor: pointer;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                        text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+                    ">
+                        ${Math.round(currentHighlightedMarker.percentage)}%
+                    </div>
+                `,
+                iconSize: [originalSize, originalSize],
+                iconAnchor: [originalSize / 2, originalSize / 2]
+            });
+            
+            currentHighlightedMarker.marker.setIcon(icon);
+            currentHighlightedMarker.marker.closePopup();
+            currentHighlightedMarker = null;
+        }
+        
+        // Reset map to original view
+        if (map && originalMapView) {
+            map.setView(originalMapView.center, originalMapView.zoom);
+        }
+        
+        // Show reset confirmation
+        showResetMessage();
+    }
+    
+    function showResetMessage() {
+        // Create a temporary success message
+        const resetMessage = $(`
+            <div class="alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 9999;">
+                <i class="fas fa-check-circle me-2"></i>
+                Map reset to default view
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+        
+        $('body').append(resetMessage);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            resetMessage.alert('close');
+        }, 3000);
+    }
+    
+    function highlightMarker(locationName) {
+        /* Remove previous highlight*/
+        if (currentHighlightedMarker) {
+            const originalColor = currentHighlightedMarker.originalColor;
+            const originalSize = currentHighlightedMarker.originalSize;
+            
+            const icon = L.divIcon({
+                className: 'custom-map-marker',
+                html: `
+                    <div class="map-marker" style="
+                        width: ${originalSize}px;
+                        height: ${originalSize}px;
+                        background: ${originalColor};
+                        border: 3px solid white;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        font-size: ${Math.max(10, originalSize - 12)}px;
+                        cursor: pointer;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                        text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+                    ">
+                        ${Math.round(currentHighlightedMarker.percentage)}%
+                    </div>
+                `,
+                iconSize: [originalSize, originalSize],
+                iconAnchor: [originalSize / 2, originalSize / 2]
+            });
+            
+            currentHighlightedMarker.marker.setIcon(icon);
+        }
+
+        /* Find and highlight new marker*/
+        const markerData = markers.find(m => m.locationName === locationName);
+        if (markerData) {
+            const highlightSize = markerData.originalSize + 15; 
+            const highlightColor = '#FF0000';
+            
+            const highlightIcon = L.divIcon({
+                className: 'custom-map-marker highlighted',
+                html: `
+                    <div class="map-marker" style="
+                        width: ${highlightSize}px;
+                        height: ${highlightSize}px;
+                        background: ${highlightColor};
+                        border: 4px solid yellow;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        font-size: ${Math.max(12, highlightSize - 15)}px;
+                        cursor: pointer;
+                        box-shadow: 0 6px 20px rgba(255,0,0,0.6);
+                        text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+                        animation: pulse 1.5s infinite;
+                    ">
+                        ${Math.round(markerData.percentage)}%
+                    </div>
+                `,
+                iconSize: [highlightSize, highlightSize],
+                iconAnchor: [highlightSize / 2, highlightSize / 2]
+            });
+            
+            markerData.marker.setIcon(highlightIcon);
+            
+            /* Center map on the highlighted marker*/
+            map.setView(markerData.coordinates, Math.max(6, map.getZoom()));
+            markerData.marker.openPopup();
+            
+            /* Store current highlighted marker*/
+            currentHighlightedMarker = {
+                marker: markerData.marker,
+                originalColor: markerData.originalColor,
+                originalSize: markerData.originalSize,
+                percentage: markerData.percentage
+            };
+        }
+    }
+
+    /* Function to create table HTML with click events */
+    function createLocationsTable(locations) {
+        return `
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="5%">#</th>
+                            <th>City Name</th>
+                            <th width="15%" class="text-end">Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${locations.map((location, index) => `
+                            <tr class="location-row" data-location="${location.name}" style="cursor: pointer;">
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">${index + 1}</span>
+                                </td>
+                                <td>
+                                    <i class="fas fa-map-marker-alt me-1 text-muted"></i>
+                                    ${location.name}
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge" style="background: ${getColorForPercentage(location.percentage)}; color: white;">
+                                        ${location.percentage}%
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
     }
 
     async function loadGeolocationData(timeframe = 'this_month') {
@@ -169,20 +363,52 @@ $(document).ready(function () {
                 container.html(`
                     <div class="alert alert-warning text-center py-4">
                         <i class="fas fa-map-marker-alt me-2"></i>
-                        Could not map any locations. Please try again.
+                        Could not map any locations. Showing table only.
                     </div>
+                    ${createLocationsTable(response.locations)}
                 `);
                 return;
             }
+
+            /* Create layout with map and table */
             container.html(`
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">
-                        <i class="fas fa-globe-americas me-2"></i>
-                        Audience Locations (${locationsWithCoordinates.length} cities)
-                    </h6>
+                <div class="row">
+                    <!-- Map Section -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-globe-americas me-2"></i>
+                                    Geographic Distribution
+                                </h6>
+                                <button class="btn btn-sm btn-outline-secondary" id="resetMapBtn">
+                                    <i class="fas fa-sync-alt me-1"></i> Reset View
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="worldMap" style="height: 400px; border-radius: 0 0 8px 8px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Table Section -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-list me-2"></i>
+                                    Top Locations (${response.locations.length})
+                                </h6>
+                                <small class="text-muted">Click on any row to highlight on map</small>
+                            </div>
+                            <div class="card-body p-0">
+                                ${createLocationsTable(response.locations)}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="worldMap" style="height: 500px; border-radius: 8px; border: 1px solid #dee2e6;"></div>
             `);
+
             await new Promise(resolve => setTimeout(resolve, 100));
             initMap();
             clearMarkers();
@@ -242,13 +468,39 @@ $(document).ready(function () {
                     .on('mouseover', function () {
                         this.openPopup();
                     });
-
-                markers.push(marker);
+                markers.push({
+                    marker: marker,
+                    locationName: location.name,
+                    coordinates: location.coordinates,
+                    originalColor: color,
+                    originalSize: size,
+                    percentage: location.percentage
+                });
             });
+            
             if (markers.length > 0) {
-                const group = new L.featureGroup(markers);
+                const group = new L.featureGroup(markers.map(m => m.marker));
                 map.fitBounds(group.getBounds().pad(0.15));
+                
+                /* Update original map view to show all markers*/
+                originalMapView = {
+                    center: map.getCenter(),
+                    zoom: map.getZoom()
+                };
             }
+            
+            /* Add click event for table rows*/
+            $('.location-row').on('click', function() {
+                const locationName = $(this).data('location');
+                $('.location-row').removeClass('table-active');
+                $(this).addClass('table-active');
+                highlightMarker(locationName);
+            });
+            
+            /* Add click event for reset button*/
+            $('#resetMapBtn').on('click', function() {
+                resetToDefault();
+            });
 
         } catch (error) {
             console.error('Error loading geolocation data:', error);
@@ -263,17 +515,20 @@ $(document).ready(function () {
 
     function clearMarkers() {
         if (map) {
-            markers.forEach(marker => {
-                map.removeLayer(marker);
+            markers.forEach(markerData => {
+                map.removeLayer(markerData.marker);
             });
         }
         markers = [];
+        currentHighlightedMarker = null;
     }
+    
     loadGeolocationData();
     $('#timeframe').on('change', function () {
         loadGeolocationData($(this).val());
     });
 });
+
 const style = document.createElement('style');
 style.textContent = `
     .custom-map-marker {
@@ -300,9 +555,6 @@ style.textContent = `
     .leaflet-popup-tip {
         background: white;
     }
-    #worldMap {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
     .progress {
         background-color: #e9ecef;
         border-radius: 10px;
@@ -311,6 +563,37 @@ style.textContent = `
         background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
         border-radius: 10px;
         transition: width 0.3s ease;
+    }
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    .table td {
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+    .location-row:hover {
+        background-color: #f8f9fa !important;
+    }
+    .table-active {
+        background-color: #e3f2fd !important;
+        border-left: 4px solid #2196F3 !important;
+    }
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 6px 20px rgba(255,0,0,0.6);
+        }
+        50% {
+            box-shadow: 0 6px 30px rgba(255,0,0,0.9);
+        }
+        100% {
+            box-shadow: 0 6px 20px rgba(255,0,0,0.6);
+        }
+    }
+    #resetMapBtn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
     }
 `;
 document.head.appendChild(style);
