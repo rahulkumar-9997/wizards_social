@@ -2278,7 +2278,7 @@ class InstagramController extends Controller
     }
 
     /**insights every post start */
-    public function postInsightsPage($id, $postId)
+    public function postInsightsPage($instagramPageId, $postId)
     {
         try {
             $user = Auth::user();
@@ -2292,7 +2292,7 @@ class InstagramController extends Controller
             }
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
             /* Fetch Instagram account basic info */
-            $instagram = Http::timeout(10)->get("https://graph.facebook.com/v24.0/{$id}", [
+            $instagram = Http::timeout(10)->get("https://graph.facebook.com/v24.0/{$instagramPageId}", [
                 'fields' => 'id,name,username,profile_picture_url,followers_count',
                 'access_token' => $token,
             ])->json();
@@ -2306,7 +2306,7 @@ class InstagramController extends Controller
                 'fields' => 'id,media_type,media_url,permalink,timestamp,like_count,comments_count,caption,username,children{media_type,media_url}',
                 'access_token' => $token,
             ])->json();
-
+            
             if (isset($postBasic['error'])) {
                 throw new Exception($postBasic['error']['message']);
             }
@@ -2324,6 +2324,7 @@ class InstagramController extends Controller
             }
             $postBasic['insights'] = ['data' => $postWithInsights['data'] ?? []];
             $postData = $this->processPostData($postBasic, $mediaType);
+            dd($postData);
             return view('backend.pages.instagram.insights', compact('postData', 'instagram'));
         } catch (\Exception $e) {
             Log::error('Post insights page error: ' . $e->getMessage());
@@ -2453,76 +2454,8 @@ class InstagramController extends Controller
     }
 
 
-    public function fetchCommentsHtml($mediaId)
-    {
-        try {
-            $user = Auth::user();
-            $mainAccount = \App\Models\SocialAccount::where('user_id', $user->id)
-                ->where('provider', 'facebook')
-                ->whereNull('parent_account_id')
-                ->first();
-
-            if (!$mainAccount) {
-                return response()->json(['error' => 'Facebook account not connected'], 401);
-            }
-
-            $token = \App\Helpers\SocialTokenHelper::getFacebookToken($mainAccount);
-
-            $response = Http::timeout(15)->get("https://graph.facebook.com/v24.0/{$mediaId}/comments", [
-                'fields' => 'id,text,timestamp,like_count,from,children{id,text,timestamp,like_count,from}',
-                'access_token' => $token,
-                'limit' => 30,
-            ])->json();
-
-            if (isset($response['error'])) {
-                throw new Exception($response['error']['message']);
-            }
-
-            $comments = $response['data'] ?? [];
-            Log::info('Fetched ' . count($comments) . ' comments for media ID ' . $mediaId);
-            Log::debug('Comments data: ' . print_r($comments, true));
-
-            $html = '';
-
-            if (count($comments) > 0) {
-                foreach ($comments as $c) {
-                    $html .= $this->renderCommentHtml($c);
-                }
-            } else {
-                $html = "<p class='text-muted mb-0'>No comments found on this post.</p>";
-            }
-
-            return response()->json(['html' => $html]);
-        } catch (Exception $e) {
-            Log::error('Error fetching IG comments: ' . $e->getMessage());
-            return response()->json(['html' => '<p class="text-danger">Error: ' . e($e->getMessage()) . '</p>']);
-        }
-    }
+    
 
 
-    private function renderCommentHtml($comment, $isChild = false)
-    {
-        $username = $comment['from']['username'] ?? 'Anonymous';
-        $text = e($comment['text'] ?? '');
-        $time = isset($comment['timestamp']) ? date('d M Y, h:i A', strtotime($comment['timestamp'])) : '';
-        $likes = $comment['like_count'] ?? 0;
-        $padding = $isChild ? 'pl-4 border-start ms-2' : '';
-        $html = "
-            <div class='border-bottom py-2 {$padding}'>
-                <div class='d-flex justify-content-between'>
-                    <strong>{$username}</strong>
-                    <small class='text-muted'>{$time}</small>
-                </div>
-                <p class='mb-1'>{$text}</p>
-                <small class='text-muted'><i class='bi bi-heart'></i> {$likes} likes</small>
-            </div>
-        ";
-        if (isset($comment['children']['data']) && count($comment['children']['data']) > 0) {
-            foreach ($comment['children']['data'] as $child) {
-                $html .= $this->renderCommentHtml($child, true);
-            }
-        }
-
-        return $html;
-    }
+    
 }
