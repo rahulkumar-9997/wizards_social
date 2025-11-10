@@ -25,11 +25,11 @@ class FacebookController extends Controller
             }
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
             /* Fetch Facebook Profile */
-            $facebookProfile = Http::timeout(10)->get("https://graph.facebook.com/v24.0/{$id}", [
-                'fields' => 'name,username,biography,followers_count,follows_count,media_count,profile_picture_url',
+            $facebookBusinessOrProfile = Http::timeout(10)->get("https://graph.facebook.com/v24.0/{$id}", [
+                'fields' => 'id,name,about,category,fan_count,followers_count,picture{url},cover,link,emails,connected_instagram_account,is_published,rating_count,instagram_business_account,is_owned',
                 'access_token' => $token,
             ])->json();          
-            return view('backend.pages.facebook.fb-summary.fb-report', compact('facebookProfile'));
+            return view('backend.pages.facebook.fb-summary.fb-report', compact('facebookBusinessOrProfile'));
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             return request()->ajax()
                 ? response()->json(['error' => 'No internet connection.'], 503)
