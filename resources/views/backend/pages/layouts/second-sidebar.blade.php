@@ -37,7 +37,9 @@
                             ->where('connected_page', $page['name'])
                             ->count() > 0;
                             @endphp
-                            <option value="{{ $page['id'] }}">
+                            <option value="{{ $page['id'] }}"
+                            {{ isset($selectedFbId) && $selectedFbId == $page['id'] ? 'selected' : '' }} 
+                            >
                                 {{ $page['name'] }} 
                                 @if(!empty($page['category']))
                                   ({{ $page['category'] }})

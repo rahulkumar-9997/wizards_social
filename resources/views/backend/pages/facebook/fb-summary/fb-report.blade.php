@@ -1,5 +1,10 @@
 @extends('backend.pages.layouts.master')
-@section('title', 'Instagram Dashboard')
+@section('title', ($facebookBusinessOrProfile['name'] ?? 'Facebook') . 
+    ' Dashboard' . 
+    (!empty($facebookBusinessOrProfile['followers_count']) 
+        ? ' – ' . number_format($facebookBusinessOrProfile['followers_count']) . ' Followers' 
+        : '')
+)
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
 @endpush
@@ -7,36 +12,51 @@
 <div class="container-fluid">
     <div class="row">
         @include('backend.pages.layouts.second-sidebar', [
-            'selectedInstagramId' => $instagram['id'] ?? null
+            'selectedInstagramId' => $instagram['id'] ?? null,
+            'selectedFbId' => $facebookBusinessOrProfile['id'] ?? null
         ])
         <div class="col-xl-9 export_pdf_report">
             <div class="row mb-2">
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                            <h4 class="card-title mb-0">Facebook Integration - Connected</h4>
+                            <h4 class="card-title mb-0">
+                                Facebook 
+                                <span class="text-success">{{ $facebookBusinessOrProfile['name'] ?? '' }}</span>
+                            </h4>
                             <button id="downloadPdf" class="btn btn-outline-primary pdf-download-btn no-print">
                                 <i class="bx bx-download"></i> Download PDF Report
                             </button>
                         </div>
-                        <div class="card-body d-flex align-items-center">
-                            <img src="{{ $instagram['profile_picture_url'] ?? '' }}" width="100" height="100" class="me-3" alt="Profile">
+
+                        <div class="card-body d-flex align-items-center flex-wrap">
+                            <img src="{{ $facebookBusinessOrProfile['picture']['data']['url'] ?? asset('images/default-profile.png') }}" 
+                                width="100" height="100" class="me-3 rounded-circle border" alt="Profile">
+
                             <div>
-                                <h3 class="mb-1 fw-bold">{{ $instagram['name'] ?? '' }}</h3>
-                                <p class="text-muted mb-1">{{ $instagram['username'] ?? '' }}</p>
-                                <p class="mb-2">{!! nl2br(e($instagram['biography'] ?? '')) !!}</p>
-                                <div class="d-flex gap-4">
-                                    <span><strong>{{ number_format($instagram['media_count'] ?? 0) }}</strong> posts</span>
-                                    <span><strong>{{ number_format($instagram['followers_count'] ?? 0) }}</strong> followers</span>
-                                    <span><strong>{{ number_format($instagram['follows_count'] ?? 0) }}</strong> following</span>
+                                <h3 class="mb-1 fw-bold">{{ $facebookBusinessOrProfile['name'] ?? 'Facebook Page' }} </h3>
+                                <h4 class="mb-1 fw-bold">({{ implode(', ', $facebookBusinessOrProfile['emails'] ?? []) }})</h4>
+                                <h4 class="mb-1 fw-bold">{{ $facebookBusinessOrProfile['category'] ?? '' }}</h4>
+                                <p class="text-muted mb-1">{{ $facebookBusinessOrProfile['username'] ?? '' }}</p>
+                                @if(!empty($facebookBusinessOrProfile['about']))
+                                    <p class="mb-2">{!! nl2br(e($facebookBusinessOrProfile['about'])) !!}</p>
+                                @endif
+
+                                <div class="d-flex gap-4 flex-wrap">
+                                    <span><strong>{{ number_format($facebookBusinessOrProfile['media_count'] ?? 0) }}</strong> posts</span>
+                                    <span><strong>{{ number_format($facebookBusinessOrProfile['fan_count'] ?? 0) }}</strong> Fan </span>
+                                    <span><strong>{{ number_format($facebookBusinessOrProfile['followers_count'] ?? 0) }}</strong> Followers</span>
+                                    <span><strong>{{ number_format($facebookBusinessOrProfile['rating_count'] ?? 0) }}</strong> Rating</span>
                                 </div>
                             </div>
+
                             <div class="ms-auto">
                                 <a href="{{ route('facebook.index') }}" class="btn btn-outline-primary">
                                     <i class="fab fa-facebook"></i> Back to Facebook
                                 </a>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>

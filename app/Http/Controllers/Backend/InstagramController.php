@@ -32,7 +32,9 @@ class InstagramController extends Controller
                 return redirect()->back()->with('error', 'Facebook account not connected');
             }
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
-            /* Fetch Instagram profile */
+            /**
+             * Fetch Instagram Profile (if connected)
+            */
             $instagram = Http::timeout(10)->get("https://graph.facebook.com/v24.0/{$id}", [
                 'fields' => 'name,username,biography,followers_count,follows_count,media_count,profile_picture_url',
                 'access_token' => $token,
@@ -157,6 +159,7 @@ class InstagramController extends Controller
                 'until' => $until,
                 'access_token' => $token,
             ])->json();
+            //Log::info('Current : Profile Visits: ' . print_r($profileResponseCurrent, true));
             if (isset($profileResponseCurrent['data'][0]['total_value'])) {
                 $currentProfile_values = $profileResponseCurrent['data'][0]['total_value']['value'];
                 $result['profile_visits']['current_profile'] = $currentProfile_values;
@@ -172,7 +175,7 @@ class InstagramController extends Controller
                 'until' => $previousUntil,
                 'access_token' => $token,
             ])->json();
-
+            //Log::info('Previous : Profile Visits: ' . print_r($prevProfile, true));
             if (isset($prevProfile['data'][0]['total_value'])) {
                 $preProfile_values = $prevProfile['data'][0]['total_value']['value'];
                 $result['profile_visits']['previous_profile'] = $preProfile_values;
@@ -192,7 +195,8 @@ class InstagramController extends Controller
                 'until' => $until,
                 'access_token' => $token,
             ])->json();
-            //Log::info('Instagram Current Profile Link Tabs Response: ' . print_r($currentProfileClickResponse, true));
+            //Log::info('Current Profile Link Click: ' . print_r($currentProfileClickResponse, true));
+            //Log::info("Current Profile Taps Click : https://graph.facebook.com/v24.0/{$accountId}/insights?metric=profile_links_taps&period=day&metric_type=total_value&since={$since}&until={$until}&access_token={$token}");
             if (isset($currentProfileClickResponse['data'][0]['total_value'])) {
                 $profile_link_current = $currentProfileClickResponse['data'][0]['total_value']['value'];
                 $result['profile_link']['current'] = $profile_link_current;
@@ -207,7 +211,8 @@ class InstagramController extends Controller
                 'until' => $previousUntil,
                 'access_token' => $token,
             ])->json();
-            //Log::info('Instagram previous Profile Link Tabs Response: ' . print_r($prevProfileClickResponse, true));
+            //Log::info('Current Profile Link Click: ' . print_r($prevProfileClickResponse, true));
+            //Log::info("Previous Profile Taps Click : https://graph.facebook.com/v24.0/{$accountId}/insights?metric=profile_links_taps&period=day&metric_type=total_value&since={$previousSince}&until={$previousUntil}&access_token={$token}");
             if (isset($prevProfileClickResponse['data'][0]['total_value'])) {
                 $profile_link_prev = $prevProfileClickResponse['data'][0]['total_value']['value'];
                 $result['profile_link']['previous'] = $profile_link_prev;
@@ -575,7 +580,7 @@ class InstagramController extends Controller
                 elseif ($type === 'UNKNOWN') $prev_views_unknown += $value;
             }
         }
-         /* ===== Interactions (Current) ===== */
+        /* ===== Interactions (Current) ===== */
         $currentInteractions = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
             'metric' => 'likes,comments,saves,shares,reposts',
             'period' => 'day',
@@ -584,26 +589,41 @@ class InstagramController extends Controller
             'until' => $until,
             'access_token' => $token,
         ])->json();
-
-        $likes = $comments = $saves = $shares = $reposts = 0;
-        $likes_desc = $comments_desc = $saves_desc = $shares_desc = $reposts_desc = '';
+        //Log::info('Current month total Interactions by (likes,comments,saves,shares,reposts): ' . print_r($currentInteractions, true));
+        $likesInteractionCurrent = $commentsInteractionCurrent = $savesInteractionCurrent = $sharesInteractionCurrent = $repostsInteractionCurrent = 0;
+        $likes_desc_current_int = $comments_desc_current_int = $saves_desc_current_int = $shares_desc_current_int = $reposts_desc_current_int = '';
 
         if (isset($currentInteractions['data'])) {
             foreach ($currentInteractions['data'] as $metric) {
                 $name = $metric['name'] ?? '';
-                $value = $metric['total_value']['value'] ?? 0;
-                $desc = $metric['description'] ?? '';
-
+                $totalValueIntCurrent = $metric['total_value']['value'] ?? 0;
+                $currentInterDesc = $metric['description'] ?? '';
+                //Log::info("Processing metric: {$name} with value: {$totalValue}");
                 switch ($name) {
-                    case 'likes': $likes = $value; $likes_desc = $desc; break;
-                    case 'comments': $comments = $value; $comments_desc = $desc; break;
-                    case 'saves': $saves = $value; $saves_desc = $desc; break;
-                    case 'shares': $shares = $value; $shares_desc = $desc; break;
-                    case 'reposts': $reposts = $value; $reposts_desc = $desc; break;
+                    case 'likes': 
+                        $likesInteractionCurrent = $totalValueIntCurrent; 
+                        $likes_desc_current_int = $currentInterDesc; 
+                        break;
+                    case 'comments': 
+                        $commentsInteractionCurrent = $totalValueIntCurrent; 
+                        $comments_desc_current_int = $currentInterDesc; 
+                        break;
+                    case 'saves': 
+                        $savesInteractionCurrent = $totalValueIntCurrent; 
+                        $saves_desc_current_int = $currentInterDesc; 
+                        break;
+                    case 'shares': 
+                        $sharesInteractionCurrent = $totalValueIntCurrent; 
+                        $shares_desc_current_int = $currentInterDesc; 
+                        break;
+                    case 'reposts': 
+                        $repostsInteractionCurrent = $totalValueIntCurrent; 
+                        $reposts_desc_current_int = $currentInterDesc; 
+                        break;
                 }
             }
         }
-
+        //Log::info("Final Interaction Counts - Likes: {$likesInteractionCurrent}, Comments: {$commentsInteractionCurrent}, Saves: {$savesInteractionCurrent}, Shares: {$sharesInteractionCurrent}, Reposts: {$repostsInteractionCurrent}");
         /* ===== Interactions (Previous) ===== */
         $previousInteractions = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
             'metric' => 'likes,comments,saves,shares,reposts',
@@ -613,22 +633,40 @@ class InstagramController extends Controller
             'until' => $previousUntil,
             'access_token' => $token,
         ])->json();
+        //Log::info('Previous period total Interactions by (likes,comments,saves,shares,reposts): ' . print_r($previousInteractions, true));
 
-        $pre_likes = $pre_comments = $pre_saves = $pre_shares = $pre_reposts = 0;
+        $likesInteractionPrevious = $commentsInteractionPrevious = $savesInteractionPrevious = $sharesInteractionPrevious = $repostsInteractionPrevious = 0;
+        $likes_desc_previous_int = $comments_desc_previous_int = $saves_desc_previous_int = $shares_desc_previous_int = $reposts_desc_previous_int = '';
+
         if (isset($previousInteractions['data'])) {
             foreach ($previousInteractions['data'] as $metric) {
                 $name = $metric['name'] ?? '';
-                $value = $metric['total_value']['value'] ?? 0;
+                $totalValueIntPrev = $metric['total_value']['value'] ?? 0;
+                $previousInterDesc = $metric['description'] ?? '';
                 switch ($name) {
-                    case 'likes': $pre_likes = $value; break;
-                    case 'comments': $pre_comments = $value; break;
-                    case 'saves': $pre_saves = $value; break;
-                    case 'shares': $pre_shares = $value; break;
-                    case 'reposts': $pre_reposts = $value; break;
+                    case 'likes':
+                        $likesInteractionPrevious = $totalValueIntPrev;
+                        $likes_desc_previous_int = $previousInterDesc;
+                        break;
+                    case 'comments':
+                        $commentsInteractionPrevious = $totalValueIntPrev;
+                        $comments_desc_previous_int = $previousInterDesc;
+                        break;
+                    case 'saves':
+                        $savesInteractionPrevious = $totalValueIntPrev;
+                        $saves_desc_previous_int = $previousInterDesc;
+                        break;
+                    case 'shares':
+                        $sharesInteractionPrevious = $totalValueIntPrev;
+                        $shares_desc_previous_int = $previousInterDesc;
+                        break;
+                    case 'reposts':
+                        $repostsInteractionPrevious = $totalValueIntPrev;
+                        $reposts_desc_previous_int = $previousInterDesc;
+                        break;
                 }
             }
         }
-
         /* ===== Total Interactions by Media Type ===== */
         $mediaTypes = ['POST' => 0, 'AD' => 0, 'REEL' => 0, 'STORY' => 0];
         /* ===== Current Period ===== */
@@ -642,10 +680,9 @@ class InstagramController extends Controller
             'access_token' => $token,
         ])->json();
 
-        //Log::info("Total Interactions Current Response:", $currentRes);
+        //Log::info('Current : Total Interactions by Media Type: ' . print_r($currentRes, true));
         $totalInteractionsDesc = $currentRes['data'][0]['description'] ?? '';
         $currentByType = $mediaTypes;
-
         if (
             isset($currentRes['data'][0]['total_value']['breakdowns'][0]['results']) &&
             is_array($currentRes['data'][0]['total_value']['breakdowns'][0]['results'])
@@ -669,18 +706,18 @@ class InstagramController extends Controller
             'until' => $previousUntil,
             'access_token' => $token,
         ])->json();
-        //Log::info("Total Interactions Previous Response:", $previousRes);
+        //Log::info('Previous : Total Interactions by Media Type: ' . print_r($previousRes, true));
         $previousByType = $mediaTypes;
-
         if (
             isset($previousRes['data'][0]['total_value']['breakdowns'][0]['results']) &&
             is_array($previousRes['data'][0]['total_value']['breakdowns'][0]['results'])
-        ) {
-            foreach ($previousRes['data'][0]['total_value']['breakdowns'][0]['results'] as $item) {
-                $type = strtoupper($item['dimension_values'][0] ?? '');
-                $value = (int) ($item['value'] ?? 0);
-                if (isset($previousByType[$type])) {
-                    $previousByType[$type] += $value;
+        )
+        {
+            foreach ($previousRes['data'][0]['total_value']['breakdowns'][0]['results'] as $prevoius_item) {
+                $previous_media_type = strtoupper($prevoius_item['dimension_values'][0] ?? '');
+                $previous_media_type_value = (int) ($prevoius_item['value'] ?? 0);
+                if (isset($previousByType[$previous_media_type])) {
+                    $previousByType[$previous_media_type] += $previous_media_type_value;
                 }
             }
         }
@@ -711,7 +748,7 @@ class InstagramController extends Controller
             'access_token' => $token,
         ])->json();
         //Log::info("Current Month Media Date Range: {$since} to {$until}");
-        Log::info("Current Month Media : https://graph.facebook.com/v24.0/{$accountId}/media?fields=media_type,media_product_type,like_count,comments_count,timestamp&since={$since}&until={$until}&access_token={$token}");
+        //Log::info("Current Month Media : https://graph.facebook.com/v24.0/{$accountId}/media?fields=media_type,media_product_type,like_count,comments_count,timestamp&since={$since}&until={$until}&access_token={$token}");
         Log::info("Current Month Media : ");
         $posts = $stories = $reels = $totalInteractions = 0;
         if (isset($mediaResponseCurrent['data'])) {
@@ -791,11 +828,36 @@ class InstagramController extends Controller
             'reels' => ['previous' => $pre_reels, 'current' => $reels],
             'content_interaction' => ['previous' => $pre_totalInteractions, 'current' => $totalInteractions],
 
-            'likes' => ['api_description' => $likes_desc, 'previous' => $pre_likes, 'current' => $likes],
-            'comments' => ['api_description' => $comments_desc, 'previous' => $pre_comments, 'current' => $comments],
-            'saves' => ['api_description' => $saves_desc, 'previous' => $pre_saves, 'current' => $saves],
-            'shares' => ['api_description' => $shares_desc, 'previous' => $pre_shares, 'current' => $shares],
-            'reposts' => ['api_description' => $reposts_desc, 'previous' => $pre_reposts, 'current' => $reposts],
+            'likes' => 
+            [
+                'api_description' => $likes_desc_current_int,
+                'previous' => $likesInteractionPrevious,
+                'current' => $likesInteractionCurrent
+            ],
+            'comments' => 
+            [
+                'api_description' => $comments_desc_current_int, 
+                'previous' => $commentsInteractionPrevious, 
+                'current' => $commentsInteractionCurrent
+            ],
+            'saves' => 
+            [
+                'api_description' => $saves_desc_current_int,
+                'previous' => $savesInteractionPrevious,
+                'current' => $savesInteractionCurrent
+            ],
+            'shares' => 
+            [
+                'api_description' => $shares_desc_current_int,
+                'previous' => $sharesInteractionPrevious, 
+                'current' => $sharesInteractionCurrent
+            ],
+            'reposts' => 
+            [
+                'api_description' => $reposts_desc_current_int,
+                'previous' => $repostsInteractionPrevious, 
+                'current' => $repostsInteractionCurrent
+            ],
             'total_interactions_by_media_type' => $combinedInteractions,
 
         ];
