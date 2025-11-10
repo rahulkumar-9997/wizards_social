@@ -128,6 +128,7 @@
 </script>
 <script>
     const FB_DASHBOARD_URL = "{{ route('facebook.user.profile') }}";
+    window.facebook_base_url = "{{ url('facebook-summary') }}";
     const INSTAGRAM_BASE_URL = "{{ url('/instagram') }}";
     window.INSTAGRAM_BASE_URL = INSTAGRAM_BASE_URL;
 </script>

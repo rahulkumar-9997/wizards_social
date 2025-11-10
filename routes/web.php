@@ -13,6 +13,7 @@ use App\Http\Controllers\Backend\DatabaseController;
 use App\Http\Controllers\Backend\CacheController;
 use App\Http\Controllers\Backend\SocialController;
 use App\Http\Controllers\Backend\AdsFacebookController;
+use App\Http\Controllers\Backend\FacebookLoginController;
 use App\Http\Controllers\Backend\FacebookController;
 use App\Http\Controllers\Backend\InstagramController;
 use App\Http\Controllers\Backend\YoutubeController;
@@ -54,8 +55,8 @@ Route::group(['middleware' => ['auth']], function() {
     Route::resource('roles', RolesController::class);
     Route::resource('permissions', PermissionsController::class);
     
-    Route::get('/facebook', [FacebookController::class, 'index'])->name('facebook.index');
-    Route::get('fb-user-profile', [FacebookController::class, 'fbUserProfileDataHtml'])->name('facebook.user.profile');
+    Route::get('/facebook', [FacebookLoginController::class, 'index'])->name('facebook.index');    
+    Route::get('fb-user-profile', [FacebookLoginController::class, 'fbUserProfileDataHtml'])->name('facebook.user.profile');
 
     Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube.index');
     Route::prefix('social')->name('social.')->group(function () {
@@ -70,7 +71,7 @@ Route::group(['middleware' => ['auth']], function() {
     ->name('disconnect');
 
     });
-    Route::get('/facebook/refresh-token', [FacebookController::class, 'refreshToken'])
+    Route::get('/facebook/refresh-token', [FacebookLoginController::class, 'refreshToken'])
     ->name('facebook.refresh.token');
     Route::get('/instagram', [InstagramController::class, 'index'])->name('instagram.index');
     Route::get('instagram/{id}', [InstagramController::class, 'show'])->name('instagram.show');
@@ -87,6 +88,8 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])->name('instagram.post.insights.page');    
     Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');
         
+
+    Route::get('facebook-summary/{id}', [FacebookController::class, 'facebookHtmlDataIndex'])->name('facebook.report');
     Route::get('face-ads', [AdsFacebookController::class, 'mainIndex'])->name('face.ads');
     Route::get('/facebook/ads-summary/{adAccountId}', [AdsFacebookController::class, 'getAdsSummary'])->name('facebook.ads.summary');
 

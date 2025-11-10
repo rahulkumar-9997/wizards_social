@@ -37,29 +37,6 @@ class InstagramController extends Controller
                 'fields' => 'name,username,biography,followers_count,follows_count,media_count,profile_picture_url',
                 'access_token' => $token,
             ])->json();
-            /* Fetch media with pagination */
-            $limit = 12;
-            $after = request()->get('after');
-            $before = request()->get('before');
-            $params = [
-                'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
-                'access_token' => $token,
-                'limit' => $limit,
-            ];
-            if ($after) $params['after'] = $after;
-            if ($before) $params['before'] = $before;
-            $mediaResponse = Http::timeout(10)
-                ->get("https://graph.facebook.com/v24.0/{$id}/media", $params)
-                ->json();
-            //dd($mediaResponse);
-            $media = $mediaResponse['data'] ?? [];
-            $paging = $mediaResponse['paging'] ?? [];
-            if (request()->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'html' => view('backend.pages.instagram.partials.instagram-media-table', compact('instagram'))->render(),
-                ]);
-            }
             return view('backend.pages.instagram.show', compact(
                 'instagram',
             ));
@@ -132,7 +109,11 @@ class InstagramController extends Controller
 
             $start = \Carbon\Carbon::parse($startDate)->startOfDay();
             $end = \Carbon\Carbon::parse($endDate)->endOfDay();
-            $days = $start->diffInDays($end) + 1;
+            $days = (int) round($start->diffInDays($end));
+            if ($days < 28) {
+                $days += 1;
+            }
+            
             /* Previous range (same length, directly before current)*/
             $prevEnd = $start->copy()->subDay()->endOfDay();
             $prevStart = $prevEnd->copy()->subDays($days - 1)->startOfDay();
@@ -226,7 +207,7 @@ class InstagramController extends Controller
                 'until' => $previousUntil,
                 'access_token' => $token,
             ])->json();
-
+            //Log::info('Instagram previous Profile Link Tabs Response: ' . print_r($prevProfileClickResponse, true));
             if (isset($prevProfileClickResponse['data'][0]['total_value'])) {
                 $profile_link_prev = $prevProfileClickResponse['data'][0]['total_value']['value'];
                 $result['profile_link']['previous'] = $profile_link_prev;
@@ -340,7 +321,10 @@ class InstagramController extends Controller
         try {
             $start = \Carbon\Carbon::parse($startDate)->startOfDay();
             $end = \Carbon\Carbon::parse($endDate)->endOfDay();
-            $days = $start->diffInDays($end) + 1;
+            $days = (int) round($start->diffInDays($end));
+            if ($days < 28) {
+                $days += 1;
+            }
             /* Previous range (same length, directly before current)*/
             $prevEnd = $start->copy()->subDay()->endOfDay();
             $prevStart = $prevEnd->copy()->subDays($days - 1)->startOfDay();
@@ -474,7 +458,8 @@ class InstagramController extends Controller
     {
         $start = \Carbon\Carbon::parse($startDate)->startOfDay()->clone();
         $end = \Carbon\Carbon::parse($endDate)->endOfDay()->clone();
-        $days = (int) round($start->diffInDays($end)) + 1;
+        $days = (int) round($start->diffInDays($end))+1;
+        
         $prevEnd = $start->copy()->subDay()->endOfDay()->clone();
         $prevStart = $prevEnd->copy()->subDays($days - 1)->startOfDay()->clone();
 
@@ -483,7 +468,7 @@ class InstagramController extends Controller
         $previousSince = $prevStart->timestamp;
         $previousUntil = $prevEnd->timestamp;
 
-        /*Log::info('Date Range Fetch Media:', [
+        Log::info('Date Range Fetch Media:', [
             'startDate' => $start->toDateString(),
             'endDate' => $end->toDateString(),
             'days' => $days,
@@ -493,7 +478,7 @@ class InstagramController extends Controller
             'until (timestamp)' => $until,
             'previousSince (timestamp)' => $previousSince,
             'previousUntil (timestamp)' => $previousUntil,
-        ]);*/
+        ]);
         /* ===== Followers / Unfollowers (Current) ===== */
         $current_month_followers = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
             'metric' => 'follows_and_unfollows',
@@ -2006,13 +1991,12 @@ class InstagramController extends Controller
             if (!$mainAccount) {
                 return response()->json(['success' => false, 'error' => 'Facebook account not connected']);
             }
-
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
             $startDate = $request->get('start_date', now()->subDays(30)->format('Y-m-d'));
-            $endDate = $request->get('end_date', now()->format('Y-m-d'));
-            $start = \Carbon\Carbon::parse($startDate);
-            $end = \Carbon\Carbon::parse($endDate);
-
+            $endDate = $request->get('end_date', now()->format('Y-m-d'));            
+            $start = \Carbon\Carbon::parse($startDate)->startOfDay()->clone();
+            $end = \Carbon\Carbon::parse($endDate)->endOfDay()->clone();
+            
             $since = $start->timestamp;
             $until = $end->timestamp;
             $limit = $request->get('limit', 12);
@@ -2022,34 +2006,49 @@ class InstagramController extends Controller
             $sortOrder = $request->get('order', 'desc');
             $mediaTypeFilter = $request->get('media_type', '');
             $searchFilter = $request->get('search', '');
+            $allMedia = [];
+            $nextPageUrl = null;
             $params = [
                 'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,media_product_type,boost_ads_list{ad_id,ad_status}',
                 'access_token' => $token,
                 'since' => $since,
                 'until' => $until,
+                'limit' => 100
             ];
             if ($after) $params['after'] = $after;
             if ($before) $params['before'] = $before;
-            $mediaResponse = Http::timeout(10)
-                ->get("https://graph.facebook.com/v24.0/{$instagramId}/media", $params)
-                ->json();
-            $media = $mediaResponse['data'] ?? [];
-            $paging = $mediaResponse['paging'] ?? [];
-            $filteredMedia = $this->applyFilters($media, $mediaTypeFilter, $searchFilter);
-            $sortedMedia = $this->applySorting($filteredMedia, $sortField, $sortOrder);
+
+            do {
+                $mediaResponse = Http::timeout(30)
+                    ->get("https://graph.facebook.com/v24.0/{$instagramId}/media", $params)
+                    ->json();
+                Log::info("Fetch Instagram Post API URL: https://graph.facebook.com/v24.0/{$instagramId}/media?" . http_build_query($params));
+                
+                if (isset($mediaResponse['data'])) {
+                    $allMedia = array_merge($allMedia, $mediaResponse['data']);
+                }
+                $nextPageUrl = $mediaResponse['paging']['next'] ?? null;
+                $params = []; 
+                if ($nextPageUrl && parse_url($nextPageUrl, PHP_URL_QUERY)) {
+                    parse_str(parse_url($nextPageUrl, PHP_URL_QUERY), $queryParams);
+                    $params['after'] = $queryParams['after'] ?? null;
+                }
+                
+            } while ($nextPageUrl && count($allMedia) < 500); 
+            $filteredMedia = $this->applyFilters($allMedia, $mediaTypeFilter, $searchFilter);
+            $sortedMedia = $this->applySorting($filteredMedia, $sortField, $sortOrder);            
             $currentPage = $request->get('page', 1);
             $perPage = $limit;
             $offset = ($currentPage - 1) * $perPage;
             $paginatedMedia = array_slice($sortedMedia, $offset, $perPage);
             $totalMedia = count($sortedMedia);
             $totalPages = ceil($totalMedia / $perPage);
-
             $formattedStart = $start->format('d M Y');
             $formattedEnd = $end->format('d M Y');
 
             $mediaTableHtml = view('backend.pages.instagram.partials.instagram-media-table', [
                 'media' => $paginatedMedia,
-                'paging' => $paging,
+                'paging' => $mediaResponse['paging'] ?? [], 
                 'startDate' => $formattedStart,
                 'endDate' => $formattedEnd,
                 'instagram' => ['id' => $instagramId],
@@ -2081,6 +2080,7 @@ class InstagramController extends Controller
 
             return response()->json(['success' => true, 'html' => $html]);
         } catch (\Exception $e) {
+            Log::error('Instagram API Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage()

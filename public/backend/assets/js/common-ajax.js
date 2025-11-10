@@ -7,6 +7,14 @@ $(document).ready(function () {
             const baseUrl = window.INSTAGRAM_BASE_URL || "/instagram";
             window.location.href = `${baseUrl}/${selectedId}`;
         }
+    }); 
+    /*Facebook select */   
+    $(document).on("change", "#facebook_pages", function () {
+        const selectedId = $(this).val();
+        if (selectedId) {
+            const baseUrlFb = window.facebook_base_url;
+            window.location.href = `${baseUrlFb}/${selectedId}`;
+        }
     });    
     
 });

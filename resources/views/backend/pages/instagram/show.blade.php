@@ -328,6 +328,7 @@
         window.instagramFetchViewDaysWise = "{{ route('instagram.fetch.view-day-wise', $instagram['id']) }}";
         window.INSTAGRAM_BASE_URL = "{{ url('/instagram') }}";
         const instagramFetchUrl = "{{ route('instagram.fetch.html', $instagram['id']) }}";
+        window.facebook_base_url = "{{ url('facebook-summary') }}";
     </script>
 
     <script src="{{ asset('backend/assets/js/pages/instagram-top-location.js') }}"></script>
@@ -338,22 +339,19 @@
     <script>
         $(document).ready(function() {
             const id = "{{ $instagram['id'] }}";
-            const defaultStart = moment().subtract(29, 'days');
+            const defaultStart = moment().subtract(28, 'days');
             const defaultEnd = moment().subtract(1, 'days');
-
             $('.daterange').daterangepicker({
                 opens: 'right',
                 startDate: defaultStart,
                 endDate: defaultEnd,
                 maxDate: moment().subtract(1, 'days'),
-                dateLimit: {
-                    days: 30
-                },
+                dateLimit: { days: 27 },
                 ranges: {
                     'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
                     'Last 7 Days': [moment().subtract(7, 'days'), moment().subtract(1, 'days')],
                     'Last 15 Days': [moment().subtract(15, 'days'), moment().subtract(1, 'days')],
-                    'Last 30 Days': [moment().subtract(30, 'days'), moment().subtract(1, 'days')]
+                    'Last 28 Days': [moment().subtract(28, 'days'), moment().subtract(1, 'days')], 
                 },
                 autoUpdateInput: true,
                 locale: {
@@ -366,32 +364,44 @@
                 $('.daterange').val(`${start.format('YYYY-MM-DD')} - ${end.format('YYYY-MM-DD')}`);
             });
 
-            $('.daterange').val(`${defaultStart.format('YYYY-MM-DD')} - ${defaultEnd.format('YYYY-MM-DD')}`);
-            loadInstagramPostData(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
-            loadReachGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
-            loadViewGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
-            loadInstagramData(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
-
             $('.daterange').on('apply.daterangepicker', function(ev, picker) {
-                const startDate = picker.startDate.format('YYYY-MM-DD');
-                const endDate = picker.endDate.format('YYYY-MM-DD');
-                $(this).val(`${startDate} - ${endDate}`);
-                loadInstagramPostData(id, startDate, endDate);
-                loadReachGraph(id, startDate, endDate);
-                loadViewGraph(id, startDate, endDate);
-                loadInstagramData(id, startDate, endDate);
+                const startDate = picker.startDate;
+                const endDate = picker.endDate;
+                const totalDays = endDate.diff(startDate, 'days') + 1;
+
+                if (totalDays > 28) {
+                    alert('You can only select up to 28 days (inclusive). Please reduce the range.');
+                    picker.setEndDate(startDate.clone().add(28, 'days'));
+                    return;
+                }
+
+                const start = startDate.format('YYYY-MM-DD');
+                const end = endDate.format('YYYY-MM-DD');
+
+                $(this).val(`${start} - ${end}`);
+                loadInstagramPostData(id, start, end);
+                loadReachGraph(id, start, end);
+                loadViewGraph(id, start, end);
+                loadInstagramData(id, start, end);
             });
 
-            $('.daterange').on('cancel.daterangepicker', function(ev, picker) {
+            $('.daterange').on('cancel.daterangepicker', function() {
                 $(this).val('');
-                const defaultStart = moment().subtract(29, 'days').format('YYYY-MM-DD');
+                const defaultStart = moment().subtract(28, 'days').format('YYYY-MM-DD');
                 const defaultEnd = moment().subtract(1, 'days').format('YYYY-MM-DD');
                 loadInstagramPostData(id, defaultStart, defaultEnd);
                 loadReachGraph(id, defaultStart, defaultEnd);
                 loadViewGraph(id, defaultStart, defaultEnd);
                 loadInstagramData(id, defaultStart, defaultEnd);
             });
+
+            $('.daterange').val(`${defaultStart.format('YYYY-MM-DD')} - ${defaultEnd.format('YYYY-MM-DD')}`);
+            loadInstagramPostData(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+            loadReachGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+            loadViewGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+            loadInstagramData(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
         });
+
 
         function loadInstagramData(accountId, startDate, endDate) {
             const loadingHtml = `
@@ -463,6 +473,13 @@
                         if (clonedElement) {
                             clonedElement.style.overflow = 'visible';
                             clonedElement.style.position = 'relative';
+                            const elementsToHide = clonedElement.querySelectorAll(
+                                '.pdf-download-btn, .btn, .btn-outline-primary, .btn-outline-secondary, .filter-box'
+                            );
+                            elementsToHide.forEach(el => {
+                                el.style.display = 'none !important';
+                                el.style.visibility = 'hidden !important';
+                            });
                         }
                     }
                 }).then(canvas => {
