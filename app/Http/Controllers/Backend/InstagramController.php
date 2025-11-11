@@ -748,7 +748,7 @@ class InstagramController extends Controller
             'access_token' => $token,
         ])->json();
         //Log::info("Current Month Media Date Range: {$since} to {$until}");
-        Log::info("Current Month Media : https://graph.facebook.com/v24.0/{$accountId}/media?fields=media_type,media_product_type,like_count,comments_count,timestamp&since={$since}&until={$until}&access_token={$token}");
+        //Log::info("Current Month Media : https://graph.facebook.com/v24.0/{$accountId}/media?fields=media_type,media_product_type,like_count,comments_count,timestamp&since={$since}&until={$until}&access_token={$token}");
         Log::info("Current Month Media : ");
         $posts = $stories = $reels = $totalInteractions = 0;
         if (isset($mediaResponseCurrent['data'])) {
