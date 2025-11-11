@@ -54,7 +54,7 @@
                     @endif
                     <a class="nav-link px-0 py-1 active" href="{{ route('face.ads') }}">
                         <span class="text-danger fw-bold">
-                            <i class="bx bxs-inbox fs-16 me-2 align-middle"></i> Ads
+                            <i class="bx bxs-inbox fs-16 me-2 align-middle"></i>Meta Ads
                         </span>
                     </a>
                 </div>

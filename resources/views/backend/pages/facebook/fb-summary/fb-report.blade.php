@@ -43,7 +43,7 @@
                                 @endif
 
                                 <div class="d-flex gap-4 flex-wrap">
-                                    <span><strong>{{ number_format($facebookBusinessOrProfile['media_count'] ?? 0) }}</strong> posts</span>
+                                    <!-- <span><strong>{{ number_format($facebookBusinessOrProfile['media_count'] ?? 0) }}</strong> posts</span> -->
                                     <span><strong>{{ number_format($facebookBusinessOrProfile['fan_count'] ?? 0) }}</strong> Fan </span>
                                     <span><strong>{{ number_format($facebookBusinessOrProfile['followers_count'] ?? 0) }}</strong> Followers</span>
                                     <span><strong>{{ number_format($facebookBusinessOrProfile['rating_count'] ?? 0) }}</strong> Rating</span>

@@ -1,6 +1,8 @@
 @extends('backend.pages.layouts.master')
 @section('title', 'Facebook Ads')
-
+@push('styles')
+    
+@endpush
 @section('main-content')
 <div class="container-fluid">
     <div class="row">
@@ -211,8 +213,6 @@
         const container = $('#ads-summary-container');
         let currentColumns = JSON.parse(localStorage.getItem('facebook_ads_columns') || '["title","status","results","cost_per_result","amount_spent","views","viewers","budget"]');
         let sortable = null;
-
-        // Load ads summary via AJAX
         function loadAdsSummary(adAccountId) {
             container.html('<div class="text-muted py-4">Loading ads data...</div>');
             
@@ -223,7 +223,8 @@
                     columns: currentColumns.join(',')
                 },
                 success: function(response) {
-                    container.html(response.html);
+                    container.html(response.html);                    
+                    initializeSelect2Modal();
                 },
                 error: function() {
                     container.html('<div class="text-danger py-4">Failed to load ads. Try again.</div>');
@@ -410,5 +411,24 @@
         // Initial sortable initialization
         initializeSortable();
     });
+    function initializeSelect2Modal() {
+        $('.js-example-basic-single, .js-example-basic-multiple').each(function() {
+            if ($(this).hasClass("select2-hidden-accessible")) {
+                $(this).select2('destroy');
+            }
+        });
+        
+        $('.js-example-basic-single').select2({
+            placeholder: "Select Campaigns Name",
+            allowClear: true,
+            minimumResultsForSearch: 0
+        });
+        
+        $('.js-example-basic-multiple').select2({
+            placeholder: "Select Campaigns Name",
+            allowClear: true,
+            minimumResultsForSearch: 0
+        });
+    }
 </script>
 @endpush
