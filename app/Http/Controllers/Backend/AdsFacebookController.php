@@ -59,6 +59,35 @@ class AdsFacebookController extends Controller
             $selectedColumns = request()->get('columns', 'title,status,results,cost_per_result,amount_spent,views,viewers,budget');
             $columns = explode(',', $selectedColumns);
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
+            /*ad  campaigns*/
+            $campaignsUrl = "https://graph.facebook.com/v24.0/{$adAccountId}/campaigns";
+            $fields = 'id,account_id,name';
+            $campaigns = [];
+            $nextUrl = $campaignsUrl;
+            do {
+                if ($nextUrl === $campaignsUrl) {
+                    $response = Http::get($campaignsUrl, [
+                        'fields' => $fields,
+                        'limit' => 50,
+                        'access_token' => $token,
+                    ]);
+                } else {
+                    $response = Http::get($nextUrl);
+                }
+
+                if ($response->failed()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error fetching campaigns: ' . $response->body(),
+                    ]);
+                }
+
+                $data = $response->json();
+                $campaigns = array_merge($campaigns, $data['data'] ?? []);
+                $nextUrl = $data['paging']['next'] ?? null;
+            } while ($nextUrl);
+            Log::info('Meta ad campaigns: ' . print_r($campaigns, true)); 
+            /*ad  campaigns*/
             $url = "https://graph.facebook.com/v21.0/{$adAccountId}";
             $fields = 'id,name,account_status,amount_spent,currency,balance,spend_cap,timezone_name,owner,business,
                 campaigns{name,created_time,start_time,stop_time,
@@ -133,7 +162,7 @@ class AdsFacebookController extends Controller
                 }
             }
 
-            $html = view('backend.pages.facebook.ads.partials.ads-table', compact('ads', 'columns'))->render();
+            $html = view('backend.pages.facebook.ads.partials.ads-table', compact('ads', 'columns', 'campaigns'))->render();
 
             return response()->json(['success' => true, 'html' => $html]);
 
@@ -144,5 +173,6 @@ class AdsFacebookController extends Controller
             ]);
         }
     }
+
 
 }

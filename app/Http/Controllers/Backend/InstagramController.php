@@ -36,7 +36,7 @@ class InstagramController extends Controller
              * Fetch Instagram Profile (if connected)
             */
             $instagram = Http::timeout(10)->get("https://graph.facebook.com/v24.0/{$id}", [
-                'fields' => 'name,username,biography,followers_count,follows_count,media_count,profile_picture_url',
+                'fields' => 'name,username,biography,followers_count,follows_count,media_count,profile_picture_url,stories',
                 'access_token' => $token,
             ])->json();
             return view('backend.pages.instagram.show', compact(

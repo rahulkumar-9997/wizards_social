@@ -3,13 +3,11 @@
     <div class="d-flex flex-wrap align-items-center p-2 gap-1">
         <div class="d-flex align-items-center border-end pe-1">
             <h4 class="mb-0 me-2 text-dark-grey">Campaigns</h4>
-            <select class="js-example-basic-multiple" name="map_category_attributes[]" id="select-attributes" multiple="multiple" required="" style="width: 300px;">
-                <option value="" disabled>Select Attributes</option>                        
-                <option value="1">Campaigns 1</option>
-                <option value="2">Campaigns 2</option>
-                <option value="3">Campaigns 3</option>
-                <option value="4">Campaigns 4</option>
-                <option value="5">Campaigns 5</option>
+            <select class="js-example-basic-multiple" name="select_ad_campaigns[]" id="select_ad_campaigns" multiple="multiple" required="" style="width: 400px;">
+                <option value="" disabled>Select Campaigns</option>                        
+                @foreach($campaigns as $campaign)
+                    <option value="{{ $campaign['id'] }}">{{ $campaign['name'] }}</option>
+                @endforeach
             </select>
         </div> 
     </div>
