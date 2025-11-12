@@ -473,6 +473,7 @@ class InstagramController extends Controller
         $previousSince = $prevStart->timestamp;
         $previousUntil = $prevEnd->timestamp;
 
+        /*
         Log::info('Date Range Fetch Media:', [
             'startDate' => $start->toDateString(),
             'endDate' => $end->toDateString(),
@@ -484,6 +485,7 @@ class InstagramController extends Controller
             'previousSince (timestamp)' => $previousSince,
             'previousUntil (timestamp)' => $previousUntil,
         ]);
+        */
         /* ===== Followers / Unfollowers (Current) ===== */
         $current_month_followers = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$accountId}/insights", [
             'metric' => 'follows_and_unfollows',
@@ -2084,7 +2086,7 @@ class InstagramController extends Controller
                 $mediaResponse = Http::timeout(30)
                     ->get("https://graph.facebook.com/v24.0/{$instagramId}/media", $params)
                     ->json();
-                Log::info("Fetch Instagram Post API URL: https://graph.facebook.com/v24.0/{$instagramId}/media?" . http_build_query($params));
+                //Log::info("Fetch Instagram Post API URL: https://graph.facebook.com/v24.0/{$instagramId}/media?" . http_build_query($params));
                 
                 if (isset($mediaResponse['data'])) {
                     $allMedia = array_merge($allMedia, $mediaResponse['data']);
