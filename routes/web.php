@@ -6,9 +6,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Backend\LoginController;
 use App\Http\Controllers\Backend\ForgotPasswordController;
 use App\Http\Controllers\Backend\DashboardController;
+use App\Http\Controllers\Backend\MenuController;
 use App\Http\Controllers\Backend\UsersController;
 use App\Http\Controllers\Backend\RolesController;
-use App\Http\Controllers\Backend\PermissionsController;
 use App\Http\Controllers\Backend\DatabaseController;
 use App\Http\Controllers\Backend\CacheController;
 use App\Http\Controllers\Backend\SocialController;
@@ -39,22 +39,16 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('database-management', [DatabaseController::class, 'showTables'])->name('show.tables');
     Route::post('truncate-tables', [DatabaseController::class, 'truncateTables'])->name('truncate.tables');
     Route::get('backup-database', [DatabaseController::class, 'backupDatabase'])->name('backup.database');
-
-    Route::group(['prefix' => 'users', 'as' => 'users.'], function() {
-        Route::get('/', [UsersController::class, 'index'])->name('index');
-        Route::get('/create', [UsersController::class, 'create'])->name('create');
-        Route::post('/', [UsersController::class, 'store'])->name('store');
-        Route::get('/{user}', [UsersController::class, 'show'])->name('show');
-        Route::get('/{user}/edit', [UsersController::class, 'edit'])->name('edit');
-        Route::patch('/{user}', [UsersController::class, 'update'])->name('update');
-        Route::delete('/{user}', [UsersController::class, 'destroy'])->name('destroy');
-        Route::get('/profile', [UsersController::class, 'UserProfile'])->name('profile');
-        Route::get('/profile/{id}/edit', [UsersController::class, 'UserProfileEditForm'])->name('profile.edit');
-        Route::post('/profile/{id}/update', [UsersController::class, 'UserProfileEditFormSubmit'])->name('profile.update');
-    });
+    Route::resource('users', UsersController::class);
+    Route::post('users/{user}/status', [UsersController::class, 'updateStatus'])->name('users.status');
+    Route::get('/profile', [UsersController::class, 'UserProfile'])->name('profile');
+    Route::get('/profile/{id}/edit', [UsersController::class, 'UserProfileEditForm'])->name('profile.edit');
+    Route::post('/profile/{id}/update', [UsersController::class, 'UserProfileEditFormSubmit'])->name('profile.update');
     Route::resource('roles', RolesController::class);
-    Route::resource('permissions', PermissionsController::class);
-    
+    Route::resource('menus', MenuController::class);
+    Route::post('menus/{menu}/status', [MenuController::class, 'updateStatus'])->name('menus.status');
+    Route::post('menus/reorder', [MenuController::class, 'reorder'])->name('menus.reorder');
+    Route::post('menus/{menu}/sidebar-status', [MenuController::class, 'updateSidebarStatus'])->name('menus.sidebar-status');    
     Route::get('/facebook', [FacebookLoginController::class, 'index'])->name('facebook.index');    
     Route::get('fb-user-profile', [FacebookLoginController::class, 'fbUserProfileDataHtml'])->name('facebook.user.profile');
 

@@ -24,6 +24,14 @@
                <span class="nav-text">Dashboard </span>
             </a>
          </li>
+         <li class="nav-item active">
+            <a class="nav-link active" href="{{ route('menus.index') }}">
+               <span class="nav-icon">
+                  <iconify-icon icon="solar:widget-5-bold-duotone"></iconify-icon>
+               </span>
+               <span class="nav-text">Manage Menu </span>
+            </a>
+         </li>
          <li class="nav-item">
             <a class="nav-link menu-arrow" href="#sidebarProducts_user" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarProducts_user">
                <span class="nav-icon">
@@ -38,12 +46,8 @@
                         <a class="sub-nav-link" href="{{ route('users.index') }}">User</a>
                      </li>
                      <li class="sub-nav-item">
-                        <a class="sub-nav-link" href="{{ route('roles.index') }}">Role</a>
-                     </li>
-                     <li class="sub-nav-item">
-                        <a class="sub-nav-link" href="{{ route('permissions.index') }}">Permissions</a>
-                     </li>
-                 
+                        <a class="sub-nav-link" href="{{ route('roles.index') }}">Roles & Assign Menu</a>
+                     </li>                                      
                </ul>
             </div>
          </li>

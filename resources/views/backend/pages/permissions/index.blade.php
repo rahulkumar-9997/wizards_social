@@ -1,86 +1,86 @@
-@extends('backend.layouts.master')
-@section('title','Manage Permissions')
+@extends('backend.pages.layouts.master')
+@section('title','Permissions List')
 @section('main-content')
-{{--@dd(Auth::check());--}}
-@section('morecss')
-<link href="{{asset('backend/assets//plugins/datatables/css/jquery.dataTables.css')}}" rel="stylesheet" type="text/css" media="screen"/>
-<link href="{{asset('backend/assets/plugins/datatables/extensions/TableTools/css/dataTables.tableTools.min.css')}}" rel="stylesheet" type="text/css" media="screen"/>
-<link href="{{asset('backend/assets/plugins/datatables/extensions/Responsive/css/dataTables.responsive.css')}}" rel="stylesheet" type="text/css" media="screen"/>
-<link href="{{asset('backend/assets/plugins/datatables/extensions/Responsive/bootstrap/3/dataTables.bootstrap.css')}}" rel="stylesheet" type="text/css" media="screen"/>    
-@endsection
-<section id="main-content" class=" ">
-   <section class="wrapper main-wrapper" style=''>
-      <div class='col-lg-12 col-md-12 col-sm-12 col-xs-12'>
-         <div class="page-title">
-            <div class="pull-left">
-                <a href="{{ route('permissions.create') }}" class="btn btn-warning btn-sm" style="margin-top: 20px;">Add new Permissions</a>             
+<div class="container-fluid">
+   <div class="row">
+      <div class="col-xl-12">
+         <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center gap-1">
+               <h4 class="mb-1">Permissions Management</h4>
+               <a href="{{ route('permissions.create') }}" class="btn btn-sm btn-primary">Add New Permission</a>
             </div>
-            <div class="pull-right hidden-xs">
-               <ol class="breadcrumb">
-                  <li>
-                     <a href="{{route('dashboard')}}"><i class="fa fa-home"></i>Home</a>
-                  </li>
-                  
-                  <li class="active">
-                     <strong>Permissions</strong>
-                  </li>
-               </ol>
+            <div class="card-body">
+               @if(session('success'))
+                  <div class="alert alert-success alert-dismissible fade show" role="alert">
+                     {{ session('success') }}
+                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+               @endif
+
+               @if(session('error'))
+                  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                     {{ session('error') }}
+                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+               @endif
+
+               <div class="table-responsive">
+                  <table class="table table-hover">
+                     <thead>
+                        <tr>
+                           <th>#</th>
+                           <th>Permission Name</th>
+                           <th>Guard Name</th>
+                           <th>Roles Count</th>
+                           <th>Created At</th>
+                           <th>Actions</th>
+                        </tr>
+                     </thead>
+                     <tbody>
+                        @forelse($permissions as $key => $permission)
+                           <tr>
+                              <td>{{ $key + 1 }}</td>
+                              <td>{{ $permission->name }}</td>
+                              <td>
+                                 <span class="badge bg-secondary">{{ $permission->guard_name }}</span>
+                              </td>
+                              <td>
+                                 <span class="badge bg-info">{{ $permission->roles_count }}</span>
+                              </td>
+                              <td>{{ $permission->created_at->format('d M Y') }}</td>
+                              <td>
+                                 <div class="btn-group" role="group">
+                                    <a href="{{ route('permissions.edit', $permission->id) }}" class="btn btn-sm btn-warning">
+                                       <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    @if($permission->roles_count == 0)
+                                       <form action="{{ route('permissions.destroy', $permission->id) }}" method="POST" class="d-inline">
+                                          @csrf
+                                          @method('DELETE')
+                                          <button type="submit" class="btn btn-sm btn-danger" 
+                                                  onclick="return confirm('Are you sure you want to delete this permission?')">
+                                             <i class="fas fa-trash"></i> Delete
+                                          </button>
+                                       </form>
+                                    @else
+                                       <button class="btn btn-sm btn-secondary" disabled title="Cannot delete - assigned to roles">
+                                          <i class="fas fa-trash"></i> Delete
+                                       </button>
+                                    @endif
+                                 </div>
+                              </td>
+                           </tr>
+                        @empty
+                           <tr>
+                              <td colspan="6" class="text-center">No permissions found.</td>
+                           </tr>
+                        @endforelse
+                     </tbody>
+                  </table>
+               </div>
             </div>
          </div>
       </div>
-      <div class="clearfix"></div>
-      <div class="col-lg-12">
-         <section class="box ">
-            <header class="panel_header">
-               <h2 class="title pull-left">Manage Permissions</h2>
-               <div class="actions panel_actions pull-right">
-                  <i class="box_toggle fa fa-chevron-down"></i>
-                  <i class="box_setting fa fa-cog" data-toggle="modal" href="#section-settings"></i>
-                  <i class="box_close fa fa-times"></i>
-               </div>
-            </header>
-            <div class="content-body">
-               <div class="row">
-                  <div class="col-md-12 col-sm-12 col-xs-12">
-                  <table class="table table-striped">
-                     <thead>
-                     <tr>
-                        <th scope="col" width="15%">Name</th>
-                        <th scope="col">Guard</th> 
-                        <th scope="col" colspan="3" width="1%"></th> 
-                     </tr>
-                     </thead>
-                     <tbody>
-                        @foreach($permissions as $permission)
-                           <tr>
-                                 <td>{{ $permission->name }}</td>
-                                 <td>{{ $permission->guard_name }}</td>
-                                 <td><a href="{{ route('permissions.edit', $permission->id) }}" class="btn btn-info btn-sm">Edit</a></td>
-                                 <td>
-                                    {!! Form::open(['method' => 'DELETE','route' => ['permissions.destroy', $permission->id],'style'=>'display:inline']) !!}
-                                    {!! Form::submit('Delete', ['class' => 'btn btn-danger btn-sm']) !!}
-                                    {!! Form::close() !!}
-                                 </td>
-                           </tr>
-                        @endforeach
-                     </tbody>
-               </table>
-                  </div>
-               </div>
-            </div>
-         </section>
-      </div>
-      
-      
-      
-   </section>
-</section>
-@endsection
-@section('morescripts')
-<script src="{{asset('backend/assets/plugins/datatables/js/jquery.dataTables.min.js')}}" type="text/javascript"></script>
-<script src="{{asset('backend/assets/plugins/datatables/extensions/TableTools/js/dataTables.tableTools.min.js')}}" type="text/javascript"></script>
-<script src="{{asset('backend/assets/plugins/datatables/extensions/Responsive/js/dataTables.responsive.min.js')}}" type="text/javascript"></script>
-<script src="{{asset('backend/assets/plugins/datatables/extensions/Responsive/bootstrap/3/dataTables.bootstrap.js')}}" type="text/javascript">
-
-</script>
+   </div>
+</div>
 @endsection

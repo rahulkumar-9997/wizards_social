@@ -37,7 +37,7 @@
                   <h6 class="dropdown-header">
                      Welcome {{auth()->user()->name ?? ''}}!
                   </h6>
-                  <a class="dropdown-item" href="{{route('users.profile')}}">
+                  <a class="dropdown-item" href="{{route('profile')}}">
                      <i class="bx bx-user-circle text-muted fs-18 align-middle me-1"></i>
                      <span class="align-middle">Profile</span>
                   </a>

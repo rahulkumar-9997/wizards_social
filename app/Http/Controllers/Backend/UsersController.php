@@ -1,131 +1,113 @@
 <?php
+
 namespace App\Http\Controllers\Backend;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules;
+
 class UsersController extends Controller
 {
-    public function index() 
+    public function index()
     {
-        $users = User::latest()->paginate(10);
-
-        return view('backend.pages.users.index', compact('users'));
+        $users = User::with('roles')->latest()->paginate(10);
+        $roles = Role::all();
+        return view('backend.pages.manage-user.users.index', compact('users', 'roles'));
     }
 
-    public function create() 
+    public function create()
     {
-        return view('backend.users.create');
+        $roles = Role::all();
+        return view('backend.pages.manage-user.users.create', compact('roles'));
     }
 
-    public function store(Request $request){
-        $this->validate($request, [
-            'name' => 'required|min:3|max:50',
-            'email' => 'required|email|unique:users,email',
-            'phone_number' => 'required|min:10',
-            'password' => 'min:8|required_with:password_confirmation|same:password_confirmation',
-            'password_confirmation' => 'min:8'
-        ]);
-        $input = $request->all();
-        $input['password'] = Hash::make($input['password']);
-    
-        $user = User::create($input);
-        if($user){
-            return redirect()->route('users')
-            ->with('success','User created successfully');
-        }
-        return redirect()->back()->with('error','Somthings went wrong please try again !.');
-    }
-
-    public function edit(User $user) {
-        return view('backend.users.edit', [
-            'user' => $user,
-            'userRole' => $user->roles->pluck('name')->toArray(),
-            'roles' => Role::latest()->get()
-        ]);
-    }
-
-    public function update(Request $request, $id){
-        $this->validate($request, [
-            'name' => 'required|min:3|max:50',
-            'phone_number' => 'required|min:10',
-           
-        ]);
-        $input = $request->all();
-        $user = User::find($id);
-        $user->update($input);
-        DB::table('model_has_roles')->where('model_id',$id)->delete();
-        $user->assignRole($request->input('role'));
-        return redirect()->route('users')->with('success','User updated successfully');
-        
-    }
-
-    public function destroy(User $user) {
-        $user->delete();
-        return redirect()->route('users')->with('success','User deleted successfully');
-    }
-
-    public function UserProfile() {
-        return view('backend.users.profile');
-    }
-
-    public function UserProfileEditForm($id) {
-        return view('backend.users.profile-edit');
-    }
-
-    public function UserProfileEditFormSubmit(Request $request, $id){
+    public function store(Request $request)
+    {
         $request->validate([
-            'name' => 'nullable|string|max:255',
-            'phone_number' => 'nullable|numeric',
-            'gender' => 'nullable|string|max:10',
-            'address' => 'nullable|string|max:255',
-            'profile_img' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // max 2MB
-            'email' => 'nullable|email|unique:users,email,' . $id
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'phone_number' => 'nullable|string|max:20',
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'roles' => 'required|array',
+            'roles.*' => 'exists:roles,id',
         ]);
-        $user = User::findOrFail($id);
-        $emailChanged = false;
-        if ($request->has('email') && $request->email != $user->email) {
-            $emailChanged = true;
-        }
-        
-        if ($request->hasFile('profile_img')) {
-            /**Remove profile image */
-            $remove_profile_image = public_path('profile-images'.$user->profile_img);
-            if (file_exists($remove_profile_image) && !is_dir($remove_profile_image)) {
-                unlink($remove_profile_image);
-            } 
-            /**Remove profile image */
 
-            $image = $request->file('profile_img');
-            $user_name = Str::slug($request->input('name', $user->name));
-            $filenameWithExt = $image->getClientOriginalName();
-            $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
-            $image_file_name = 'profile-image-' . $user_name . '.webp'; 
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone_number' => $request->phone_number,
+            'password' => Hash::make($request->password),
+            'status' => $request->status ?? 1,
+        ]);
+        $roleNames = Role::whereIn('id', $request->roles)->pluck('name')->toArray();
+        $user->syncRoles($roleNames);
+        return redirect()->route('users.index')->with('success', 'User created successfully.');
+    }
 
-            $profile_image_path = public_path('profile-images');
-            if (!file_exists($profile_image_path)) {
-                mkdir($profile_image_path, 0775, true);
-            }                   
-            
-            $img_large = Image::make($image->getRealPath());
-            $img_large->resize(800, 800, function ($constraint) {
-                $constraint->aspectRatio();
-            })->encode('webp', 100)->save($profile_image_path . '/' . $image_file_name);
-            $user->profile_img = $image_file_name;
+    public function show(User $user)
+    {
+        $user->load('roles', 'permissions');
+        return view('backend.pages.manage-user.users.show', compact('user'));
+    }
+
+    public function edit(User $user)
+    {
+        $roles = Role::all();
+        $userRoles = $user->roles->pluck('id')->toArray();
+        return view('backend.pages.manage-user.users.edit', compact('user', 'roles', 'userRoles'));
+    }
+
+    public function update(Request $request, User $user)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'phone_number' => 'nullable|string|max:20',
+            'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
+            'roles' => 'required|array',
+            'roles.*' => 'exists:roles,id',
+        ]);
+        $updateData = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone_number' => $request->phone_number,
+            'status' => $request->status ?? 0,
+        ];
+
+        if ($request->filled('password')) {
+            $updateData['password'] = Hash::make($request->password);
         }
-        $user->name = $request->input('name', $user->name);
-        $user->email = $request->input('email', $user->email);
-        $user->phone_number = $request->input('phone_number', $user->phone_number);
-        $user->gender = $request->input('gender', $user->gender);
-        $user->address = $request->input('address', $user->address);
-        $user->save();
-        /*Store session flag for email change*/
-        if ($emailChanged) {
-            session(['email_changed' => true]);
+        $user->update($updateData);
+        $roles = Role::whereIn('id', $request->roles)->pluck('name')->toArray();
+        $user->syncRoles($roles);
+        return redirect()->route('users.index')->with('success', 'User updated successfully.');
+    }
+
+
+    public function destroy(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return redirect()->route('users.index')->with('error', 'You cannot delete your own account.');
         }
-        return redirect()->route('profile')->with('success', 'Profile updated successfully.');
+        $user->syncRoles([]);
+        $user->permissions()->detach();
+        $user->delete();
+        return redirect()->route('users.index')->with('success', 'User and related data deleted successfully.');
+    }
+
+
+    public function updateStatus(Request $request, User $user)
+    {
+        $request->validate([
+            'status' => 'required|boolean'
+        ]);
+        $user->update(['status' => $request->status]);
+        return response()->json([
+            'status' => true, 
+            'message' => 'User status updated successfully.'
+        ]);
     }
 
 }
