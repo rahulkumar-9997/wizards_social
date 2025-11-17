@@ -34,7 +34,7 @@ class MenuSeeder extends Seeder
         ]);
         $menu->roles()->sync([$superAdmin->id, $mainAdmin->id]);      
 
-       
+        // ---------------- Manage Users ----------------
         $users = Menu::updateOrCreate([
             'name' => 'Manage Users',
             'url' => '#',
@@ -45,31 +45,51 @@ class MenuSeeder extends Seeder
         $users->roles()->sync([$superAdmin->id, $mainAdmin->id]);
 
         $usersSubMenu = [
-            ['name' => 'User', 'url' => 'users'],
-            ['name' => 'Roles & Assign Menu', 'url' => 'roles'],
+            ['name' => 'User', 'url' => 'users', 'icon' => 'solar:user-bold-duotone'],
+            ['name' => 'Roles & Assign Menu', 'url' => 'roles', 'icon' => 'solar:settings-bold-duotone'],
         ];
 
         foreach ($usersSubMenu as $index => $submenu) {
             $child = Menu::updateOrCreate([
                 'name' => $submenu['name'],
                 'url' => $submenu['url'],
+                'icon' => $submenu['icon'] ?? null,
                 'order' => $index + 1,
                 'parent_id' => $users->id,
                 'is_active' => 1,
             ]);
             $child->roles()->sync([$superAdmin->id, $mainAdmin->id]);
         }
+        $socialMediaMenus = [
+            [
+                'name' => 'Facebook',
+                'url' => 'facebook',
+                'icon' => 'solar:facebook-bold-duotone',
+                'order' => 4,
+            ],
+            [
+                'name' => 'Instagram', 
+                'url' => 'instagram',
+                'icon' => 'solar:instagram-bold-duotone', 
+                'order' => 5,
+            ],
+            [
+                'name' => 'Youtube',
+                'url' => 'youtube', 
+                'icon' => 'solar:youtube-bold-duotone', 
+                'order' => 6,
+            ],
+        ];
 
-        // ---------------- Manage Customer ----------------
-        $customer = Menu::updateOrCreate([
-            'name' => 'Manage Customer',
-            'url' => '#',
-            'icon' => 'solar:users-group-two-rounded-bold-duotone',
-            'order' => 5,
-            'is_active' => 1,
-        ]);
-        $customer->roles()->sync([$superAdmin->id, $mainAdmin->id]);      
-
-        
+        foreach ($socialMediaMenus as $menuData) {
+            $menuItem = Menu::updateOrCreate([
+                'name' => $menuData['name'],
+                'url' => $menuData['url'],
+                'icon' => $menuData['icon'],
+                'order' => $menuData['order'],
+                'is_active' => 1,
+            ]);
+            $menuItem->roles()->sync([$superAdmin->id, $mainAdmin->id]);
+        }
     }
 }

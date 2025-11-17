@@ -32,7 +32,7 @@ class SidebarComposer
                 return;
             }
 
-            // ✅ Find the main linked Facebook account for this user
+            // Find the main linked Facebook account for this user
             $mainAccount = SocialAccount::where('user_id', $user->id)
                 ->where('provider', 'facebook')
                 ->whereNull('parent_account_id')
@@ -44,7 +44,7 @@ class SidebarComposer
                 return;
             }
 
-            // ✅ Get token from your helper
+            // Get token from helper
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
             if (empty($token)) {
                 Log::warning("SidebarComposer: Facebook token not found for user ID {$user->id}");
@@ -52,7 +52,7 @@ class SidebarComposer
                 return;
             }
 
-            // ✅ Cache response to avoid multiple API calls
+            // Cache response to avoid multiple API calls
             $cacheKey = "fb_pages_for_user_{$user->id}_" . md5($token);
 
             $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($token) {
@@ -66,11 +66,14 @@ class SidebarComposer
 
             $fbPages = $data['pages'] ?? [];
             $fbInstagram = $data['instagram_accounts'] ?? collect();
+            
         } catch (\Throwable $e) {
             Log::error('SidebarComposer: Unexpected error — ' . $e->getMessage());
+            $fbPages = [];
+            $fbInstagram = collect();
         }
 
-        // ✅ Share data with all sidebar views
+        // Share data with all sidebar views
         $view->with(compact('fbPages', 'fbInstagram'));
     }
 }

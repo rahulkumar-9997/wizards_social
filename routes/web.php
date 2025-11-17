@@ -32,9 +32,8 @@ Route::post('forget.password', [ForgotPasswordController::class, 'submitForgetPa
 Route::get('reset-password/{token}', [ForgotPasswordController::class, 'showResetPasswordForm'])->name('reset.password.get');
 Route::post('reset-password', [ForgotPasswordController::class, 'submitResetPasswordForm'])->name('reset.password.post');
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
-Route::group(['middleware' => ['auth']], function() {
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
+Route::middleware(['auth'])->group(function () {
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');    
     Route::get('clear-cache', [CacheController::class, 'clearCache'])->name('clear-cache');
     Route::get('database-management', [DatabaseController::class, 'showTables'])->name('show.tables');
     Route::post('truncate-tables', [DatabaseController::class, 'truncateTables'])->name('truncate.tables');
