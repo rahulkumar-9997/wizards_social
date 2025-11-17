@@ -2055,12 +2055,14 @@ class InstagramController extends Controller
             if (!$mainAccount) {
                 return response()->json(['success' => false, 'error' => 'Facebook account not connected']);
             }
+
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
             $startDate = $request->get('start_date', now()->subDays(30)->format('Y-m-d'));
-            $endDate = $request->get('end_date', now()->format('Y-m-d'));            
+            $endDate = $request->get('end_date', now()->format('Y-m-d'));
+
             $start = \Carbon\Carbon::parse($startDate)->startOfDay()->clone();
             $end = \Carbon\Carbon::parse($endDate)->endOfDay()->clone();
-            
+
             $since = $start->timestamp;
             $until = $end->timestamp;
             $limit = $request->get('limit', 12);
@@ -2070,6 +2072,7 @@ class InstagramController extends Controller
             $sortOrder = $request->get('order', 'desc');
             $mediaTypeFilter = $request->get('media_type', '');
             $searchFilter = $request->get('search', '');
+
             $allMedia = [];
             $nextPageUrl = null;
             $params = [
@@ -2079,6 +2082,7 @@ class InstagramController extends Controller
                 'until' => $until,
                 'limit' => 100
             ];
+
             if ($after) $params['after'] = $after;
             if ($before) $params['before'] = $before;
 
@@ -2086,33 +2090,43 @@ class InstagramController extends Controller
                 $mediaResponse = Http::timeout(30)
                     ->get("https://graph.facebook.com/v24.0/{$instagramId}/media", $params)
                     ->json();
-                //Log::info("Fetch Instagram Post API URL: https://graph.facebook.com/v24.0/{$instagramId}/media?" . http_build_query($params));
-                
+
                 if (isset($mediaResponse['data'])) {
-                    $allMedia = array_merge($allMedia, $mediaResponse['data']);
+
+                    foreach ($mediaResponse['data'] as $post) {
+                        $insights = $this->getPostInsightsOfEachPost($post['id'], $token);
+                        $post['views'] = $insights['views'] ?? 0;
+                        $post['reach'] = $insights['reach'] ?? 0;
+                        $post['impressions'] = $insights['impressions'] ?? 0;
+
+                        $allMedia[] = $post;
+                    }
                 }
+
                 $nextPageUrl = $mediaResponse['paging']['next'] ?? null;
-                $params = []; 
+                $params = [];
                 if ($nextPageUrl && parse_url($nextPageUrl, PHP_URL_QUERY)) {
                     parse_str(parse_url($nextPageUrl, PHP_URL_QUERY), $queryParams);
                     $params['after'] = $queryParams['after'] ?? null;
                 }
-                
-            } while ($nextPageUrl && count($allMedia) < 500); 
+
+            } while ($nextPageUrl && count($allMedia) < 500);
             $filteredMedia = $this->applyFilters($allMedia, $mediaTypeFilter, $searchFilter);
-            $sortedMedia = $this->applySorting($filteredMedia, $sortField, $sortOrder);            
+            $sortedMedia = $this->applySorting($filteredMedia, $sortField, $sortOrder);
             $currentPage = $request->get('page', 1);
             $perPage = $limit;
             $offset = ($currentPage - 1) * $perPage;
             $paginatedMedia = array_slice($sortedMedia, $offset, $perPage);
+
             $totalMedia = count($sortedMedia);
             $totalPages = ceil($totalMedia / $perPage);
+
             $formattedStart = $start->format('d M Y');
             $formattedEnd = $end->format('d M Y');
 
             $mediaTableHtml = view('backend.pages.instagram.partials.instagram-media-table', [
                 'media' => $paginatedMedia,
-                'paging' => $mediaResponse['paging'] ?? [], 
+                'paging' => $mediaResponse['paging'] ?? [],
                 'startDate' => $formattedStart,
                 'endDate' => $formattedEnd,
                 'instagram' => ['id' => $instagramId],
@@ -2136,21 +2150,42 @@ class InstagramController extends Controller
                 ]
             ])->render();
 
-            $html = '                
-                <div id="instagram-media-table">
-                    ' . $mediaTableHtml . '
-                </div>
-            ';
+            return response()->json(['success' => true, 'html' => $mediaTableHtml]);
 
-            return response()->json(['success' => true, 'html' => $html]);
         } catch (\Exception $e) {
             Log::error('Instagram API Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ]);
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
         }
     }
+
+
+    private function getPostInsightsOfEachPost($mediaId, $token)
+    {
+        try {
+            $response = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$mediaId}/insights", [
+                'metric' => 'views,reach,impressions',
+                'access_token' => $token,
+            ])->json();
+
+            $insights = [];
+
+            if (isset($response['data'])) {
+                foreach ($response['data'] as $metric) {
+                    $insights[$metric['name']] = $metric['values'][0]['value'] ?? 0;
+                }
+            }
+
+            return $insights;
+
+        } catch (\Exception $e) {
+            return [
+                'views' => 0,
+                'reach' => 0,
+                'impressions' => 0,
+            ];
+        }
+    }
+
 
     private function applyFilters($media, $mediaTypeFilter, $searchFilter)
     {

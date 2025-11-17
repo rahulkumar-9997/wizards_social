@@ -225,13 +225,30 @@ class MenuController extends Controller
     private function getMenuIcons()
     {
         return [
+
+            /** ------------------------------
+             *  MAIN NAVIGATION
+             * ------------------------------ */
             'solar:home-2-bold-duotone' => '🏠 Home',
             'solar:chart-square-bold-duotone' => '📊 Dashboard',
             'solar:graph-up-bold-duotone' => '📈 Analytics',
             'solar:pie-chart-3-bold-duotone' => '🥧 Reports',
+            'solar:settings-bold-duotone' => '⚙️ Settings',
+            'solar:globe-bold-duotone' => '🌐 Website',
+            'solar:calendar-bold-duotone' => '📅 Calendar',
+            'solar:location-bold-duotone' => '📍 Locations',
+
+            /** ------------------------------
+             *  USERS / ROLES
+             * ------------------------------ */
             'solar:user-bold-duotone' => '👤 User',
             'solar:users-group-rounded-bold-duotone' => '👥 Users Group',
             'solar:shield-keyhole-bold-duotone' => '🔒 Roles & Permissions',
+            'ti ti-tie' => '👔 Salesman',
+
+            /** ------------------------------
+             *  E-COMMERCE / BUSINESS
+             * ------------------------------ */
             'solar:box-bold-duotone' => '📦 Products',
             'solar:bag-3-bold-duotone' => '🛍️ Orders',
             'solar:barcode-bold-duotone' => '🏷️ Categories',
@@ -240,22 +257,50 @@ class MenuController extends Controller
             'solar:wallet-bold-duotone' => '💰 Wallet',
             'solar:credit-card-bold-duotone' => '💳 Payments',
             'solar:bill-list-bold-duotone' => '🧾 Invoices',
+
+            /** ------------------------------
+             *  COMMUNICATION
+             * ------------------------------ */
             'solar:chat-round-dots-bold-duotone' => '💬 Messages',
             'solar:envelope-bold-duotone' => '📧 Email',
             'solar:bell-bold-duotone' => '🔔 Notifications',
-            'solar:settings-bold-duotone' => '⚙️ Settings',
-            'solar:slider-vertical-bold-duotone' => '🎚️ Controls',
-            'solar:globe-bold-duotone' => '🌐 Website',
+
+            /** ------------------------------
+             *  FILES / DOCUMENTS
+             * ------------------------------ */
             'solar:file-text-bold-duotone' => '📄 Documents',
             'solar:clipboard-list-bold-duotone' => '🗒️ Tasks',
             'solar:book-2-bold-duotone' => '📘 Knowledge Base',
-            'solar:calendar-bold-duotone' => '📅 Calendar',
-            'solar:location-bold-duotone' => '📍 Locations',
+
+            /** ------------------------------
+             *  FAVORITES / RATINGS / TRASH
+             * ------------------------------ */
             'solar:heart-bold-duotone' => '❤️ Favorites',
             'solar:star-bold-duotone' => '⭐ Ratings',
             'solar:trash-bin-minimalistic-bold-duotone' => '🗑️ Trash',
-            'ti ti-tie' => '👔 Salesman',
-            'solar:menu-dots-bold-duotone' => '⋮ Default',
+
+            /** ------------------------------
+             *  ACTION ICONS (COMMON UI)
+             * ------------------------------ */
+            'solar:add-circle-bold-duotone' => '➕ Add',
+            'solar:pen-bold-duotone' => '✏️ Edit',
+            'solar:eye-bold-duotone' => '👁️ View',
+            'solar:trash-bin-minimalistic-bold-duotone' => '🗑️ Delete',
+            'solar:download-bold-duotone' => '⬇️ Download',
+            'solar:upload-bold-duotone' => '⬆️ Upload',
+            'solar:refresh-bold-duotone' => '🔄 Refresh',
+            'solar:filter-bold-duotone' => '🔍 Filter',
+            'solar:search-bold-duotone' => '🔎 Search',
+            'solar:check-circle-bold-duotone' => '✔️ Confirm',
+            'solar:close-circle-bold-duotone' => '❌ Cancel',
+            'solar:menu-dots-bold-duotone' => '⋮ More Options',
+            'solar:slider-vertical-bold-duotone' => '🎚️ Controls',
+            'solar:arrow-left-bold-duotone' => '⬅️ Back',
+            'solar:arrow-right-bold-duotone' => '➡️ Next',
+
+            /** ------------------------------
+             *  SOCIAL MEDIA
+             * ------------------------------ */
             'uil:facebook' => '📘 Facebook',
             'uil:instagram' => '📸 Instagram',
             'uil:twitter' => '🐦 Twitter',
@@ -285,6 +330,7 @@ class MenuController extends Controller
             'uil:soundcloud' => '☁️ SoundCloud',
         ];
     }
+
 
 
 }
