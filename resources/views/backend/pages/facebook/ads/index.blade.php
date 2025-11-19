@@ -159,50 +159,6 @@
 </div>
 @endsection
 
-@push('styles')
-<style>
-.ads-customize-coloumn{
-    min-height: 100px;
-    max-height: 500px;
-    overflow-y: auto;
-}
-.section-group {
-    margin-bottom: 5px;
-}
-.section-title {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #333;
-}
-
-.sortable-item {
-    cursor: move;
-}
-.sortable-item.sortable-ghost {
-    opacity: 0.4;
-}
-.sortable-item.sortable-chosen {
-    background-color: #f8f9fa;
-}
-.form-check {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-.form-check:last-child {
-    border-bottom: none;
-}
-#customizeColumnsModal .form-check .form-check-input{
-    margin-left: 0px;
-}
-#customizeColumnsModal .form-check-label{
-    margin-left: 10px;
-}
-#customizeColumnsModal .form-check {
-    padding: 0.2rem 0;
-}
-</style>
-@endpush
-
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
@@ -213,26 +169,141 @@
         const container = $('#ads-summary-container');
         let currentColumns = JSON.parse(localStorage.getItem('facebook_ads_columns') || '["title","status","results","cost_per_result","amount_spent","views","viewers","budget"]');
         let sortable = null;
-        function loadAdsSummary(adAccountId) {
-            container.html('<div class="text-muted py-4">Loading ads data...</div>');
+        
+        // Date range initialization
+        function initializeDateRange() {
+            const defaultStart = moment().subtract(28, 'days');
+            const defaultEnd = moment().subtract(1, 'days');
+            
+            $('.daterange').daterangepicker({
+                opens: 'right',
+                startDate: defaultStart,
+                endDate: defaultEnd,
+                maxDate: moment().subtract(1, 'days'),
+                dateLimit: { days: 27 }, // 28 days inclusive
+                ranges: {
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(7, 'days'), moment().subtract(1, 'days')],
+                    'Last 15 Days': [moment().subtract(15, 'days'), moment().subtract(1, 'days')],
+                    'Last 28 Days': [moment().subtract(28, 'days'), moment().subtract(1, 'days')], 
+                },
+                autoUpdateInput: true,
+                locale: {
+                    format: 'YYYY-MM-DD',
+                    cancelLabel: 'Clear',
+                },
+                alwaysShowCalendars: true,
+                showDropdowns: true,
+            }, function(start, end) {
+                $('.daterange').val(`${start.format('YYYY-MM-DD')} - ${end.format('YYYY-MM-DD')}`);
+            });
+
+            $('.daterange').on('apply.daterangepicker', function(ev, picker) {
+                const startDate = picker.startDate;
+                const endDate = picker.endDate;
+                const totalDays = endDate.diff(startDate, 'days') + 1;
+
+                if (totalDays > 28) {
+                    alert('You can only select up to 28 days (inclusive). Please reduce the range.');
+                    picker.setEndDate(startDate.clone().add(28, 'days'));
+                    return;
+                }
+
+                const start = startDate.format('YYYY-MM-DD');
+                const end = endDate.format('YYYY-MM-DD');
+
+                $(this).val(`${start} - ${end}`);
+                
+                // Reload ads with new date range
+                if (adSelect.val()) {
+                    loadAdsSummary(adSelect.val(), start, end);
+                }
+            });
+
+            $('.daterange').on('cancel.daterangepicker', function() {
+                $(this).val('');
+                // Reset to default 28 days
+                const defaultStart = moment().subtract(28, 'days').format('YYYY-MM-DD');
+                const defaultEnd = moment().subtract(1, 'days').format('YYYY-MM-DD');
+                
+                if (adSelect.val()) {
+                    loadAdsSummary(adSelect.val(), defaultStart, defaultEnd);
+                }
+            });
+
+            // Set initial value and load data
+            $('.daterange').val(`${defaultStart.format('YYYY-MM-DD')} - ${defaultEnd.format('YYYY-MM-DD')}`);
+            
+            // Load initial data
+            if (adSelect.val()) {
+                loadAdsSummary(adSelect.val(), defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+            }
+        }
+
+        function loadAdsSummary(adAccountId, startDate = null, endDate = null) {
+            container.html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><div class="mt-2">Loading ads data...</div></div>');
+            
+            const params = {
+                columns: currentColumns.join(',')
+            };
+            
+            // Add date range if provided
+            if (startDate && endDate) {
+                params.date_range = `${startDate} - ${endDate}`;
+            }
             
             $.ajax({
                 url: `${FACEBOOK_BASE_URL}/ads-summary/${adAccountId}`,
                 type: 'GET',
-                data: {
-                    columns: currentColumns.join(',')
-                },
+                data: params,
                 success: function(response) {
-                    container.html(response.html);                    
-                    initializeSelect2Modal();
+                    if (response.success) {
+                        container.html(response.html);
+                        
+                        // Update date range display if needed
+                        if (response.date_range) {
+                            console.log('Data loaded for range:', response.date_range);
+                        }
+                        
+                        initializeSelect2Modal();
+                        initializeCollapsibleRows();
+                    } else {
+                        container.html(`<div class="alert alert-danger py-4">${response.message || 'Failed to load ads'}</div>`);
+                    }
                 },
-                error: function() {
-                    container.html('<div class="text-danger py-4">Failed to load ads. Try again.</div>');
+                error: function(xhr, status, error) {
+                    console.error('Error loading ads:', error);
+                    let errorMessage = 'Failed to load ads. Please try again.';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    
+                    container.html(`<div class="alert alert-danger py-4">${errorMessage}</div>`);
                 }
             });
         }
 
-        // Initialize Sortable
+        // Initialize collapsible rows
+        function initializeCollapsibleRows() {
+            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(element) {
+                element.addEventListener('click', function() {
+                    const icon = this.querySelector('.toggle-icon');
+                    if (icon) {
+                        if (this.classList.contains('collapsed')) {
+                            icon.style.transform = 'rotate(0deg)';
+                        } else {
+                            icon.style.transform = 'rotate(180deg)';
+                        }
+                    }
+                });
+            });
+        }
+
+        // Initialize date range picker
+        initializeDateRange();
+
+        // Rest of your existing code
         function initializeSortable() {
             if (sortable) {
                 sortable.destroy();
@@ -245,14 +316,12 @@
                     ghostClass: 'sortable-ghost',
                     chosenClass: 'sortable-chosen',
                     onEnd: function(evt) {
-                        // Update currentColumns based on new order
                         updateCurrentColumnsFromSortable();
                     }
                 });
             }
         }
 
-        // Update currentColumns based on sortable order
         function updateCurrentColumnsFromSortable() {
             const newOrder = [];
             $('#columnOrderList .sortable-item').each(function() {
@@ -261,87 +330,49 @@
             currentColumns = newOrder;
         }
 
-        // Load first account by default
-        if (adSelect.val()) {
-            loadAdsSummary(adSelect.val());
-        }
-
         // Change listener for ad account
         adSelect.on('change', function() {
             const id = $(this).val();
-            if (id) loadAdsSummary(id);
-        });
-
-        // Customize Columns Modal
-        $('#customizeColumnsBtn').on('click', function() {
-            initializeColumnModal();
-            $('#customizeColumnsModal').modal('show');
-        });
-
-        // Initialize modal with current settings
-        function initializeColumnModal() {
-            // Show all form checks first
-            $('.form-check').show();
-            
-            // Check checkboxes based on current columns
-            $('.column-checkbox').each(function() {
-                const column = $(this).val();
-                $(this).prop('checked', currentColumns.includes(column));
-            });
-
-            // Update order list based on currentColumns
-            updateOrderList();
-            
-            // Reinitialize sortable after a small delay to ensure DOM is updated
-            setTimeout(() => {
-                initializeSortable();
-            }, 100);
-        }
-
-        // Update order list based on currentColumns (preserving order)
-        function updateOrderList() {
-            $('#columnOrderList').empty();
-            
-            // Only show columns that are in currentColumns AND checked
-            currentColumns.forEach(column => {
-                if ($(`#col_${column}`).is(':checked')) {
-                    $('#columnOrderList').append(`
-                        <div class="sortable-item" data-column="${column}">
-                            <div class="d-flex align-items-center justify-content-between p-1 border rounded mb-1 bg-light">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-grip-vertical text-muted me-2"></i>
-                                    <span>${ucwords(column.replace(/_/g, ' '))}</span>
-                                </div>
-                                <button class="btn btn-sm btn-outline-danger remove-column" type="button">
-                                    <i class="ti ti-trash" data-bs-toggle="tooltip" data-bs-original-title="Delete"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `);
+            if (id) {
+                const currentRange = $('.daterange').val();
+                if (currentRange) {
+                    const dates = currentRange.split(' - ');
+                    loadAdsSummary(id, dates[0], dates[1]);
+                } else {
+                    // If no date range selected, use default
+                    const defaultStart = moment().subtract(28, 'days').format('YYYY-MM-DD');
+                    const defaultEnd = moment().subtract(1, 'days').format('YYYY-MM-DD');
+                    loadAdsSummary(id, defaultStart, defaultEnd);
                 }
-            });
-        }
+            }
+        });
 
-        // Remove column from order list
-        $(document).on('click', '.remove-column', function(e) {
-            e.preventDefault();
-            const column = $(this).closest('.sortable-item').data('column');
-            $(`#col_${column}`).prop('checked', false);
-            
-            // Remove from currentColumns
-            currentColumns = currentColumns.filter(col => col !== column);
-            
-            updateOrderList();
+        // Customize columns modal functionality
+        $('#customizeColumnsBtn').on('click', function() {
+            $('#customizeColumnsModal').modal('show');
             initializeSortable();
         });
 
-        // Search columns
+        // Apply columns functionality
+        $('#applyColumns').on('click', function() {
+            updateCurrentColumnsFromSortable();
+            localStorage.setItem('facebook_ads_columns', JSON.stringify(currentColumns));
+            
+            // Reload data with new columns
+            const currentRange = $('.daterange').val();
+            if (adSelect.val() && currentRange) {
+                const dates = currentRange.split(' - ');
+                loadAdsSummary(adSelect.val(), dates[0], dates[1]);
+            }
+            
+            $('#customizeColumnsModal').modal('hide');
+        });
+
+        // Column search functionality
         $('#columnSearch').on('input', function() {
             const searchTerm = $(this).val().toLowerCase();
-            
-            $('.form-check').each(function() {
+            $('.column-list .form-check').each(function() {
                 const label = $(this).find('.form-check-label').text().toLowerCase();
-                
                 if (label.includes(searchTerm)) {
                     $(this).show();
                 } else {
@@ -350,67 +381,44 @@
             });
         });
 
-        // Column checkbox change event
-        $(document).on('change', '.column-checkbox', function() {
+        // Remove column from order list
+        $(document).on('click', '.remove-column', function() {
+            $(this).closest('.sortable-item').remove();
+            updateCurrentColumnsFromSortable();
+        });
+
+        // Add column to order list
+        $('.column-checkbox').on('change', function() {
             const column = $(this).val();
             const isChecked = $(this).is(':checked');
             
             if (isChecked) {
-                // Add to currentColumns if not already present
-                if (!currentColumns.includes(column)) {
-                    currentColumns.push(column);
+                // Add to order list if not already present
+                if (!$(`.sortable-item[data-column="${column}"]`).length) {
+                    const columnName = $(this).next('.form-check-label').text();
+                    $('#columnOrderList').append(`
+                        <div class="sortable-item" data-column="${column}">
+                            <div class="d-flex align-items-center justify-content-between p-1 border rounded mb-1 bg-light">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-grip-vertical text-muted me-2"></i>
+                                    <span>${columnName}</span>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger remove-column">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `);
                 }
             } else {
-                // Remove from currentColumns
-                currentColumns = currentColumns.filter(col => col !== column);
+                // Remove from order list
+                $(`.sortable-item[data-column="${column}"]`).remove();
             }
             
-            updateOrderList();
-            initializeSortable();
+            updateCurrentColumnsFromSortable();
         });
-
-        // Apply column changes
-        $('#applyColumns').on('click', function() {
-            // Ensure we have at least one column
-            if (currentColumns.length === 0) {
-                alert('Please select at least one column to display.');
-                return;
-            }
-
-            // Save to localStorage
-            localStorage.setItem('facebook_ads_columns', JSON.stringify(currentColumns));
-            
-            $('#customizeColumnsModal').modal('hide');
-            
-            // Reload ads with new columns
-            if (adSelect.val()) {
-                loadAdsSummary(adSelect.val());
-            }
-        });
-
-        // Modal hidden event - cleanup
-        $('#customizeColumnsModal').on('hidden.bs.modal', function () {
-            // Reset search
-            $('#columnSearch').val('');
-            $('.form-check').show();
-        });
-
-        // Modal shown event - reinitialize
-        $('#customizeColumnsModal').on('shown.bs.modal', function () {
-            initializeSortable();
-        });
-
-        // Helper function to capitalize words
-        function ucwords(str) {
-            return str.replace(/_/g, ' ')
-                     .replace(/\w\S*/g, function(txt) {
-                         return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-                     });
-        }
-        
-        // Initial sortable initialization
-        initializeSortable();
     });
+
     function initializeSelect2Modal() {
         $('.js-example-basic-single, .js-example-basic-multiple').each(function() {
             if ($(this).hasClass("select2-hidden-accessible")) {

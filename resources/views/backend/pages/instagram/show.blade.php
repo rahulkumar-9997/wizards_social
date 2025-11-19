@@ -251,7 +251,7 @@
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
                             <h5 class="card-title mb-0">
-                                Instagram Views
+                                Total Views
                                 <i id="viewDateRangeTitle"
                                     class="bx bx-question-mark text-primary"
                                     style="cursor: pointer; font-size: 18px;"

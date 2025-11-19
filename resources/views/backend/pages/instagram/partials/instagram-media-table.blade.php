@@ -37,9 +37,7 @@
                     @endif
                 </span>
             </th>
-            <th>View</th>
-            <th>Reach</th>
-            <th>Impression</th>
+            
             <th>Caption</th>
             <th data-sort="media_type" data-order="{{ isset($currentSort) && $currentSort['field'] == 'media_type' ? $currentSort['order'] : 'none' }}" title="Click to sort">
                 Media Type 
@@ -97,14 +95,12 @@
                     <source src="{{ $post['media_url'] }}" type="video/mp4">
                 </video>
                 @else
-                <img src="{{ $post['media_url'] }}" alt="Media" class="img-fluid img-thumbnail" style="max-width:70px; max-height:70px;">
+                <img src="{{ $post['media_url'] }}" alt="Media" class="img-fluid img-thumbnail" style="max-width:70px; max-height:88px;">
                 @endif
                 @endif
             </td>
             <td>{{ isset($post['timestamp']) ? \Carbon\Carbon::parse($post['timestamp'])->format('d-m-Y h:i A') : '-' }}</td>
-            <td>👀 {{ $post['views'] }}</td>
-            <td>📢 {{ $post['reach'] }}</td>
-            <td>📊 {{ $post['impressions'] }}</td>
+            
             <td>{{ \Illuminate\Support\Str::limit($post['caption'] ?? '-', 40) }}</td>
             <td>
                 <span class="badge 

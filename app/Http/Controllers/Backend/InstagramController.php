@@ -1152,7 +1152,7 @@ class InstagramController extends Controller
                             <div class="metric-card">
                                 <div class="metric-header">
                                     <h4>
-                                        View
+                                        View By Followers & Non Followers
                                         <i class="bx bx-question-mark text-primary" 
                                         style="cursor: pointer; font-size: 18px;" 
                                         data-bs-toggle="tooltip" data-bs-placement="top" 
@@ -1164,37 +1164,38 @@ class InstagramController extends Controller
                                 <div class="metric-body">
                                     <table class="table table-sm mb-2 align-middle text-center">
                                         <tr>
-                                            <td colspan="2" class="bg-black text-light">Followers</td>                                        
+                                            <td colspan="2" class="bg-primary text-light">Current Month</td>                                        
                                         </tr>
                                         <tr>
-                                            <td><h4 class="mb-0">' . $this->formatNumber($views_followers_previous) . '</h4></td>
                                             <td><h4 class="mb-0">' . $this->formatNumber($views_followers_current) . '</h4></td>
+                                            <td><h4 class="mb-0">' . $this->formatNumber($views_non_followers_current) . '</h4></td>
                                         </tr>
-                                        <tr>
-                                            <td class="bg-black text-light">Previous Month</td>
-                                            <td class="bg-black text-light">Current Month</td>
-                                        </tr>
-                                        <tr>
+                                        <!--<tr>
                                             <td colspan="2" class="' . ($views_followers_perce > 0 ? 'positive' : ($views_followers_perce < 0 ? 'negative' : 'neutral')) . '">
                                                 <h4 class="mb-0">' . ($views_followers_perce > 0 ? "▲ +" : ($views_followers_perce < 0 ? "▼ " : "➖ ")) . abs($views_followers_perce) . '%</h4>
                                             </td>
-                                        </tr> 
+                                        </tr>--> 
                                         <tr>
-                                            <td colspan="2" class="bg-black text-light">Non Followers</td>                                        
+                                            <td class="bg-black text-light">Followers</td>
+                                            <td class="bg-black text-light">Non-Followers</td>
                                         </tr>
                                         <tr>
+                                            <td colspan="2" class="bg-primary text-light">Previous Month</td>                                        
+                                        </tr>
+                                        <tr>
+                                            <td class="bg-black text-light">Followers</td>
+                                            <td class="bg-black text-light">Non-Followers</td>
+                                        </tr>
+
+                                        <tr>
+                                            <td><h4 class="mb-0">' . $this->formatNumber($views_followers_previous) . '</h4></td>
                                             <td><h4 class="mb-0">' . $this->formatNumber($views_non_followers_previous) . '</h4></td>
-                                            <td><h4 class="mb-0">' . $this->formatNumber($views_non_followers_current) . '</h4></td>
                                         </tr>
-                                        <tr>
-                                            <td class="bg-black text-light">Previous Month</td>
-                                            <td class="bg-black text-light">Current Month</td>
-                                        </tr>
-                                        <tr>
+                                        <!--<tr>
                                             <td colspan="2" class="' . ($views_non_followers_perce > 0 ? 'positive' : ($views_non_followers_perce < 0 ? 'negative' : 'neutral')) . '">
                                                 <h4 class="mb-0">' . ($views_non_followers_perce > 0 ? "▲ +" : ($views_non_followers_perce < 0 ? "▼ " : "➖ ")) . abs($views_non_followers_perce) . '%</h4>
                                             </td>
-                                        </tr>                                       
+                                        </tr>-->                          
                                     </table>
                                 </div>
                             </div>
@@ -1304,7 +1305,7 @@ class InstagramController extends Controller
                                                                     </td>
                                                                     <td><h4 class="mb-0">' . $this->formatNumber($intraPrevShares) . '</h4></td>
                                                                 </tr>
-                                                                <tr>
+                                                                <!--<tr>
                                                                     <td>
                                                                         <h4 class="mb-0">
                                                                             Reposts
@@ -1317,7 +1318,7 @@ class InstagramController extends Controller
                                                                         </h4>
                                                                     </td>
                                                                     <td><h4 class="mb-0">' . $this->formatNumber($intraPrevReposts) . '</h4></td>
-                                                                </tr>
+                                                                </tr>-->
                                                             </table>
                                                         </td>
 
@@ -1408,7 +1409,7 @@ class InstagramController extends Controller
                                                                         
                                                                     </td>
                                                                 </tr>
-                                                                <tr>
+                                                                <!--<tr>
                                                                     <td>
                                                                         <h4 class="mb-0">
                                                                             Reposts
@@ -1428,7 +1429,7 @@ class InstagramController extends Controller
                                                                         </h4>
                                                                         
                                                                     </td>
-                                                                </tr>
+                                                                </tr>-->
                                                             </table>
                                                         </td>
                                                     </tr>
@@ -1645,14 +1646,12 @@ class InstagramController extends Controller
                                         <thead>
                                             <tr>
                                                 <th colspan="2">Number of Posts</th>
-                                                <th colspan="2">Number of Stories</th>
                                                 <th colspan="2">Number of Reels</th>
                                             </tr>
                                             <tr>
                                                 <th class="metric-section-header">Prev. Month</th>
                                                 <th class="metric-section-header">Current</th>
-                                                <th class="metric-section-header">Prev. Month</th>
-                                                <th class="metric-section-header">Current</th>
+                                                
                                                 <th class="metric-section-header">Prev. Month</th>
                                                 <th class="metric-section-header">Current</th>                                              
                                                 
@@ -1662,19 +1661,14 @@ class InstagramController extends Controller
                                             <tr>
                                                 <td class="highlight">' . $postsPrevious . '</td>
                                                 <td>' . $postsCurrent . '</td>
-                                                <td class="highlight">' . $storiesPrevious . '</td>
-                                                <td>' . $storiesCurrent . '</td>
                                                 <td class="highlight">' . $reelsPrevious . '</td>
                                                 <td>' . $reelsCurrent . '</td>
                                                 
                                             </tr>
                                             <tr>
                                                 <td colspan="2" style="' . $this->getBgColor($postsPerce) . '">' . ($postsPerce > 0 ? '+' : '') . $postsPerce . '%</td>
-                                                <td colspan="2" style="' . $this->getBgColor($storiesPerce) . '">' . ($storiesPerce > 0 ? '+' : '') . $storiesPerce . '%</td>
-                                                <td colspan="2" style="' . $this->getBgColor($reelsPerce) . '">' . ($reelsPerce > 0 ? '+' : '') . $reelsPerce . '%</td>                                               
-                                                
-                                            </tr>
-
+                                                <td colspan="2" style="' . $this->getBgColor($reelsPerce) . '">' . ($reelsPerce > 0 ? '+' : '') . $reelsPerce . '%</td>
+                                                </tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -2059,9 +2053,8 @@ class InstagramController extends Controller
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
             $startDate = $request->get('start_date', now()->subDays(30)->format('Y-m-d'));
             $endDate = $request->get('end_date', now()->format('Y-m-d'));
-
-            $start = \Carbon\Carbon::parse($startDate)->startOfDay()->clone();
-            $end = \Carbon\Carbon::parse($endDate)->endOfDay()->clone();
+            $start = \Carbon\Carbon::parse($startDate);
+            $end = \Carbon\Carbon::parse($endDate);
 
             $since = $start->timestamp;
             $until = $end->timestamp;
@@ -2072,52 +2065,25 @@ class InstagramController extends Controller
             $sortOrder = $request->get('order', 'desc');
             $mediaTypeFilter = $request->get('media_type', '');
             $searchFilter = $request->get('search', '');
-
-            $allMedia = [];
-            $nextPageUrl = null;
             $params = [
                 'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,media_product_type,boost_ads_list{ad_id,ad_status}',
                 'access_token' => $token,
                 'since' => $since,
                 'until' => $until,
-                'limit' => 100
             ];
-
             if ($after) $params['after'] = $after;
             if ($before) $params['before'] = $before;
-
-            do {
-                $mediaResponse = Http::timeout(30)
-                    ->get("https://graph.facebook.com/v24.0/{$instagramId}/media", $params)
-                    ->json();
-
-                if (isset($mediaResponse['data'])) {
-
-                    foreach ($mediaResponse['data'] as $post) {
-                        $insights = $this->getPostInsightsOfEachPost($post['id'], $token);
-                        $post['views'] = $insights['views'] ?? 0;
-                        $post['reach'] = $insights['reach'] ?? 0;
-                        $post['impressions'] = $insights['impressions'] ?? 0;
-
-                        $allMedia[] = $post;
-                    }
-                }
-
-                $nextPageUrl = $mediaResponse['paging']['next'] ?? null;
-                $params = [];
-                if ($nextPageUrl && parse_url($nextPageUrl, PHP_URL_QUERY)) {
-                    parse_str(parse_url($nextPageUrl, PHP_URL_QUERY), $queryParams);
-                    $params['after'] = $queryParams['after'] ?? null;
-                }
-
-            } while ($nextPageUrl && count($allMedia) < 500);
-            $filteredMedia = $this->applyFilters($allMedia, $mediaTypeFilter, $searchFilter);
+            $mediaResponse = Http::timeout(10)
+                ->get("https://graph.facebook.com/v24.0/{$instagramId}/media", $params)
+                ->json();
+            $media = $mediaResponse['data'] ?? [];
+            $paging = $mediaResponse['paging'] ?? [];
+            $filteredMedia = $this->applyFilters($media, $mediaTypeFilter, $searchFilter);
             $sortedMedia = $this->applySorting($filteredMedia, $sortField, $sortOrder);
             $currentPage = $request->get('page', 1);
             $perPage = $limit;
             $offset = ($currentPage - 1) * $perPage;
             $paginatedMedia = array_slice($sortedMedia, $offset, $perPage);
-
             $totalMedia = count($sortedMedia);
             $totalPages = ceil($totalMedia / $perPage);
 
@@ -2126,7 +2092,7 @@ class InstagramController extends Controller
 
             $mediaTableHtml = view('backend.pages.instagram.partials.instagram-media-table', [
                 'media' => $paginatedMedia,
-                'paging' => $mediaResponse['paging'] ?? [],
+                'paging' => $paging,
                 'startDate' => $formattedStart,
                 'endDate' => $formattedEnd,
                 'instagram' => ['id' => $instagramId],
@@ -2150,21 +2116,31 @@ class InstagramController extends Controller
                 ]
             ])->render();
 
-            return response()->json(['success' => true, 'html' => $mediaTableHtml]);
+            $html = '                
+                <div id="instagram-media-table">
+                    ' . $mediaTableHtml . '
+                </div>
+            ';
 
+            return response()->json(['success' => true, 'html' => $html]);
         } catch (\Exception $e) {
-            Log::error('Instagram API Error: ' . $e->getMessage());
-            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 
 
-    private function getPostInsightsOfEachPost($mediaId, $token)
+
+    /*private function getPostInsightsOfEachPost($mediaId, $token, $since, $until)
     {
         try {
             $response = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$mediaId}/insights", [
-                'metric' => 'views,reach,impressions',
+                'metric' => 'views,reach',
                 'access_token' => $token,
+                'since' => $since,
+                'until' => $until,
             ])->json();
 
             $insights = [];
@@ -2181,10 +2157,9 @@ class InstagramController extends Controller
             return [
                 'views' => 0,
                 'reach' => 0,
-                'impressions' => 0,
             ];
         }
-    }
+    }*/
 
 
     private function applyFilters($media, $mediaTypeFilter, $searchFilter)
@@ -2423,7 +2398,6 @@ class InstagramController extends Controller
             }
             $postBasic['insights'] = ['data' => $postWithInsights['data'] ?? []];
             $postData = $this->processPostData($postBasic, $mediaType);
-            dd($postData);
             return view('backend.pages.instagram.insights', compact('postData', 'instagram'));
         } catch (\Exception $e) {
             Log::error('Post insights page error: ' . $e->getMessage());
@@ -2442,7 +2416,7 @@ class InstagramController extends Controller
             case 'VIDEO':
                 return 'impressions,reach,saved,shares,video_views,total_interactions,likes,comments';
             case 'CAROUSEL_ALBUM':
-                return 'impressions,reach,saved,shares,total_interactions,likes,comments';
+                return 'reach,saved,shares,total_interactions,likes,comments';
             case 'IMAGE':
             default:
                 return 'impressions,reach,saved,shares,total_interactions,likes,comments';
