@@ -195,17 +195,21 @@
                                 ];
 
                                 if ($postData['media_type'] === 'REEL') {
-                                // Facebook removed "plays" metric, so don't use it.
-                                $statItems[] = [
-                                'value' => $postData['avg_watch_time_formatted'],
-                                'label' => 'Avg Watch Time',
-                                'color' => '#0ea5e9'
-                                ];
-                                $statItems[] = [
-                                'value' => $postData['total_watch_time_formatted'],
-                                'label' => 'Total Watch Time',
-                                'color' => '#06b6d4'
-                                ];
+                                    $statItems[] = [
+                                        'value' => $postData['avg_watch_time_formatted'],
+                                        'label' => 'Avg Watch Time',
+                                        'color' => '#0ea5e9'
+                                    ];
+                                    $statItems[] = [
+                                        'value' => $postData['total_watch_time_formatted'],
+                                        'label' => 'Total Watch Time',
+                                        'color' => '#06d428ff'
+                                    ];
+                                    $statItems[] = [
+                                        'value' => $postData['total_views'],
+                                        'label' => 'Total Views',
+                                        'color' => '#8f06d4ff'
+                                    ];
                                 } else {
                                 if (!empty($postData['impressions']) && $postData['impressions'] > 0) {
                                 $statItems[] = [

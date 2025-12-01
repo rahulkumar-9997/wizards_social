@@ -80,6 +80,8 @@ Route::middleware(['auth', 'menu.access'])->group(function () {
 
     Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])->name('instagram.post.insights.page');    
     Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');
+
+    Route::get('instagram-report-pdf/{id}/', [InstagramController::class, 'downloadInstagramReportToPdfFile'])->name('instagram.report.pdf');
         
 
     Route::get('facebook-summary/{id}', [FacebookController::class, 'facebookMainIndex'])->name('facebook.report');

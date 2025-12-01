@@ -74,9 +74,11 @@ class InstagramController extends Controller
             $performanceData = $this->fetchPerformanceData($id, $token, $startDate, $endDate);
             //Log::info('Instagram fetchHtml Media Response: ' . print_r($performanceData, true));            
             $html = $this->renderDashboardHtml($instagramId, $performanceData);
+            $total_interaction_other = $this->renderTotalInteractionAndOther($instagramId, $performanceData);
             return response()->json([
                 'success' => true,
                 'html' => $html,
+                'total_interaction_other' =>$total_interaction_other,
             ]);
         } catch (\Exception $e) {
             Log::error('Instagram fetchHtml error: ' . $e->getMessage());
@@ -914,26 +916,7 @@ class InstagramController extends Controller
         $currentReach  = $instagramReach->reach->current_month->total ?? 0;
         $previousReach = $instagramReach->reach->previous_month->total ?? 0;
         $reachPercentage = $instagramReach->reach->percent_change ?? 0;
-        $reachTrend = $reachPercentage >= 0 ? 'positive' : 'negative';
-
-        /* Profile Visits */
-        $currentProfile  = $performanceData['profile_visits']['current_profile'] ?? 0;
-        $previousProfile = $performanceData['profile_visits']['previous_profile'] ?? 0;
-        $profilePercentage = $performanceData['profile_visits']['percent_change'] ?? 0;
-
-        /* Engagement */
-        $accountEngagedCurrent  = $performanceData['engagement']['accounts_engaged_current'] ?? 0;
-        $accountEngagedPrevious = $performanceData['engagement']['accounts_engaged_previous'] ?? 0;
-        $accountEngagedPercent  = $performanceData['engagement']['accounts_engaged_percent_change'] ?? 0;
-
-        $totalInteractionsCurrent  = $performanceData['engagement']['total_interactions_current'] ?? 0;
-        $totalInteractionsPrevious = $performanceData['engagement']['total_interactions_previous'] ?? 0;
-        $totalInteractionsPercent  = $performanceData['engagement']['total_interactions_percent_change'] ?? 0;
-
-        /* Profile Link Clicks */
-        $profileLinkCurrent = $performanceData['profile_link']['current'] ?? 0;
-        $profileLinkPrevious = $performanceData['profile_link']['previous'] ?? 0;
-        $profileLinkPercent = $performanceData['profile_link']['percent_change'] ?? 0;
+        $reachTrend = $reachPercentage >= 0 ? 'positive' : 'negative';        
 
         /* Followers & Unfollowers*/
         $followersCurrent  = $performanceData['followers']['current'] ?? 0;
@@ -944,23 +927,7 @@ class InstagramController extends Controller
         $unfollowersCurrent  = $performanceData['unfollowers']['current'] ?? 0;
         $unfollowersPrevious = $performanceData['unfollowers']['previous'] ?? 0;
         $unfollowersPerce    = $performanceData['unfollowers']['percent'] ?? 0;
-        $unfollowersStatus   = $performanceData['unfollowers']['status'] ?? '-';
-
-        /* Posts, Stories, Reels */
-        $postsCurrent   = $performanceData['posts']['current'] ?? 0;
-        $postsPrevious  = $performanceData['posts']['previous'] ?? 0;
-        $postsPerce     = $performanceData['posts']['percent'] ?? 0;
-        $postsStatus    = $performanceData['posts']['status'] ?? '-';
-
-        $storiesCurrent  = $performanceData['stories']['current'] ?? 0;
-        $storiesPrevious = $performanceData['stories']['previous'] ?? 0;
-        $storiesPerce    = $performanceData['stories']['percent'] ?? 0;
-        $storiesStatus   = $performanceData['stories']['status'] ?? '-';
-
-        $reelsCurrent  = $performanceData['reels']['current'] ?? 0;
-        $reelsPrevious = $performanceData['reels']['previous'] ?? 0;
-        $reelsPerce    = $performanceData['reels']['percent'] ?? 0;
-        $reelsStatus   = $performanceData['reels']['status'] ?? '-';
+        $unfollowersStatus   = $performanceData['unfollowers']['status'] ?? '-';        
 
         /**View follower and non followers */
         $views_followers_non_foll_desc   = $performanceData['views_followers']['api_description'] ?? '-';
@@ -971,39 +938,9 @@ class InstagramController extends Controller
         $views_non_followers_current   = $performanceData['views_non_followers']['current'] ?? '-';
         $views_non_followers_previous   = $performanceData['views_non_followers']['previous'] ?? '-';
         $views_non_followers_perce   = $performanceData['views_non_followers']['percent'] ?? '-';
-        /**View follower and non followers */
-        /**tooltips */
-        $reachDescription = $performanceData['instagramReach']->reach->api_description ?? '';
-        $profileVisitDescription = $performanceData['profile_visits']['api_description'] ?? '';
-        $profileLinkDescription = $performanceData['profile_link']['api_description'] ?? '';
-        $engagementDescription = $performanceData['engagement']['account_engaged_api_description'] ?? '';
-        $interactionsDescription = $performanceData['engagement']['interactions_api_description'] ?? '';
-        $followUnfollowDescription = $performanceData['followers']['api_description'] ?? '';
-        /*Multiple interactions */
-        $intraCurrentLikes      = $performanceData['likes']['current'] ?? '-';
-        $intraCurrentComments   = $performanceData['comments']['current'] ?? '-';
-        $intraCurrentSaves      = $performanceData['saves']['current'] ?? '-';
-        $intraCurrentShares     = $performanceData['shares']['current'] ?? '-';
-        $intraCurrentReposts    = $performanceData['reposts']['current'] ?? '-';
-
-        $intraPrevLikes         = $performanceData['likes']['previous'] ?? '-';
-        $intraPrevComments      = $performanceData['comments']['previous'] ?? '-';
-        $intraPrevSaves         = $performanceData['saves']['previous'] ?? '-';
-        $intraPrevShares        = $performanceData['shares']['previous'] ?? '-';
-        $intraPrevReposts       = $performanceData['reposts']['previous'] ?? '-';
-
-        $intraPercentLikes      = $performanceData['likes']['percent'] ?? '-';
-        $intraPercentComments   = $performanceData['comments']['percent'] ?? '-';
-        $intraPercentSaves      = $performanceData['saves']['percent'] ?? '-';
-        $intraPercentShares     = $performanceData['shares']['percent'] ?? '-';
-        $intraPercentReposts    = $performanceData['reposts']['percent'] ?? '-';        
-
-        $intraDescLikes         = $performanceData['likes']['api_description'] ?? '-';
-        $intraDescComments      = $performanceData['comments']['api_description'] ?? '-';
-        $intraDescSaves         = $performanceData['saves']['api_description'] ?? '-';
-        $intraDescShares        = $performanceData['shares']['api_description'] ?? '-';
-        $intraDescReposts       = $performanceData['reposts']['api_description'] ?? '-';
-       
+        /**View follower and non followers */       
+       $reachDescription = $performanceData['instagramReach']->reach->api_description ?? '';
+       $followUnfollowDescription = $performanceData['followers']['api_description'] ?? '';
         $html = '
         <div class="card">
             <div class="card-header text-white">
@@ -1164,7 +1101,7 @@ class InstagramController extends Controller
                                 <div class="metric-body">
                                     <table class="table table-sm mb-2 align-middle text-center">
                                         <tr>
-                                            <td colspan="2" class="bg-primary text-light">Current Month</td>                                        
+                                            <td colspan="2" class="bg-black text-light">Current Month</td>                                        
                                         </tr>
                                         <tr>
                                             <td><h4 class="mb-0">' . $this->formatNumber($views_followers_current) . '</h4></td>
@@ -1176,15 +1113,15 @@ class InstagramController extends Controller
                                             </td>
                                         </tr>--> 
                                         <tr>
-                                            <td class="bg-black text-light">Followers</td>
-                                            <td class="bg-black text-light">Non-Followers</td>
+                                            <td class="bg-success text-light">Followers</td>
+                                            <td class="bg-success text-light">Non-Followers</td>
                                         </tr>
                                         <tr>
-                                            <td colspan="2" class="bg-primary text-light">Previous Month</td>                                        
+                                            <td colspan="2" class="bg-black text-light">Previous Month</td>                                        
                                         </tr>
                                         <tr>
-                                            <td class="bg-black text-light">Followers</td>
-                                            <td class="bg-black text-light">Non-Followers</td>
+                                            <td class="bg-success text-light">Followers</td>
+                                            <td class="bg-success text-light">Non-Followers</td>
                                         </tr>
 
                                         <tr>
@@ -1201,481 +1138,557 @@ class InstagramController extends Controller
                             </div>
                         </div> 
                     </div>
-                </div>
-                <div class="row g-4"> 
-                    <div class="col-md-12 col-sm-6 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2 mb-1">
-                        <div class="row">
-                            <div class="col-md-12 col-sm-12 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2 mb-1">
-                                <div class="metric-card">
-                                    <div class="metric-header">
-                                        <h4>
-                                            Total Interactions
-                                            <i class="bx bx-question-mark text-primary" 
-                                            style="cursor: pointer; font-size: 18px;" 
-                                            data-bs-toggle="tooltip" data-bs-placement="top" 
-                                            data-bs-custom-class="success-tooltip"
-                                            data-bs-title="' . e($interactionsDescription) . '">
-                                            </i> 
-                                        </h4>
-                                    </div>
-                                    <div class="metric-body">
-                                        <table class="table table-sm mb-3 align-middle text-center">
-                                            
-                                            <tr>
-                                                <td><h4 class="mb-0">' . $this->formatNumber($totalInteractionsPrevious) . '</h4></td>
-                                                <td><h4 class="mb-0">' . $this->formatNumber($totalInteractionsCurrent) . '</h4></td>
-                                            </tr>
-                                            <tr>
-                                                <td class="bg-black text-light">Previous Month</td>
-                                                <td class="bg-black text-light">Current Month</td>
-                                            </tr>
-                                            <tr>
-                                                <td colspan="2" class="' . ($totalInteractionsPercent > 0 ? 'positive' : ($totalInteractionsPercent < 0 ? 'negative' : 'neutral')) . '">
-                                                    <h4 class="mb-0">' . ($totalInteractionsPercent > 0 ? "▲ +" : ($totalInteractionsPercent < 0 ? "▼ " : "➖ ")) . abs($totalInteractionsPercent) . '%</h4>
-                                                </td>
-                                            </tr>                                       
-                                        </table>
-                                        <div class="row">
-                                            <div class="col-lg-6">
-                                                <div class="col-lg-12 mb-2">
-                                                    <h5 class="card-title mb-0">Total Interactions by Likes, Comments, Saves, Shares, Reposts </h5>
-                                                </div>
-                                                <table class="table table-bordered table-sm mb-2 ">                                            
-                                                    <tr>
-                                                        <td class="bg-black text-light">Previous Month</td>
-                                                        <td class="bg-black text-light">Current Month</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <!-- Previous Month -->
-                                                        <td>
-                                                            <table class="table table-sm mb-2 "> 
-                                                                <tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0"> 
-                                                                            Likes
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescLikes) . '">
-                                                                            </i>
-                                                                        </h4>
-                                                                    </td>
-                                                                    <td><h4 class="mb-0">' . $this->formatNumber($intraPrevLikes) . '</h4></td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0"> 
-                                                                            Comments
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescComments) . '">
-                                                                            </i>
-                                                                        </h4> 
-                                                                    </td>
-                                                                    <td><h4 class="mb-0">' . $this->formatNumber($intraPrevComments) . '</h4></td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                            Saves
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescSaves) . '">
-                                                                            </i>
-                                                                        </h4>
-                                                                    </td>
-                                                                    <td><h4 class="mb-0">' . $this->formatNumber($intraPrevSaves) . '</h4></td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                            Shares
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescShares) . '">
-                                                                            </i>
-                                                                        </h4>
-                                                                    </td>
-                                                                    <td><h4 class="mb-0">' . $this->formatNumber($intraPrevShares) . '</h4></td>
-                                                                </tr>
-                                                                <!--<tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                            Reposts
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescReposts) . '">
-                                                                            </i>
-                                                                        </h4>
-                                                                    </td>
-                                                                    <td><h4 class="mb-0">' . $this->formatNumber($intraPrevReposts) . '</h4></td>
-                                                                </tr>-->
-                                                            </table>
-                                                        </td>
+                </div>                                
+            </div>
+        </div>';
+        return $html;
+    }
 
-                                                        <!-- Current Month -->
-                                                        <td>
-                                                            <table class="table  table-sm mb-2"> 
-                                                                <tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                            Likes 
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescLikes) . '">
-                                                                            </i>
-                                                                        </h4>
-                                                                    </td>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                        ' . $this->formatNumber($intraCurrentLikes) . '
-                                                                        <small class="' . ($intraPercentLikes > 0 ? 'text-success' : ($intraPercentLikes < 0 ? 'text-danger' : 'text-muted')) . '">
-                                                                            ' . ($intraPercentLikes > 0 ? '▲ +' : ($intraPercentLikes < 0 ? '▼ ' : '➖ ')) . abs($intraPercentLikes) . '%</small>
-                                                                        </h4>
-                                                                        
-                                                                    </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                            Comments
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescComments) . '">
-                                                                            </i>
-                                                                        </h4>
-                                                                    </td>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                        ' . $this->formatNumber($intraCurrentComments) . '
-                                                                        <small class="' . ($intraPercentComments > 0 ? 'text-success' : ($intraPercentComments < 0 ? 'text-danger' : 'text-muted')) . '">
-                                                                            ' . ($intraPercentComments > 0 ? '▲ +' : ($intraPercentComments < 0 ? '▼ ' : '➖ ')) . abs($intraPercentComments) . '%</small>
-                                                                        </h4>
-                                                                        
-                                                                    </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                            Saves
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescSaves) . '">
-                                                                            </i>
-                                                                        </h4>
-                                                                    </td>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                        ' . $this->formatNumber($intraCurrentSaves) . '
-                                                                        <small class="' . ($intraPercentSaves > 0 ? 'text-success' : ($intraPercentSaves < 0 ? 'text-danger' : 'text-muted')) . '">
-                                                                            ' . ($intraPercentSaves > 0 ? '▲ +' : ($intraPercentSaves < 0 ? '▼ ' : '➖ ')) . abs($intraPercentSaves) . '%</small>
-                                                                        </h4>
-                                                                        
-                                                                    </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                            Shares
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescShares) . '">
-                                                                            </i>
-                                                                        </h4>
-                                                                    </td>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                        ' . $this->formatNumber($intraCurrentShares) . '
-                                                                        <small class="' . ($intraPercentShares > 0 ? 'text-success' : ($intraPercentShares < 0 ? 'text-danger' : 'text-muted')) . '">
-                                                                            ' . ($intraPercentShares > 0 ? '▲ +' : ($intraPercentShares < 0 ? '▼ ' : '➖ ')) . abs($intraPercentShares) . '%</small>
-                                                                        </h4>
-                                                                        
-                                                                    </td>
-                                                                </tr>
-                                                                <!--<tr>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                            Reposts
-                                                                            <i class="bx bx-question-mark text-primary" 
-                                                                                style="cursor: pointer; font-size: 18px;" 
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top" 
-                                                                                data-bs-custom-class="success-tooltip" 
-                                                                                data-bs-title="' . e($intraDescReposts) . '">
-                                                                            </i>
-                                                                        </h4>
-                                                                    </td>
-                                                                    <td>
-                                                                        <h4 class="mb-0">
-                                                                        ' . $this->formatNumber($intraCurrentReposts) . '
-                                                                        <small class="' . ($intraPercentReposts > 0 ? 'text-success' : ($intraPercentReposts < 0 ? 'text-danger' : 'text-muted')) . '">
-                                                                            ' . ($intraPercentReposts > 0 ? '▲ +' : ($intraPercentReposts < 0 ? '▼ ' : '➖ ')) . abs($intraPercentReposts) . '%</small>
-                                                                        </h4>
-                                                                        
-                                                                    </td>
-                                                                </tr>-->
-                                                            </table>
-                                                        </td>
-                                                    </tr>
-                                                </table>
-                                            </div>';
-                                            $html .= '
-                                            <div class="col-lg-6">
-                                                <div class="col-lg-12 mb-2">
-                                                    <h5 class="card-title mb-0">Total Interactions by Media Type</h5>
-                                                </div>
-                                                <table class="table table-bordered table-sm mb-2">
-                                                    <tr>
-                                                        <td class="bg-black text-light">Previous Month</td>
-                                                        <td class="bg-black text-light">Current Month</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <!-- Previous Month -->
-                                                        <td>
-                                                            <table class="table table-sm mb-2">';
-                                                                if (!empty($performanceData["total_interactions_by_media_type"])) {
-                                                                    foreach ($performanceData["total_interactions_by_media_type"] as $type => $data) {
-                                                                        $desc = e($data["api_description"] ?? "-");
-                                                                        $prev = $this->formatNumber($data["previous"] ?? 0);
+    private function renderTotalInteractionAndOther($instagramId, $performanceData){
+        Log::info('Rendering TotalInteractionAndOther Data: ' . print_r($performanceData, true));
+        /* Date range */
+        $dateRange = $performanceData['date_range']['display'] ?? '';
+        /* Instagram Reach (object) */
+        /* Profile Visits */
+        $currentProfile  = $performanceData['profile_visits']['current_profile'] ?? 0;
+        $previousProfile = $performanceData['profile_visits']['previous_profile'] ?? 0;
+        $profilePercentage = $performanceData['profile_visits']['percent_change'] ?? 0;
 
-                                                                        $html .= '
-                                                                        <tr>
-                                                                            <td>
-                                                                                <h4 class="mb-0">' . ucfirst(strtolower($type)) . '
-                                                                                    <i class="bx bx-question-mark text-primary"
-                                                                                        style="cursor: pointer; font-size: 18px;"
-                                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
-                                                                                        data-bs-custom-class="success-tooltip"
-                                                                                        data-bs-title="' . $desc . '">
-                                                                                    </i>
-                                                                                </h4>
-                                                                            </td>
-                                                                            <td><h4 class="mb-0">' . $prev . '</h4></td>
-                                                                        </tr>';
-                                                                    }
-                                                                }
-                                                                $html .= '
-                                                            </table>
-                                                        </td>
+        /* Engagement */
+        $accountEngagedCurrent  = $performanceData['engagement']['accounts_engaged_current'] ?? 0;
+        $accountEngagedPrevious = $performanceData['engagement']['accounts_engaged_previous'] ?? 0;
+        $accountEngagedPercent  = $performanceData['engagement']['accounts_engaged_percent_change'] ?? 0;
 
-                                                        <!-- Current Month -->
-                                                        <td>
-                                                            <table class="table table-sm mb-2">';
-                                                                if (!empty($performanceData["total_interactions_by_media_type"])) {
-                                                                    foreach ($performanceData["total_interactions_by_media_type"] as $type => $data) {
-                                                                        $desc = e($data["api_description"] ?? "-");
-                                                                        $curr = $this->formatNumber($data["current"] ?? 0);
-                                                                        $percent = $data["percent"] ?? 0;
+        $totalInteractionsCurrent  = $performanceData['engagement']['total_interactions_current'] ?? 0;
+        $totalInteractionsPrevious = $performanceData['engagement']['total_interactions_previous'] ?? 0;
+        $totalInteractionsPercent  = $performanceData['engagement']['total_interactions_percent_change'] ?? 0;
 
-                                                                        $colorClass = $percent > 0 ? "text-success" : ($percent < 0 ? "text-danger" : "text-muted");
-                                                                        $arrow = $percent > 0 ? "▲ +" : ($percent < 0 ? "▼ " : "➖ ");
+        /* Profile Link Clicks */
+        $profileLinkCurrent = $performanceData['profile_link']['current'] ?? 0;
+        $profileLinkPrevious = $performanceData['profile_link']['previous'] ?? 0;
+        $profileLinkPercent = $performanceData['profile_link']['percent_change'] ?? 0;
+        /* Posts, Stories, Reels */
+        $postsCurrent   = $performanceData['posts']['current'] ?? 0;
+        $postsPrevious  = $performanceData['posts']['previous'] ?? 0;
+        $postsPerce     = $performanceData['posts']['percent'] ?? 0;
+        $postsStatus    = $performanceData['posts']['status'] ?? '-';
 
-                                                                        $html .= '
-                                                                        <tr>
-                                                                            <td>
-                                                                                <h4 class="mb-0">' . ucfirst(strtolower($type)) . '
-                                                                                    <i class="bx bx-question-mark text-primary"
-                                                                                        style="cursor: pointer; font-size: 18px;"
-                                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
-                                                                                        data-bs-custom-class="success-tooltip"
-                                                                                        data-bs-title="' . $desc . '">
-                                                                                    </i>
-                                                                                </h4>
-                                                                            </td>
-                                                                            <td>
-                                                                                <h4 class="mb-0">
-                                                                                    ' . $curr . '
-                                                                                    <small class="' . $colorClass . '">' . $arrow . abs($percent) . '%</small>
-                                                                                </h4>
-                                                                            </td>
-                                                                        </tr>';
-                                                                    }
-                                                                }
-                                                            $html .= '
-                                                            </table>
-                                                        </td>
-                                                    </tr>
-                                                </table>
-                                            </div>                                            
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                        </div>
-                    </div>
-                </div>
+        $storiesCurrent  = $performanceData['stories']['current'] ?? 0;
+        $storiesPrevious = $performanceData['stories']['previous'] ?? 0;
+        $storiesPerce    = $performanceData['stories']['percent'] ?? 0;
+        $storiesStatus   = $performanceData['stories']['status'] ?? '-';
+
+        $reelsCurrent  = $performanceData['reels']['current'] ?? 0;
+        $reelsPrevious = $performanceData['reels']['previous'] ?? 0;
+        $reelsPerce    = $performanceData['reels']['percent'] ?? 0;
+        $reelsStatus   = $performanceData['reels']['status'] ?? '-';
+
+        /**tooltips */
+        $reachDescription = $performanceData['instagramReach']->reach->api_description ?? '';
+        $profileVisitDescription = $performanceData['profile_visits']['api_description'] ?? '';
+        $profileLinkDescription = $performanceData['profile_link']['api_description'] ?? '';
+        $engagementDescription = $performanceData['engagement']['account_engaged_api_description'] ?? '';
+        $interactionsDescription = $performanceData['engagement']['interactions_api_description'] ?? '';
+        $followUnfollowDescription = $performanceData['followers']['api_description'] ?? '';
+        /*Multiple interactions */
+        $intraCurrentLikes      = $performanceData['likes']['current'] ?? '-';
+        $intraCurrentComments   = $performanceData['comments']['current'] ?? '-';
+        $intraCurrentSaves      = $performanceData['saves']['current'] ?? '-';
+        $intraCurrentShares     = $performanceData['shares']['current'] ?? '-';
+        $intraCurrentReposts    = $performanceData['reposts']['current'] ?? '-';
+
+        $intraPrevLikes         = $performanceData['likes']['previous'] ?? '-';
+        $intraPrevComments      = $performanceData['comments']['previous'] ?? '-';
+        $intraPrevSaves         = $performanceData['saves']['previous'] ?? '-';
+        $intraPrevShares        = $performanceData['shares']['previous'] ?? '-';
+        $intraPrevReposts       = $performanceData['reposts']['previous'] ?? '-';
+
+        $intraPercentLikes      = $performanceData['likes']['percent'] ?? '-';
+        $intraPercentComments   = $performanceData['comments']['percent'] ?? '-';
+        $intraPercentSaves      = $performanceData['saves']['percent'] ?? '-';
+        $intraPercentShares     = $performanceData['shares']['percent'] ?? '-';
+        $intraPercentReposts    = $performanceData['reposts']['percent'] ?? '-';        
+
+        $intraDescLikes         = $performanceData['likes']['api_description'] ?? '-';
+        $intraDescComments      = $performanceData['comments']['api_description'] ?? '-';
+        $intraDescSaves         = $performanceData['saves']['api_description'] ?? '-';
+        $intraDescShares        = $performanceData['shares']['api_description'] ?? '-';
+        $intraDescReposts       = $performanceData['reposts']['api_description'] ?? '-';
+        
+        $html ='';
+        $html .='
+        <div class="row g-4"> 
+            <div class="col-md-12 col-sm-6 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2 mb-1">
                 <div class="row">
-                    <!-- Profile Visits -->
-                    <div class="col-md-4 col-sm-4 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-0 pe-xl-0 ps-xl-2">
+                    <div class="col-md-12 col-sm-12 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2 mb-1">
                         <div class="metric-card">
                             <div class="metric-header">
                                 <h4>
-                                Profile Visits
-                                <i class="bx bx-question-mark text-primary" 
+                                    Total Interactions
+                                    <i class="bx bx-question-mark text-primary" 
                                     style="cursor: pointer; font-size: 18px;" 
                                     data-bs-toggle="tooltip" data-bs-placement="top" 
                                     data-bs-custom-class="success-tooltip"
-                                    data-bs-title="' . e($profileVisitDescription) . '">
-                                </i> 
+                                    data-bs-title="' . e($interactionsDescription) . '">
+                                    </i> 
                                 </h4>
                             </div>
                             <div class="metric-body">
-                                <table class="table table-sm mb-2 align-middle text-center">
+                                <table class="table table-sm mb-3 align-middle text-center">
+                                    
                                     <tr>
-                                        <th><h3 class="mb-0">' . $this->formatNumber($previousProfile) . '</h3></th>
-                                        <th><h3 class="mb-0">' . $this->formatNumber($currentProfile) . '</h3></th>
+                                        <td><h4 class="mb-0">' . $this->formatNumber($totalInteractionsPrevious) . '</h4></td>
+                                        <td><h4 class="mb-0">' . $this->formatNumber($totalInteractionsCurrent) . '</h4></td>
                                     </tr>
                                     <tr>
                                         <td class="bg-black text-light">Previous Month</td>
                                         <td class="bg-black text-light">Current Month</td>
                                     </tr>
                                     <tr>
-                                        <td colspan="2" class="' . ($profilePercentage > 0 ? 'positive' : ($profilePercentage < 0 ? 'negative' : 'neutral')) . '">
-                                            <h4 class="mb-0">' . ($profilePercentage > 0 ? "▲ +" : ($profilePercentage < 0 ? "▼ " : "➖ ")) . abs($profilePercentage) . '%</h4>
+                                        <td colspan="2" class="' . ($totalInteractionsPercent > 0 ? 'positive' : ($totalInteractionsPercent < 0 ? 'negative' : 'neutral')) . '">
+                                            <h4 class="mb-0">' . ($totalInteractionsPercent > 0 ? "▲ +" : ($totalInteractionsPercent < 0 ? "▼ " : "➖ ")) . abs($totalInteractionsPercent) . '%</h4>
+                                        </td>
+                                    </tr>                                       
+                                </table>
+                                <div class="row">
+                                    <div class="col-lg-6">
+                                        <div class="col-lg-12 mb-2">
+                                            <h5 class="card-title mb-0">Total Interactions by Likes, Comments, Saves, Shares, Reposts </h5>
+                                        </div>
+                                        <table class="table table-bordered table-sm mb-2 ">                                            
+                                            <tr>
+                                                <td class="bg-black text-light">Previous Month</td>
+                                                <td class="bg-black text-light">Current Month</td>
+                                            </tr>
+                                            <tr>
+                                                <!-- Previous Month -->
+                                                <td>
+                                                    <table class="table table-sm mb-2 "> 
+                                                        <tr>
+                                                            <td>
+                                                                <h4 class="mb-0"> 
+                                                                    Likes
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescLikes) . '">
+                                                                    </i>
+                                                                </h4>
+                                                            </td>
+                                                            <td><h4 class="mb-0">' . $this->formatNumber($intraPrevLikes) . '</h4></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <h4 class="mb-0"> 
+                                                                    Comments
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescComments) . '">
+                                                                    </i>
+                                                                </h4> 
+                                                            </td>
+                                                            <td><h4 class="mb-0">' . $this->formatNumber($intraPrevComments) . '</h4></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                    Saves
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescSaves) . '">
+                                                                    </i>
+                                                                </h4>
+                                                            </td>
+                                                            <td><h4 class="mb-0">' . $this->formatNumber($intraPrevSaves) . '</h4></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                    Shares
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescShares) . '">
+                                                                    </i>
+                                                                </h4>
+                                                            </td>
+                                                            <td><h4 class="mb-0">' . $this->formatNumber($intraPrevShares) . '</h4></td>
+                                                        </tr>
+                                                        <!--<tr>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                    Reposts
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescReposts) . '">
+                                                                    </i>
+                                                                </h4>
+                                                            </td>
+                                                            <td><h4 class="mb-0">' . $this->formatNumber($intraPrevReposts) . '</h4></td>
+                                                        </tr>-->
+                                                    </table>
+                                                </td>
+
+                                                <!-- Current Month -->
+                                                <td>
+                                                    <table class="table  table-sm mb-2"> 
+                                                        <tr>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                    Likes 
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescLikes) . '">
+                                                                    </i>
+                                                                </h4>
+                                                            </td>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                ' . $this->formatNumber($intraCurrentLikes) . '
+                                                                <small class="' . ($intraPercentLikes > 0 ? 'text-success' : ($intraPercentLikes < 0 ? 'text-danger' : 'text-muted')) . '">
+                                                                    ' . ($intraPercentLikes > 0 ? '▲ +' : ($intraPercentLikes < 0 ? '▼ ' : '➖ ')) . abs($intraPercentLikes) . '%</small>
+                                                                </h4>
+                                                                
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                    Comments
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescComments) . '">
+                                                                    </i>
+                                                                </h4>
+                                                            </td>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                ' . $this->formatNumber($intraCurrentComments) . '
+                                                                <small class="' . ($intraPercentComments > 0 ? 'text-success' : ($intraPercentComments < 0 ? 'text-danger' : 'text-muted')) . '">
+                                                                    ' . ($intraPercentComments > 0 ? '▲ +' : ($intraPercentComments < 0 ? '▼ ' : '➖ ')) . abs($intraPercentComments) . '%</small>
+                                                                </h4>
+                                                                
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                    Saves
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescSaves) . '">
+                                                                    </i>
+                                                                </h4>
+                                                            </td>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                ' . $this->formatNumber($intraCurrentSaves) . '
+                                                                <small class="' . ($intraPercentSaves > 0 ? 'text-success' : ($intraPercentSaves < 0 ? 'text-danger' : 'text-muted')) . '">
+                                                                    ' . ($intraPercentSaves > 0 ? '▲ +' : ($intraPercentSaves < 0 ? '▼ ' : '➖ ')) . abs($intraPercentSaves) . '%</small>
+                                                                </h4>
+                                                                
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                    Shares
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescShares) . '">
+                                                                    </i>
+                                                                </h4>
+                                                            </td>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                ' . $this->formatNumber($intraCurrentShares) . '
+                                                                <small class="' . ($intraPercentShares > 0 ? 'text-success' : ($intraPercentShares < 0 ? 'text-danger' : 'text-muted')) . '">
+                                                                    ' . ($intraPercentShares > 0 ? '▲ +' : ($intraPercentShares < 0 ? '▼ ' : '➖ ')) . abs($intraPercentShares) . '%</small>
+                                                                </h4>
+                                                                
+                                                            </td>
+                                                        </tr>
+                                                        <!--<tr>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                    Reposts
+                                                                    <i class="bx bx-question-mark text-primary" 
+                                                                        style="cursor: pointer; font-size: 18px;" 
+                                                                        data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                                        data-bs-custom-class="success-tooltip" 
+                                                                        data-bs-title="' . e($intraDescReposts) . '">
+                                                                    </i>
+                                                                </h4>
+                                                            </td>
+                                                            <td>
+                                                                <h4 class="mb-0">
+                                                                ' . $this->formatNumber($intraCurrentReposts) . '
+                                                                <small class="' . ($intraPercentReposts > 0 ? 'text-success' : ($intraPercentReposts < 0 ? 'text-danger' : 'text-muted')) . '">
+                                                                    ' . ($intraPercentReposts > 0 ? '▲ +' : ($intraPercentReposts < 0 ? '▼ ' : '➖ ')) . abs($intraPercentReposts) . '%</small>
+                                                                </h4>
+                                                                
+                                                            </td>
+                                                        </tr>-->
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>';
+                                    $html .= '
+                                    <div class="col-lg-6">
+                                        <div class="col-lg-12 mb-2">
+                                            <h5 class="card-title mb-0">Total Interactions by Media Type</h5>
+                                        </div>
+                                        <table class="table table-bordered table-sm mb-2">
+                                            <tr>
+                                                <td class="bg-black text-light">Previous Month</td>
+                                                <td class="bg-black text-light">Current Month</td>
+                                            </tr>
+                                            <tr>
+                                                <!-- Previous Month -->
+                                                <td>
+                                                    <table class="table table-sm mb-2">';
+                                                        if (!empty($performanceData["total_interactions_by_media_type"])) {
+                                                            foreach ($performanceData["total_interactions_by_media_type"] as $type => $data) {
+                                                                $desc = e($data["api_description"] ?? "-");
+                                                                $prev = $this->formatNumber($data["previous"] ?? 0);
+
+                                                                $html .= '
+                                                                <tr>
+                                                                    <td>
+                                                                        <h4 class="mb-0">' . ucfirst(strtolower($type)) . '
+                                                                            <i class="bx bx-question-mark text-primary"
+                                                                                style="cursor: pointer; font-size: 18px;"
+                                                                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                data-bs-custom-class="success-tooltip"
+                                                                                data-bs-title="' . $desc . '">
+                                                                            </i>
+                                                                        </h4>
+                                                                    </td>
+                                                                    <td><h4 class="mb-0">' . $prev . '</h4></td>
+                                                                </tr>';
+                                                            }
+                                                        }
+                                                        $html .= '
+                                                    </table>
+                                                </td>
+
+                                                <!-- Current Month -->
+                                                <td>
+                                                    <table class="table table-sm mb-2">';
+                                                        if (!empty($performanceData["total_interactions_by_media_type"])) {
+                                                            foreach ($performanceData["total_interactions_by_media_type"] as $type => $data) {
+                                                                $desc = e($data["api_description"] ?? "-");
+                                                                $curr = $this->formatNumber($data["current"] ?? 0);
+                                                                $percent = $data["percent"] ?? 0;
+
+                                                                $colorClass = $percent > 0 ? "text-success" : ($percent < 0 ? "text-danger" : "text-muted");
+                                                                $arrow = $percent > 0 ? "▲ +" : ($percent < 0 ? "▼ " : "➖ ");
+
+                                                                $html .= '
+                                                                <tr>
+                                                                    <td>
+                                                                        <h4 class="mb-0">' . ucfirst(strtolower($type)) . '
+                                                                            <i class="bx bx-question-mark text-primary"
+                                                                                style="cursor: pointer; font-size: 18px;"
+                                                                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                data-bs-custom-class="success-tooltip"
+                                                                                data-bs-title="' . $desc . '">
+                                                                            </i>
+                                                                        </h4>
+                                                                    </td>
+                                                                    <td>
+                                                                        <h4 class="mb-0">
+                                                                            ' . $curr . '
+                                                                            <small class="' . $colorClass . '">' . $arrow . abs($percent) . '%</small>
+                                                                        </h4>
+                                                                    </td>
+                                                                </tr>';
+                                                            }
+                                                        }
+                                                    $html .= '
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>                                            
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Profile Visits -->
+            <div class="col-md-6 col-sm-6 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-0 pe-xl-0 ps-xl-2">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <h4>
+                        Profile Visits
+                        <i class="bx bx-question-mark text-primary" 
+                            style="cursor: pointer; font-size: 18px;" 
+                            data-bs-toggle="tooltip" data-bs-placement="top" 
+                            data-bs-custom-class="success-tooltip"
+                            data-bs-title="' . e($profileVisitDescription) . '">
+                        </i> 
+                        </h4>
+                    </div>
+                    <div class="metric-body">
+                        <table class="table table-sm mb-2 align-middle text-center">
+                            <tr>
+                                <th><h3 class="mb-0">' . $this->formatNumber($previousProfile) . '</h3></th>
+                                <th><h3 class="mb-0">' . $this->formatNumber($currentProfile) . '</h3></th>
+                            </tr>
+                            <tr>
+                                <td class="bg-black text-light">Previous Month</td>
+                                <td class="bg-black text-light">Current Month</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="' . ($profilePercentage > 0 ? 'positive' : ($profilePercentage < 0 ? 'negative' : 'neutral')) . '">
+                                    <h4 class="mb-0">' . ($profilePercentage > 0 ? "▲ +" : ($profilePercentage < 0 ? "▼ " : "➖ ")) . abs($profilePercentage) . '%</h4>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Link Clicks -->
+            <!--<div class="col-md-4 col-sm-4 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-0 pe-xl-0 ps-xl-2">
+                <div class="row">
+                    <div class="col-md-12 col-sm-12 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2">
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <h4>
+                                    Profile Link Clicks
+                                    <i class="bx bx-question-mark text-primary" 
+                                    style="cursor: pointer; font-size: 18px;" 
+                                    data-bs-toggle="tooltip" data-bs-placement="top" 
+                                    data-bs-custom-class="success-tooltip"
+                                    data-bs-title="' . e($profileLinkDescription) . '">
+                            </i> 
+                                </h4>
+                            </div>
+                            <div class="metric-body">
+                                <table class="table table-sm mb-2 align-middle text-center">
+                                    ' . (isset($performanceData["profile_link"]["message"]) && !empty($performanceData["profile_link"]["message"])
+                                    ? "<tr><td colspan=\"2\" class=\"text-info small text-start\"><i class=\"fas fa-info-circle\"></i> " . e($performanceData["profile_link"]["message"]) . "</td></tr>"
+                                    : "") . '
+                                    <tr>
+                                        <th><h3 class="mb-0">' . $this->formatNumber($profileLinkPrevious) . '</h3></th>
+                                        <th><h3 class="mb-0">' . $this->formatNumber($profileLinkCurrent) . '</h3></th>
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-black text-light">Previous Month</td>
+                                        <td class="bg-black text-light">Current Month</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" class="' . ($profileLinkPercent > 0 ? 'positive' : ($profileLinkPercent < 0 ? 'negative' : 'neutral')) . '">
+                                            <h4 class="mb-0">' . ($profileLinkPercent > 0 ? "▲ +" : ($profileLinkPercent < 0 ? "▼ " : "➖ ")) . abs($profileLinkPercent) . '%</h4>
                                         </td>
                                     </tr>
                                 </table>
                             </div>
                         </div>
                     </div>
+                    
+                </div>
+            </div>-->
 
-                    <!-- Profile Link Clicks -->
-                    <div class="col-md-4 col-sm-4 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-0 pe-xl-0 ps-xl-2">
-                        <div class="row">
-                            <div class="col-md-12 col-sm-12 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2">
-                                <div class="metric-card">
-                                    <div class="metric-header">
-                                        <h4>
-                                            Profile Link Clicks
-                                            <i class="bx bx-question-mark text-primary" 
-                                            style="cursor: pointer; font-size: 18px;" 
-                                            data-bs-toggle="tooltip" data-bs-placement="top" 
-                                            data-bs-custom-class="success-tooltip"
-                                            data-bs-title="' . e($profileLinkDescription) . '">
+            <!-- Engagement -->
+            <div class="col-md-6 col-sm-6 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2">
+                <div class="row">
+                    <div class="col-md-12 col-sm-12 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2 mb-1">
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <h4>
+                                Engagement
+                                <i class="bx bx-question-mark text-primary" 
+                                    style="cursor: pointer; font-size: 18px;" 
+                                    data-bs-toggle="tooltip" data-bs-placement="top" 
+                                    data-bs-custom-class="success-tooltip"
+                                    data-bs-title="' . e($engagementDescription) . '">
                                     </i> 
-                                        </h4>
-                                    </div>
-                                    <div class="metric-body">
-                                        <table class="table table-sm mb-2 align-middle text-center">
-                                            ' . (isset($performanceData["profile_link"]["message"]) && !empty($performanceData["profile_link"]["message"])
-                                            ? "<tr><td colspan=\"2\" class=\"text-info small text-start\"><i class=\"fas fa-info-circle\"></i> " . e($performanceData["profile_link"]["message"]) . "</td></tr>"
-                                            : "") . '
-                                            <tr>
-                                                <th><h3 class="mb-0">' . $this->formatNumber($profileLinkPrevious) . '</h3></th>
-                                                <th><h3 class="mb-0">' . $this->formatNumber($profileLinkCurrent) . '</h3></th>
-                                            </tr>
-                                            <tr>
-                                                <td class="bg-black text-light">Previous Month</td>
-                                                <td class="bg-black text-light">Current Month</td>
-                                            </tr>
-                                            <tr>
-                                                <td colspan="2" class="' . ($profileLinkPercent > 0 ? 'positive' : ($profileLinkPercent < 0 ? 'negative' : 'neutral')) . '">
-                                                    <h4 class="mb-0">' . ($profileLinkPercent > 0 ? "▲ +" : ($profileLinkPercent < 0 ? "▼ " : "➖ ")) . abs($profileLinkPercent) . '%</h4>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </div>
-                                </div>
+                                </h4>
                             </div>
-                            
+                            <div class="metric-body">
+                                <table class="table table-sm mb-2 align-middle text-center">
+                                    <tr>
+                                        <th><h3 class="mb-0">' . $this->formatNumber($accountEngagedPrevious) . '</h3></th>
+                                        <th><h3 class="mb-0">' . $this->formatNumber($accountEngagedCurrent) . '</h3></th>
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-black text-light">Previous Month</td>
+                                        <td class="bg-black text-light">Current Month</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" class="' . ($accountEngagedPercent > 0 ? 'positive' : ($accountEngagedPercent < 0 ? 'negative' : 'neutral')) . '">
+                                            <h4 class="mb-0">' . ($accountEngagedPercent > 0 ? "▲ +" : ($accountEngagedPercent < 0 ? "▼ " : "➖ ")) . abs($accountEngagedPercent) . '%</h4>
+                                        </td>
+                                    </tr>                                        
+                                </table>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Engagement -->
-                    <div class="col-md-4 col-sm-4 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2">
-                        <div class="row">
-                            <div class="col-md-12 col-sm-12 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2 mb-1">
-                                <div class="metric-card">
-                                    <div class="metric-header">
-                                        <h4>
-                                        Engagement
-                                        <i class="bx bx-question-mark text-primary" 
-                                            style="cursor: pointer; font-size: 18px;" 
-                                            data-bs-toggle="tooltip" data-bs-placement="top" 
-                                            data-bs-custom-class="success-tooltip"
-                                            data-bs-title="' . e($engagementDescription) . '">
-                                            </i> 
-                                        </h4>
-                                    </div>
-                                    <div class="metric-body">
-                                        <table class="table table-sm mb-2 align-middle text-center">
-                                            <tr>
-                                                <th><h3 class="mb-0">' . $this->formatNumber($accountEngagedPrevious) . '</h3></th>
-                                                <th><h3 class="mb-0">' . $this->formatNumber($accountEngagedCurrent) . '</h3></th>
-                                            </tr>
-                                            <tr>
-                                                <td class="bg-black text-light">Previous Month</td>
-                                                <td class="bg-black text-light">Current Month</td>
-                                            </tr>
-                                            <tr>
-                                                <td colspan="2" class="' . ($accountEngagedPercent > 0 ? 'positive' : ($accountEngagedPercent < 0 ? 'negative' : 'neutral')) . '">
-                                                    <h4 class="mb-0">' . ($accountEngagedPercent > 0 ? "▲ +" : ($accountEngagedPercent < 0 ? "▼ " : "➖ ")) . abs($accountEngagedPercent) . '%</h4>
-                                                </td>
-                                            </tr>                                        
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                            
+                    
+                </div>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="post-section">
+                <div class="row justify-content-center">
+                    <div class="col-lg-12">
+                        <div class="table-responsive metrics-table mt-3">
+                            <table class="table table-bordered align-middle text-center mb-0">
+                                <thead>
+                                    <tr>
+                                        <th colspan="2">Number of Posts</th>
+                                        <th colspan="2">Number of Reels</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="metric-section-header">Prev. Month</th>
+                                        <th class="metric-section-header">Current</th>
+                                        
+                                        <th class="metric-section-header">Prev. Month</th>
+                                        <th class="metric-section-header">Current</th>                                              
+                                        
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="highlight">' . $postsPrevious . '</td>
+                                        <td>' . $postsCurrent . '</td>
+                                        <td class="highlight">' . $reelsPrevious . '</td>
+                                        <td>' . $reelsCurrent . '</td>
+                                        
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" style="' . $this->getBgColor($postsPerce) . '">' . ($postsPerce > 0 ? '+' : '') . $postsPerce . '%</td>
+                                        <td colspan="2" style="' . $this->getBgColor($reelsPerce) . '">' . ($reelsPerce > 0 ? '+' : '') . $reelsPerce . '%</td>
+                                        </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-                <div class="row g-4">
-                    <div class="post-section">
-                        <div class="row justify-content-center">
-                            <div class="col-lg-12">
-                                <div class="table-responsive metrics-table mt-3">
-                                    <table class="table table-bordered align-middle text-center mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th colspan="2">Number of Posts</th>
-                                                <th colspan="2">Number of Reels</th>
-                                            </tr>
-                                            <tr>
-                                                <th class="metric-section-header">Prev. Month</th>
-                                                <th class="metric-section-header">Current</th>
-                                                
-                                                <th class="metric-section-header">Prev. Month</th>
-                                                <th class="metric-section-header">Current</th>                                              
-                                                
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td class="highlight">' . $postsPrevious . '</td>
-                                                <td>' . $postsCurrent . '</td>
-                                                <td class="highlight">' . $reelsPrevious . '</td>
-                                                <td>' . $reelsCurrent . '</td>
-                                                
-                                            </tr>
-                                            <tr>
-                                                <td colspan="2" style="' . $this->getBgColor($postsPerce) . '">' . ($postsPerce > 0 ? '+' : '') . $postsPerce . '%</td>
-                                                <td colspan="2" style="' . $this->getBgColor($reelsPerce) . '">' . ($reelsPerce > 0 ? '+' : '') . $reelsPerce . '%</td>
-                                                </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>                
             </div>
         </div>';
         return $html;
@@ -1702,61 +1715,6 @@ class InstagramController extends Controller
         return $number;
     }
 
-
-    public function getAudienceTopLocationsOld(Request $request, $instagramId)
-    {
-        $timeframe = $request->get('timeframe', 'this_month');
-        $user = Auth::user();
-        $mainAccount = SocialAccount::where('user_id', $user->id)
-            ->where('provider', 'facebook')
-            ->whereNull('parent_account_id')
-            ->first();
-        if (!$mainAccount) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Facebook account not connected.'
-            ], 400);
-        }
-        $token = SocialTokenHelper::getFacebookToken($mainAccount);
-        $response = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$instagramId}/insights", [
-            'metric' => 'engaged_audience_demographics',
-            'period' => 'lifetime',
-            'metric_type' => 'total_value',
-            'breakdown' => 'city',
-            'timeframe' => $timeframe,
-            'access_token' => $token,
-        ])->json();
-
-        //Log::info("Top Location : https://graph.facebook.com/v24.0/{$instagramId}/insights?metric=engaged_audience_demographics&period=lifetime&breakdown=city&metric_type=total_value&timeframe={$timeframe}&access_token={$token}");
-        //Log::info('Instagram Top Locations API Response:', $response);
-        if (isset($response['error'])) {
-            return response()->json([
-                'success' => false,
-                'message' => $response['error']['message']
-            ]);
-        }
-        $results = data_get($response, 'data.0.total_value.breakdowns.0.results', []);
-        /*Top 10 cities select */
-        $topCities = collect($results)
-            ->sortByDesc('value')
-            ->take(10)
-            ->values();
-        $total = $topCities->sum('value');
-        $labels = $topCities->map(function ($item) {
-            $parts = $item['dimension_values'] ?? [];
-            return implode(', ', array_filter($parts));
-        });
-        $values = $topCities->pluck('value')->toArray();
-        $percentages = $topCities->map(function ($item) use ($total) {
-            return $total ? round(($item['value'] / $total) * 100, 2) : 0;
-        });
-        //Log::info('Top Location Labels:', $labels->toArray());
-        return response()->json([
-            'success' => true,
-            'labels' => $labels,
-            'values' => $percentages,
-        ]);
-    }
 
     public function getAudienceTopLocations(Request $request, $instagramId)
     {
@@ -2132,36 +2090,6 @@ class InstagramController extends Controller
     }
 
 
-
-    /*private function getPostInsightsOfEachPost($mediaId, $token, $since, $until)
-    {
-        try {
-            $response = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$mediaId}/insights", [
-                'metric' => 'views,reach',
-                'access_token' => $token,
-                'since' => $since,
-                'until' => $until,
-            ])->json();
-
-            $insights = [];
-
-            if (isset($response['data'])) {
-                foreach ($response['data'] as $metric) {
-                    $insights[$metric['name']] = $metric['values'][0]['value'] ?? 0;
-                }
-            }
-
-            return $insights;
-
-        } catch (\Exception $e) {
-            return [
-                'views' => 0,
-                'reach' => 0,
-            ];
-        }
-    }*/
-
-
     private function applyFilters($media, $mediaTypeFilter, $searchFilter)
     {
         return collect($media)->filter(function ($post) use ($mediaTypeFilter, $searchFilter) {
@@ -2233,124 +2161,6 @@ class InstagramController extends Controller
         }
     }
 
-
-
-
-    public function metricsGraph_remove($id, Request $request)
-    {
-        try {
-            $user = Auth::user();
-            $mainAccount = SocialAccount::where('user_id', $user->id)
-                ->where('provider', 'facebook')
-                ->whereNull('parent_account_id')
-                ->first();
-            if (!$mainAccount) {
-                return response()->json(['error' => 'Facebook account not connected'], 400);
-            }
-            $token = SocialTokenHelper::getFacebookToken($mainAccount);
-            $metrics = 'reach,likes,comments,views';
-            $period = $request->get('period', 'week');
-            switch ($period) {
-                case 'day':
-                    $since = now()->subDay()->toDateString();
-                    $until = now()->toDateString();
-                    break;
-
-                case 'week':
-                    $since = now()->subDays(7)->toDateString();
-                    $until = now()->toDateString();
-                    break;
-
-                case 'days_28':
-                    $since = now()->subDays(28)->toDateString();
-                    $until = now()->toDateString();
-                    break;
-                case 'month':
-                    $since = now()->subMonth()->toDateString();
-                    $until = now()->toDateString();
-                    break;
-
-                case 'lifetime':
-                    /* No range restriction — all data */
-                    $since = null;
-                    $until = null;
-                    break;
-
-                case 'total_over_range':
-                    /* For demonstration, consider last 3 months*/
-                    $since = now()->subMonths(3)->toDateString();
-                    $until = now()->toDateString();
-                    break;
-
-                default:
-                    $since = now()->subDay()->toDateString();
-                    $until = now()->toDateString();
-                    break;
-            }
-            $url = "https://graph.facebook.com/v24.0/{$id}/media";
-            $params = [
-                'fields' => "timestamp,media_product_type,insights.metric({$metrics}).period({$period})",
-                'access_token' => $token,
-            ];
-            if ($since && $until) {
-                $params['since'] = $since;
-                $params['until'] = $until;
-            }
-            $response = Http::get($url, $params)->json();
-            if (isset($response['error'])) {
-                return response()->json(['error' => $response['error']['message']], 400);
-            }
-            $dates = [];
-            $dataSets = [
-                'reach' => [],
-                'likes' => [],
-                'comments' => [],
-                'views' => [],
-            ];
-            foreach ($response['data'] ?? [] as $media) {
-                $timestamp = $media['timestamp'] ?? null;
-                if (!$timestamp) continue;
-                $date = \Carbon\Carbon::parse($timestamp)->format('Y-m-d');
-                if (!in_array($date, $dates)) $dates[] = $date;
-                $reach = $likes = $comments = $views = 0;
-                foreach ($media['insights']['data'] ?? [] as $metric) {
-                    $value = $metric['values'][0]['value'] ?? 0;
-                    switch ($metric['name']) {
-                        case 'reach':
-                            $reach = $value;
-                            break;
-                        case 'likes':
-                            $likes = $value;
-                            break;
-                        case 'comments':
-                            $comments = $value;
-                            break;
-                        case 'views':
-                            $views = $value;
-                            break;
-                    }
-                }
-                $dataSets['reach'][$date] = ($dataSets['reach'][$date] ?? 0) + $reach;
-                $dataSets['likes'][$date] = ($dataSets['likes'][$date] ?? 0) + $likes;
-                $dataSets['comments'][$date] = ($dataSets['comments'][$date] ?? 0) + $comments;
-                $dataSets['views'][$date] = ($dataSets['views'][$date] ?? 0) + $views;
-            }
-            sort($dates);
-            $final = [
-                'dates' => $dates,
-                'reach' => array_map(fn($d) => $dataSets['reach'][$d] ?? 0, $dates),
-                'likes' => array_map(fn($d) => $dataSets['likes'][$d] ?? 0, $dates),
-                'comments' => array_map(fn($d) => $dataSets['comments'][$d] ?? 0, $dates),
-                'views' => array_map(fn($d) => $dataSets['views'][$d] ?? 0, $dates),
-                'range' => compact('since', 'until'),
-            ];
-            return response()->json($final);
-        } catch (\Exception $e) {
-            Log::error('Instagram metricsGraph error: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    }
-
     /**insights every post start */
     public function postInsightsPage($instagramPageId, $postId)
     {
@@ -2398,6 +2208,7 @@ class InstagramController extends Controller
             }
             $postBasic['insights'] = ['data' => $postWithInsights['data'] ?? []];
             $postData = $this->processPostData($postBasic, $mediaType);
+            //dd($postData);
             return view('backend.pages.instagram.insights', compact('postData', 'instagram'));
         } catch (\Exception $e) {
             Log::error('Post insights page error: ' . $e->getMessage());
@@ -2409,10 +2220,9 @@ class InstagramController extends Controller
     private function getAvailableMetrics($mediaType)
     {
         Log::error('getAvailableMetrics mediaType: ' . $mediaType);
-
         switch ($mediaType) {
             case 'REEL':
-                return 'reach,saved,shares,total_interactions,likes,comments,ig_reels_avg_watch_time,ig_reels_video_view_total_time';
+                return 'reach,saved,shares,total_interactions,likes,comments,ig_reels_avg_watch_time,ig_reels_video_view_total_time, views';
             case 'VIDEO':
                 return 'impressions,reach,saved,shares,video_views,total_interactions,likes,comments';
             case 'CAROUSEL_ALBUM':
@@ -2442,10 +2252,11 @@ class InstagramController extends Controller
                 $insights[$insight['name']] = $value;
             }
         }
+        //dd($insights);
 
         $likes = $post['like_count'] ?? 0;
         $comments = $post['comments_count'] ?? 0;
-
+        $total_views = $insights['views'] ?? 0;
         $impressions = $insights['impressions'] ?? 0;
         $reach = $insights['reach'] ?? 0;
         $shares = $insights['shares'] ?? 0;
@@ -2494,6 +2305,7 @@ class InstagramController extends Controller
             'impressions' => $impressions,
             'reach' => $reach,
             'saves' => $saves,
+            'total_views' =>$total_views,
             'video_views' => $videoViews,
             'total_watch_time' => $totalWatchTime,
             'total_watch_time_formatted' => $totalWatchTimeFormatted,
@@ -2524,6 +2336,10 @@ class InstagramController extends Controller
         $remainingMinutes = $minutes % 60;
 
         return $hours . 'h ' . $remainingMinutes . 'm ' . $remainingSeconds . 's';
+    }
+
+    public function downloadInstagramReportToPdfFile(){
+        
     }
 
 

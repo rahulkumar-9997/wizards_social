@@ -176,6 +176,37 @@
                     </div>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-xxl-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center gap-1">
+                            <h5 class="card-title mb-0">
+                                Total Views
+                                <i id="viewDateRangeTitle"
+                                    class="bx bx-question-mark text-primary"
+                                    style="cursor: pointer; font-size: 18px;"
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    data-bs-custom-class="success-tooltip">
+                                </i>
+                            </h5>
+                            <span id="viewDateRange" class="text-muted small"></span>
+                        </div>
+                        <div class="card-body">
+                            <div id="viewDaysContainer">
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--Total interaction section-->
+            <div class="row mb-2">
+                <div class="col-xxl-12">
+                    <div id="total_interactions_dashboard">
+
+                    </div>
+                </div>
+            </div>
             <div class="row mb-2">
                 <div class="col-xxl-12">
                     <div class="card">
@@ -246,28 +277,7 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-xxl-12">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                            <h5 class="card-title mb-0">
-                                Total Views
-                                <i id="viewDateRangeTitle"
-                                    class="bx bx-question-mark text-primary"
-                                    style="cursor: pointer; font-size: 18px;"
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    data-bs-custom-class="success-tooltip">
-                                </i>
-                            </h5>
-                            <span id="viewDateRange" class="text-muted small"></span>
-                        </div>
-                        <div class="card-body">
-                            <div id="viewDaysContainer">
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                </div>                
             </div>
             <div class="row mb-2">
                 <div class="col-xxl-12">
@@ -412,6 +422,7 @@
                 <p class="mt-2">Loading performance data...</p>
             </div>`;
             $('#insta_face_dashboard').html(loadingHtml);
+            $('#total_interactions_dashboard').html(loadingHtml);
             $.ajax({
                 url: instagramFetchUrl,
                 type: 'GET',
@@ -422,17 +433,20 @@
                 success: function(res) {
                     if (res.success) {
                         $('#insta_face_dashboard').html(res.html);
+                        $('#total_interactions_dashboard').html(res.total_interaction_other);
                         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                         tooltipTriggerList.forEach(function(tooltipTriggerEl) {
                             new bootstrap.Tooltip(tooltipTriggerEl);
                         });
                     } else {
                         $('#insta_face_dashboard').html(`<div class="alert alert-danger">${res.message}</div>`);
+                        $('#total_interactions_dashboard').html(`<div class="alert alert-danger">${res.message}</div>`);
                     }
                 },
                 error: function(xhr) {
                     const errorMessage = xhr.responseJSON?.error || 'Error fetching data';
                     $('#insta_face_dashboard').html(`<div class="alert alert-danger">${errorMessage}</div>`);
+                    $('#total_interactions_dashboard').html(`<div class="alert alert-danger">${errorMessage}</div>`);
                 }
             });
         }
