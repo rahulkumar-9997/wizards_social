@@ -17,7 +17,7 @@ use App\Http\Controllers\Backend\FacebookLoginController;
 use App\Http\Controllers\Backend\FacebookController;
 use App\Http\Controllers\Backend\InstagramController;
 use App\Http\Controllers\Backend\YoutubeController;
-
+use Illuminate\Http\Request;
 
 Route::get('/privacy-policy', function () {
     return view('privacy-policy');
@@ -86,5 +86,11 @@ Route::middleware(['auth', 'menu.access'])->group(function () {
     Route::get('face-ads', [AdsFacebookController::class, 'mainIndex'])->name('face.ads');
     Route::get('/facebook/ads-summary/{adAccountId}', [AdsFacebookController::class, 'getAdsSummary'])->name('facebook.ads.summary');
 
+    Route::get('/image-proxy', function(Request $request) {
+        $url = $request->query('url');
+        $contents = file_get_contents($url);
+        $mime = mime_content_type($url);
+        return response($contents)->header('Content-Type', $mime);
+    });
 
 });

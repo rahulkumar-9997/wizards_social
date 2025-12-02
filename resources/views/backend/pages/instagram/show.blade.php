@@ -471,7 +471,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const downloadBtn = document.getElementById('downloadPdf');
-            downloadBtn.addEventListener('click', function() {
+            downloadBtn.addEventListener('click', async function() {
                 const button = this;
                 const originalText = button.innerHTML;
                 button.innerHTML = '<i class="bx bx-loader bx-spin"></i> Generating PDF...';
@@ -498,6 +498,7 @@
                     allowTaint: false,
                     onclone: function(clonedDoc) {
                         const clonedElement = clonedDoc.querySelector('.export_pdf_report');
+                         console.log('clonedElement:', clonedElement);
                         if (clonedElement) {
                             clonedElement.style.overflow = 'visible';
                             clonedElement.style.position = 'relative';
@@ -509,19 +510,17 @@
                                 el.style.visibility = 'hidden';
                             });
 
-                            const videos = clonedElement.querySelectorAll('video');
+                            const videos = element.querySelectorAll('.media-video, video');
+                            console.log('videos in clone:', videos);
                             videos.forEach(video => {
                                 let poster = video.getAttribute('data-poster') || video.getAttribute('poster');
-                                alert(poster);
+                                console.log(poster);
                                 if (!poster) {
-                                    poster = '/images/default-video-thumb.jpg'; // fallback
+                                    poster = '/images/default-video-thumb.jpg';
                                 }
-
+                                poster = '/image-proxy?url=' + encodeURIComponent(poster);
                                 const img = clonedDoc.createElement('img');
                                 img.src = poster;
-                                console.log(poster);
-
-                                // Copy video size
                                 const rect = video.getBoundingClientRect();
                                 img.style.width = rect.width + 'px';
                                 img.style.height = rect.height + 'px';
