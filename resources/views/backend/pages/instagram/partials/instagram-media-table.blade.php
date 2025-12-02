@@ -91,8 +91,14 @@
             <td>
                 @if(isset($post['media_type']))
                 @if($post['media_type'] === 'VIDEO')
-                <video width="70" height="70" muted autoplay loop playsinline style="object-fit:cover; border-radius:6px;">
-                    <source src="{{ $post['media_url'] }}" type="video/mp4">
+                <video width="70" height="70" muted autoplay loop playsinline 
+                style="object-fit:cover; border-radius:6px;"
+                    data-poster="{{ $post['thumbnail_url'] ?? $post['media_url'] }}"
+                    poster="{{ $post['thumbnail_url'] ?? $post['media_url'] }}"
+                    >
+                    <source src="{{ $post['media_url'] }}" 
+                    
+                    type="video/mp4">
                 </video>
                 @else
                 <img src="{{ $post['media_url'] }}" alt="Media" class="img-fluid img-thumbnail" style="max-width:70px; max-height:88px;">

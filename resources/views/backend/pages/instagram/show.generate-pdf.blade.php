@@ -129,13 +129,6 @@
         font-weight: 600;
         color: #007bff;
     }
-    .page-break {
-        page-break-before: always;
-        break-before: page;
-        height: 40px;
-        background: transparent !important;
-    }
-    
 </style>
 @endpush
 @section('main-content')
@@ -150,7 +143,8 @@
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
                             <h4 class="card-title mb-0">Instagram Integration - Connected</h4>
-                            <button id="downloadPdf" class="btn btn-outline-primary pdf-download-btn no-print">
+                            <button id="downloadPdf" class="btn btn-outline-primary pdf-download-btn no-print" data-route="{{ route('instagram.report.pdf', $instagram['id']) }}"
+                            data-id="{{ $instagram['id'] }}">
                                 <i class="bx bx-download"></i> Download PDF Report
                             </button>
                         </div>
@@ -206,7 +200,6 @@
                     </div>
                 </div>
             </div>
-            <div class="page-break"></div>
             <!--Total interaction section-->
             <div class="row mb-2">
                 <div class="col-xxl-12">
@@ -215,7 +208,6 @@
                     </div>
                 </div>
             </div>
-            
             <div class="row mb-2">
                 <div class="col-xxl-12">
                     <div class="card">
@@ -240,7 +232,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="page-break"></div>
                 <div class="col-xxl-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
@@ -289,7 +280,6 @@
                     </div>
                 </div>                
             </div>
-            <div class="page-break"></div>
             <div class="row mb-2">
                 <div class="col-xxl-12">
                     <div class="card">
@@ -330,7 +320,6 @@
                     </div>
                 </div>
             </div>
-            
         </div>
     </div>
     @endsection
@@ -466,116 +455,49 @@
         }
     </script>
     <!--generate a pdf file-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const downloadBtn = document.getElementById('downloadPdf');
-            downloadBtn.addEventListener('click', function() {
-                const button = this;
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="bx bx-loader bx-spin"></i> Generating PDF...';
-                button.disabled = true;
-                const element = document.querySelector('.export_pdf_report');
-                if (!element) {
-                    alert('Export element not found');
-                    button.innerHTML = originalText;
-                    button.disabled = false;
+        $(document).ready(function () {
+            $(document).on("click", "#downloadPdf", function () {
+                const id = $(this).data("id");
+                const url = $(this).data("route");
+                const dateRange = $('.daterange').val();
+                if (!dateRange) {
+                    alert("Please select a date range first.");
                     return;
                 }
-                const originalStyles = {
-                    overflow: element.style.overflow,
-                    position: element.style.position
-                };
-                element.style.overflow = 'visible';
-                element.style.position = 'relative';
-
-                html2canvas(element, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    allowTaint: false,
-                    onclone: function(clonedDoc) {
-                        const clonedElement = clonedDoc.querySelector('.export_pdf_report');
-                        if (clonedElement) {
-                            clonedElement.style.overflow = 'visible';
-                            clonedElement.style.position = 'relative';
-                            const elementsToHide = clonedElement.querySelectorAll(
-                                '.pdf-download-btn, .btn, .btn-outline-primary, .btn-outline-secondary, .filter-box'
-                            );
-                            elementsToHide.forEach(el => {
-                                el.style.display = 'none';
-                                el.style.visibility = 'hidden';
-                            });
-
-                            const videos = clonedElement.querySelectorAll('video');
-                            videos.forEach(video => {
-                                let poster = video.getAttribute('data-poster') || video.getAttribute('poster');
-                                alert(poster);
-                                if (!poster) {
-                                    poster = '/images/default-video-thumb.jpg'; // fallback
-                                }
-
-                                const img = clonedDoc.createElement('img');
-                                img.src = poster;
-                                console.log(poster);
-
-                                // Copy video size
-                                const rect = video.getBoundingClientRect();
-                                img.style.width = rect.width + 'px';
-                                img.style.height = rect.height + 'px';
-                                img.style.objectFit = 'cover';
-                                img.style.borderRadius = '6px';
-
-                                video.parentNode.replaceChild(img, video);
-                            });
-                            
-                            const pageBreaks = clonedElement.querySelectorAll('.page-break');
-                            pageBreaks.forEach(pb => {
-                                pb.style.display = 'block';
-                                pb.style.height = '500px';
-                                pb.style.margin = '0';
-                                pb.style.padding = '0';
-                                pb.style.background = 'transparent';
-                            });
-                        }
-                    }
-                }).then(canvas => {
-                    element.style.overflow = originalStyles.overflow;
-                    element.style.position = originalStyles.position;
-
-                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-                    const imgWidth = 190;
-                    const imgHeight = canvas.height * imgWidth / canvas.width;
-
-                    let heightLeft = imgHeight;
-                    let position = 10;
-                    let pageCount = 1;
-                    pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-                    heightLeft -= (300 - position);
-                    while (heightLeft >= 0) {
-                        position = heightLeft - imgHeight;
-                        pdf.addPage();
-                        pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-                        heightLeft -= 300;
-                        pageCount++;
-                    }
-
-                    pdf.save('Instagram_Dashboard_Report.pdf');
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-
-                }).catch(error => {
-                    console.error('PDF error:', error);
-                    element.style.overflow = originalStyles.overflow;
-                    element.style.position = originalStyles.position;
-                    alert('Error generating PDF: ' + error.message);
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                });
+                const [startDate, endDate] = dateRange.split(' - ');
+                downloadPdfAjax(id, startDate, endDate, url, $(this));
             });
+
         });
+
+
+        function downloadPdfAjax(accountId, startDate, endDate, url, button) {
+            button.prop("disabled", true)
+                .html('<span class="spinner-border spinner-border-sm me-2"></span>Generating...');
+            $.ajax({
+                url: url,
+                type: "GET",
+                xhrFields: { responseType: 'blob' },
+                data: {
+                    start_date: startDate,
+                    end_date: endDate
+                },
+                success: function (data) {
+                    const blob = new Blob([data], { type: 'application/pdf' });
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = "instagram_report.pdf";
+                    link.click();
+                    button.prop("disabled", false)
+                        .html('<i class="bx bx-download"></i> Download PDF Report');
+                },
+                error: function () {
+                    alert("Error generating PDF");
+                    button.prop("disabled", false)
+                        .html('<i class="bx bx-download"></i> Download PDF Report');
+                }
+            });
+        }
     </script>
 @endpush

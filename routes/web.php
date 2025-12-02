@@ -79,10 +79,7 @@ Route::middleware(['auth', 'menu.access'])->group(function () {
     Route::get('/instagram/audience-age-gender/{instagramId}', [InstagramController::class, 'getAudienceAgeGender'])->name('instagram.audienceAgeGender'); 
 
     Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])->name('instagram.post.insights.page');    
-    Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');
-
-    Route::get('instagram-report-pdf/{id}/', [InstagramController::class, 'downloadInstagramReportToPdfFile'])->name('instagram.report.pdf');
-        
+    Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');            
 
     Route::get('facebook-summary/{id}', [FacebookController::class, 'facebookMainIndex'])->name('facebook.report');
     Route::get('facebook-html/{id}', [FacebookController::class, 'facebookHtmlAjax'])->name('facebook.fetch.html');
