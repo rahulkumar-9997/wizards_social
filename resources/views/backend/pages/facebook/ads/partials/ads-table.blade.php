@@ -3,7 +3,7 @@
     <div class="d-flex flex-wrap align-items-center p-2 gap-1">
         <div class="d-flex align-items-center border-end pe-1">
             <h4 class="mb-0 me-2 text-dark-grey">Campaigns</h4>
-            <select class="js-example-basic-multiple" name="select_ad_campaigns[]" id="select_ad_campaigns" multiple="multiple" required="" style="width: 400px;">
+            <select class="js-example-basic-multiple" name="select_ad_campaigns[]" id="select_ad_campaigns" multiple="multiple" required="" style="width: 500px;">
                 <option value="" disabled>Select Campaigns</option>
                 @foreach($campaigns as $campaign)
                 <option value="{{ $campaign['id'] }}"
@@ -90,7 +90,21 @@
     </table>
 </div>
 
-@if(isset($pagination) && ($pagination['has_previous'] || $pagination['has_next']))
+@php
+    $showPagination = false;    
+    if (isset($pagination)) {
+        if ($pagination['is_filter_applied']) {
+            /* When filter is applied, show pagination only if filtered ads >= limit*/
+            $showPagination = ($pagination['has_previous'] || $pagination['has_next']) && 
+                             ($pagination['filtered_count'] >= $pagination['per_page']);
+        } else {
+            /* When no filter, use normal Facebook pagination*/
+            $showPagination = $pagination['has_previous'] || $pagination['has_next'];
+        }
+    }
+@endphp
+
+@if($showPagination)
 <div class="d-flex justify-content-end gap-2 mt-3 pagination">
     @if($pagination['has_previous'])
     <button type="button" class="btn btn-outline-primary btn-sm pagination-btn"
