@@ -91,7 +91,7 @@
             <td>
                 @if(isset($post['media_type']))
                 @if($post['media_type'] === 'VIDEO')
-                <video class="media-video" width="70" height="70" muted autoplay loop playsinline 
+                <video width="70" height="70" muted autoplay loop playsinline 
                 style="object-fit:cover; border-radius:6px;"
                     data-poster="{{ $post['thumbnail_url'] ?? $post['media_url'] }}"
                     poster="{{ $post['thumbnail_url'] ?? $post['media_url'] }}"
