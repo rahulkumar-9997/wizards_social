@@ -129,13 +129,13 @@
         font-weight: 600;
         color: #007bff;
     }
+
     .page-break {
         page-break-before: always;
         break-before: page;
         height: 40px;
         background: transparent !important;
     }
-    
 </style>
 @endpush
 @section('main-content')
@@ -215,7 +215,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="row mb-2">
                 <div class="col-xxl-12">
                     <div class="card">
@@ -287,7 +287,7 @@
                             </div>
                         </div>
                     </div>
-                </div>                
+                </div>
             </div>
             <div class="page-break"></div>
             <div class="row mb-2">
@@ -330,7 +330,7 @@
                     </div>
                 </div>
             </div>
-            
+
         </div>
     </div>
     @endsection
@@ -368,12 +368,14 @@
                 startDate: defaultStart,
                 endDate: defaultEnd,
                 maxDate: moment().subtract(1, 'days'),
-                dateLimit: { days: 27 },
+                dateLimit: {
+                    days: 27
+                },
                 ranges: {
                     'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
                     'Last 7 Days': [moment().subtract(7, 'days'), moment().subtract(1, 'days')],
                     'Last 15 Days': [moment().subtract(15, 'days'), moment().subtract(1, 'days')],
-                    'Last 28 Days': [moment().subtract(28, 'days'), moment().subtract(1, 'days')], 
+                    'Last 28 Days': [moment().subtract(28, 'days'), moment().subtract(1, 'days')],
                 },
                 autoUpdateInput: true,
                 locale: {
@@ -405,7 +407,7 @@
                 loadReachGraph(id, start, end);
                 loadViewGraph(id, start, end);
                 loadInstagramData(id, start, end);
-                
+
             });
 
             $('.daterange').on('cancel.daterangepicker', function() {
@@ -416,7 +418,7 @@
                 loadReachGraph(id, defaultStart, defaultEnd);
                 loadViewGraph(id, defaultStart, defaultEnd);
                 loadInstagramData(id, defaultStart, defaultEnd);
-                
+
             });
 
             $('.daterange').val(`${defaultStart.format('YYYY-MM-DD')} - ${defaultEnd.format('YYYY-MM-DD')}`);
@@ -424,7 +426,7 @@
             loadReachGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
             loadViewGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
             loadInstagramData(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
-           
+
         });
 
         function loadInstagramData(accountId, startDate, endDate) {
@@ -468,14 +470,16 @@
     <!--generate a pdf file-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const downloadBtn = document.getElementById('downloadPdf');
-            downloadBtn.addEventListener('click', function() {
+            downloadBtn.addEventListener('click', async function() {
                 const button = this;
                 const originalText = button.innerHTML;
                 button.innerHTML = '<i class="bx bx-loader bx-spin"></i> Generating PDF...';
                 button.disabled = true;
+
                 const element = document.querySelector('.export_pdf_report');
                 if (!element) {
                     alert('Export element not found');
@@ -487,15 +491,16 @@
                     overflow: element.style.overflow,
                     position: element.style.position
                 };
+
                 element.style.overflow = 'visible';
                 element.style.position = 'relative';
-
                 html2canvas(element, {
                     scale: 2,
                     useCORS: true,
                     logging: false,
                     backgroundColor: '#ffffff',
                     allowTaint: false,
+
                     onclone: function(clonedDoc) {
                         const clonedElement = clonedDoc.querySelector('.export_pdf_report');
                         if (clonedElement) {
@@ -508,29 +513,32 @@
                                 el.style.display = 'none';
                                 el.style.visibility = 'hidden';
                             });
-
-                            const videos = clonedElement.querySelectorAll('video');
-                            videos.forEach(video => {
-                                let poster = video.getAttribute('data-poster') || video.getAttribute('poster');
-                                alert(poster);
-                                if (!poster) {
-                                    poster = '/images/default-video-thumb.jpg'; // fallback
-                                }
-
-                                const img = clonedDoc.createElement('img');
-                                img.src = poster;
-                                console.log(poster);
-
-                                // Copy video size
-                                const rect = video.getBoundingClientRect();
-                                img.style.width = rect.width + 'px';
-                                img.style.height = rect.height + 'px';
-                                img.style.objectFit = 'cover';
-                                img.style.borderRadius = '6px';
-
-                                video.parentNode.replaceChild(img, video);
+                            const hiddenImgs = clonedElement.querySelectorAll('img.pdf-img');
+                            hiddenImgs.forEach(img => {
+                                img.style.display = 'block';
+                                img.style.visibility = 'visible';
                             });
-                            
+
+                           const hiddenVideo = clonedElement.querySelectorAll('video.video-section');
+                            hiddenVideo.forEach(video => {
+                                const td = video.closest('td'); 
+                                video.remove();
+                                if (td) {
+                                    td.style.padding = "0";
+                                    td.style.margin = "0";
+                                    td.style.height = "auto";
+                                    td.style.minHeight = "0";
+                                    td.style.maxHeight = "auto";
+                                    td.style.lineHeight = "normal";
+                                    td.style.display = "table-cell";
+                                    td.style.verticalAlign = "middle";
+                                }
+                            });
+                            const realImgs = clonedElement.querySelectorAll('img.real-image');
+                            realImgs.forEach(img => {
+                                img.style.display = 'none';
+                                img.style.visibility = 'hidden';
+                            });
                             const pageBreaks = clonedElement.querySelectorAll('.page-break');
                             pageBreaks.forEach(pb => {
                                 pb.style.display = 'block';
@@ -541,10 +549,11 @@
                             });
                         }
                     }
+
                 }).then(canvas => {
+
                     element.style.overflow = originalStyles.overflow;
                     element.style.position = originalStyles.position;
-
                     const imgData = canvas.toDataURL('image/jpeg', 0.95);
                     const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
                     const imgWidth = 190;
@@ -552,7 +561,6 @@
 
                     let heightLeft = imgHeight;
                     let position = 10;
-                    let pageCount = 1;
                     pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
                     heightLeft -= (300 - position);
                     while (heightLeft >= 0) {
@@ -560,9 +568,7 @@
                         pdf.addPage();
                         pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
                         heightLeft -= 300;
-                        pageCount++;
                     }
-
                     pdf.save('Instagram_Dashboard_Report.pdf');
                     button.innerHTML = originalText;
                     button.disabled = false;
@@ -575,7 +581,9 @@
                     button.innerHTML = originalText;
                     button.disabled = false;
                 });
+
             });
         });
     </script>
-@endpush
+
+    @endpush

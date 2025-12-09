@@ -1,7 +1,7 @@
 @extends('backend.pages.layouts.master')
 @section('title', 'Facebook Ads')
 @push('styles')
-    
+
 @endpush
 @section('main-content')
 <div class="container-fluid">
@@ -17,10 +17,9 @@
                         </div>
 
                         <div class="d-flex gap-2">
-                            <!-- Customize Columns Button -->
-                            <button class="btn btn-outline-light" id="customizeColumnsBtn">
+                            <!-- <button class="btn btn-outline-light" id="customizeColumnsBtn">
                                 <i class="fas fa-columns me-1"></i> Customize Columns
-                            </button>
+                            </button> -->
 
                             <div class="ads-select-option" style="width: 350px;">
                                 @if(!empty($adAccount['data']) && count($adAccount['data']) > 0)
@@ -74,7 +73,7 @@
                                 <div class="column-list">
                                     @foreach(['title', 'status', 'start_date', 'end_date', 'budget'] as $column)
                                     <div class="form-check">
-                                        <input class="form-check-input column-checkbox" type="checkbox" 
+                                        <input class="form-check-input column-checkbox" type="checkbox"
                                             value="{{ $column }}" id="col_{{ $column }}" checked>
                                         <label class="form-check-label" for="col_{{ $column }}">
                                             {{ ucwords(str_replace('_', ' ', $column)) }}
@@ -88,7 +87,7 @@
                                 <div class="column-list">
                                     @foreach(['results', 'cost_per_result', 'views', 'viewers', 'amount_spent'] as $column)
                                     <div class="form-check">
-                                        <input class="form-check-input column-checkbox" type="checkbox" 
+                                        <input class="form-check-input column-checkbox" type="checkbox"
                                             value="{{ $column }}" id="col_{{ $column }}" checked>
                                         <label class="form-check-label" for="col_{{ $column }}">
                                             {{ ucwords(str_replace('_', ' ', $column)) }}
@@ -102,7 +101,7 @@
                                 <div class="column-list">
                                     @foreach(['post_engagements', 'post_reactions', 'post_comments', 'post_shares', 'post_saves', 'link_clicks', 'follows', 'ctr'] as $column)
                                     <div class="form-check">
-                                        <input class="form-check-input column-checkbox" type="checkbox" 
+                                        <input class="form-check-input column-checkbox" type="checkbox"
                                             value="{{ $column }}" id="col_{{ $column }}">
                                         <label class="form-check-label" for="col_{{ $column }}">
                                             {{ ucwords(str_replace('_', ' ', $column)) }}
@@ -117,7 +116,7 @@
                                 <div class="column-list">
                                     @foreach(['3_second_video_plays', 'video_avg_play_time', 'thruplays'] as $column)
                                     <div class="form-check">
-                                        <input class="form-check-input column-checkbox" type="checkbox" 
+                                        <input class="form-check-input column-checkbox" type="checkbox"
                                             value="{{ $column }}" id="col_{{ $column }}">
                                         <label class="form-check-label" for="col_{{ $column }}">
                                             {{ ucwords(str_replace('_', ' ', $column)) }}
@@ -145,7 +144,7 @@
                                     </div>
                                     @endforeach
                                 </div>
-                            </div>                        
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -167,25 +166,27 @@
     $(document).ready(function() {
         const adSelect = $('#ad_select');
         const container = $('#ads-summary-container');
-        let currentColumns = JSON.parse(localStorage.getItem('facebook_ads_columns') || '["title","status","results","cost_per_result","amount_spent","views","viewers","budget"]');
         let sortable = null;
-        
-        // Date range initialization
+        let currentPage = 1;
+        let currentAfter = null;
+
         function initializeDateRange() {
             const defaultStart = moment().subtract(28, 'days');
             const defaultEnd = moment().subtract(1, 'days');
-            
+
             $('.daterange').daterangepicker({
                 opens: 'right',
                 startDate: defaultStart,
                 endDate: defaultEnd,
                 maxDate: moment().subtract(1, 'days'),
-                dateLimit: { days: 27 }, // 28 days inclusive
+                dateLimit: {
+                    days: 27
+                },
                 ranges: {
                     'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
                     'Last 7 Days': [moment().subtract(7, 'days'), moment().subtract(1, 'days')],
                     'Last 15 Days': [moment().subtract(15, 'days'), moment().subtract(1, 'days')],
-                    'Last 28 Days': [moment().subtract(28, 'days'), moment().subtract(1, 'days')], 
+                    'Last 28 Days': [moment().subtract(28, 'days'), moment().subtract(1, 'days')],
                 },
                 autoUpdateInput: true,
                 locale: {
@@ -213,8 +214,8 @@
                 const end = endDate.format('YYYY-MM-DD');
 
                 $(this).val(`${start} - ${end}`);
-                
-                // Reload ads with new date range
+                currentPage = 1; 
+                currentAfter = null;
                 if (adSelect.val()) {
                     loadAdsSummary(adSelect.val(), start, end);
                 }
@@ -222,51 +223,55 @@
 
             $('.daterange').on('cancel.daterangepicker', function() {
                 $(this).val('');
-                // Reset to default 28 days
                 const defaultStart = moment().subtract(28, 'days').format('YYYY-MM-DD');
                 const defaultEnd = moment().subtract(1, 'days').format('YYYY-MM-DD');
-                
+                currentPage = 1;
+                currentAfter = null;
+
                 if (adSelect.val()) {
                     loadAdsSummary(adSelect.val(), defaultStart, defaultEnd);
                 }
             });
 
-            // Set initial value and load data
             $('.daterange').val(`${defaultStart.format('YYYY-MM-DD')} - ${defaultEnd.format('YYYY-MM-DD')}`);
-            
-            // Load initial data
+
             if (adSelect.val()) {
                 loadAdsSummary(adSelect.val(), defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
             }
         }
 
-        function loadAdsSummary(adAccountId, startDate = null, endDate = null) {
+        function loadAdsSummary(adAccountId, startDate = null, endDate = null, page = 1, after = null, campaignFilter = null) {
             container.html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><div class="mt-2">Loading ads data...</div></div>');
-            
             const params = {
-                columns: currentColumns.join(',')
+                page: page,
+                limit: 50
             };
-            
-            // Add date range if provided
+            if (after) {
+                params.after = after;
+            }
             if (startDate && endDate) {
                 params.date_range = `${startDate} - ${endDate}`;
             }
-            
+            if (campaignFilter && campaignFilter.length > 0) {
+                params['campaign_filter[]'] = campaignFilter;
+            }
+            /* console.log('Sending params:', params); */
             $.ajax({
                 url: `${FACEBOOK_BASE_URL}/ads-summary/${adAccountId}`,
                 type: 'GET',
                 data: params,
+                traditional: true,
                 success: function(response) {
                     if (response.success) {
                         container.html(response.html);
-                        
-                        // Update date range display if needed
+                        currentPage = page;
+                        currentAfter = after;
+                        initializeSelect2Modal();
+                        bindPaginationEvents();
+                        bindCampaignFilterEvents();
                         if (response.date_range) {
                             console.log('Data loaded for range:', response.date_range);
                         }
-                        
-                        initializeSelect2Modal();
-                        initializeCollapsibleRows();
                     } else {
                         container.html(`<div class="alert alert-danger py-4">${response.message || 'Failed to load ads'}</div>`);
                     }
@@ -274,148 +279,79 @@
                 error: function(xhr, status, error) {
                     console.error('Error loading ads:', error);
                     let errorMessage = 'Failed to load ads. Please try again.';
-                    
+
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
                     }
-                    
+
                     container.html(`<div class="alert alert-danger py-4">${errorMessage}</div>`);
                 }
             });
         }
 
-        // Initialize collapsible rows
-        function initializeCollapsibleRows() {
-            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(element) {
-                element.addEventListener('click', function() {
-                    const icon = this.querySelector('.toggle-icon');
-                    if (icon) {
-                        if (this.classList.contains('collapsed')) {
-                            icon.style.transform = 'rotate(0deg)';
-                        } else {
-                            icon.style.transform = 'rotate(180deg)';
-                        }
-                    }
-                });
+        function bindPaginationEvents() {
+            $('.pagination-btn').off('click').on('click', function() {
+                const page = $(this).data('page');
+                const after = $(this).data('after');
+                const currentRange = $('.daterange').val();
+                const adAccountId = adSelect.val();
+
+                if (adAccountId && currentRange) {
+                    const dates = currentRange.split(' - ');
+                    const campaignFilterSelect = $('#select_ad_campaigns');
+                    let campaignFilter = [];                    
+                    if (campaignFilterSelect.length > 0) {
+                        campaignFilter = campaignFilterSelect.val() || [];
+                    }                    
+                    loadAdsSummary(adAccountId, dates[0], dates[1], page, after, campaignFilter);
+                }
             });
         }
 
-        // Initialize date range picker
+        function bindCampaignFilterEvents() {
+            $('#select_ad_campaigns').off('change').on('change', function() {
+                const campaignFilter = $(this).val();
+                console.log('Selected campaign filter:', campaignFilter);                 
+                const currentRange = $('.daterange').val();
+                const adAccountId = adSelect.val();
+                if (adAccountId && currentRange) {
+                    const dates = currentRange.split(' - ');
+                    currentPage = 1;
+                    currentAfter = null;
+                    loadAdsSummary(adAccountId, dates[0], dates[1], 1, null, campaignFilter);
+                }
+            });
+
+            $('#resetFilterBtn').off('click').on('click', function() {
+                $('#select_ad_campaigns').val(null).trigger('change');
+                $('#select_ad_campaigns').select2();
+                const currentRange = $('.daterange').val();
+                const adAccountId = adSelect.val();
+                if (adAccountId && currentRange) {
+                    const dates = currentRange.split(' - ');
+                    currentPage = 1;
+                    currentAfter = null;
+                    loadAdsSummary(adAccountId, dates[0], dates[1], 1, null, []);
+                }
+            });
+        }
+
         initializeDateRange();
-
-        // Rest of your existing code
-        function initializeSortable() {
-            if (sortable) {
-                sortable.destroy();
-            }
-            
-            const columnOrderList = document.getElementById('columnOrderList');
-            if (columnOrderList) {
-                sortable = new Sortable(columnOrderList, {
-                    animation: 150,
-                    ghostClass: 'sortable-ghost',
-                    chosenClass: 'sortable-chosen',
-                    onEnd: function(evt) {
-                        updateCurrentColumnsFromSortable();
-                    }
-                });
-            }
-        }
-
-        function updateCurrentColumnsFromSortable() {
-            const newOrder = [];
-            $('#columnOrderList .sortable-item').each(function() {
-                newOrder.push($(this).data('column'));
-            });
-            currentColumns = newOrder;
-        }
-
-        // Change listener for ad account
         adSelect.on('change', function() {
             const id = $(this).val();
+            currentPage = 1;
+            currentAfter = null;
             if (id) {
                 const currentRange = $('.daterange').val();
                 if (currentRange) {
                     const dates = currentRange.split(' - ');
                     loadAdsSummary(id, dates[0], dates[1]);
                 } else {
-                    // If no date range selected, use default
                     const defaultStart = moment().subtract(28, 'days').format('YYYY-MM-DD');
                     const defaultEnd = moment().subtract(1, 'days').format('YYYY-MM-DD');
                     loadAdsSummary(id, defaultStart, defaultEnd);
                 }
             }
-        });
-
-        // Customize columns modal functionality
-        $('#customizeColumnsBtn').on('click', function() {
-            $('#customizeColumnsModal').modal('show');
-            initializeSortable();
-        });
-
-        // Apply columns functionality
-        $('#applyColumns').on('click', function() {
-            updateCurrentColumnsFromSortable();
-            localStorage.setItem('facebook_ads_columns', JSON.stringify(currentColumns));
-            
-            // Reload data with new columns
-            const currentRange = $('.daterange').val();
-            if (adSelect.val() && currentRange) {
-                const dates = currentRange.split(' - ');
-                loadAdsSummary(adSelect.val(), dates[0], dates[1]);
-            }
-            
-            $('#customizeColumnsModal').modal('hide');
-        });
-
-        // Column search functionality
-        $('#columnSearch').on('input', function() {
-            const searchTerm = $(this).val().toLowerCase();
-            $('.column-list .form-check').each(function() {
-                const label = $(this).find('.form-check-label').text().toLowerCase();
-                if (label.includes(searchTerm)) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        });
-
-        // Remove column from order list
-        $(document).on('click', '.remove-column', function() {
-            $(this).closest('.sortable-item').remove();
-            updateCurrentColumnsFromSortable();
-        });
-
-        // Add column to order list
-        $('.column-checkbox').on('change', function() {
-            const column = $(this).val();
-            const isChecked = $(this).is(':checked');
-            
-            if (isChecked) {
-                // Add to order list if not already present
-                if (!$(`.sortable-item[data-column="${column}"]`).length) {
-                    const columnName = $(this).next('.form-check-label').text();
-                    $('#columnOrderList').append(`
-                        <div class="sortable-item" data-column="${column}">
-                            <div class="d-flex align-items-center justify-content-between p-1 border rounded mb-1 bg-light">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-grip-vertical text-muted me-2"></i>
-                                    <span>${columnName}</span>
-                                </div>
-                                <button class="btn btn-sm btn-outline-danger remove-column">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `);
-                }
-            } else {
-                // Remove from order list
-                $(`.sortable-item[data-column="${column}"]`).remove();
-            }
-            
-            updateCurrentColumnsFromSortable();
         });
     });
 
@@ -425,13 +361,13 @@
                 $(this).select2('destroy');
             }
         });
-        
+
         $('.js-example-basic-single').select2({
             placeholder: "Select Campaigns Name",
             allowClear: true,
             minimumResultsForSearch: 0
         });
-        
+
         $('.js-example-basic-multiple').select2({
             placeholder: "Select Campaigns Name",
             allowClear: true,

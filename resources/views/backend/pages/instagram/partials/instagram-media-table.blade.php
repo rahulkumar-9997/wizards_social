@@ -90,19 +90,16 @@
             <td>{{ (($pagination['current_page'] ?? 1) - 1) * ($pagination['per_page'] ?? 12) + $index + 1 }}</td>
             <td>
                 @if(isset($post['media_type']))
-                @if($post['media_type'] === 'VIDEO')
-                <video width="70" height="70" muted autoplay loop playsinline 
-                style="object-fit:cover; border-radius:6px;"
-                    data-poster="{{ $post['thumbnail_url'] ?? $post['media_url'] }}"
-                    poster="{{ $post['thumbnail_url'] ?? $post['media_url'] }}"
-                    >
-                    <source src="{{ $post['media_url'] }}" 
-                    
-                    type="video/mp4">
-                </video>
-                @else
-                <img src="{{ $post['media_url'] }}" alt="Media" class="img-fluid img-thumbnail" style="max-width:70px; max-height:88px;">
-                @endif
+                    @if($post['media_type'] === 'VIDEO')
+                        <video class="video-section" width="70" height="70" muted autoplay loop playsinline 
+                        style="object-fit:cover; border-radius:6px;">
+                            <source src="{{ $post['media_url'] }}" type="video/mp4">
+                        </video>
+                        <img class="pdf-img img-fluid img-thumbnail" src="{{ $post['thumbnail_url'] ?? $post['media_url'] }}" style="display: none; max-width:70px; max-height:88px;" alt="Media">
+                    @else
+                        <img src="{{ $post['media_url'] }}" alt="Media" class="img-fluid img-thumbnail real-image" style="max-width:70px; max-height:88px;" >
+                        <img class="pdf-img img-fluid img-thumbnail" src="{{ $post['media_url'] }}" style="display: none; max-width:70px; max-height:88px;" alt="Media">
+                    @endif
                 @endif
             </td>
             <td>{{ isset($post['timestamp']) ? \Carbon\Carbon::parse($post['timestamp'])->format('d-m-Y h:i A') : '-' }}</td>
