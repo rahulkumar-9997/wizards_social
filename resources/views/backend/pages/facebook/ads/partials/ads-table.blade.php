@@ -27,8 +27,8 @@
             <th>Sr. No.</th>
             <th>Title</th>
             <th>Status</th>
-            <th>Start Date</th>
-            <th>End Date</th>
+            <th style="width: 10%;">Start Date</th>
+            <th style="width: 10%;">End Date</th>
             <th>Amount Spent</th>
             <th>Reach</th>
             <th>Ad Creative Url</th>
@@ -48,10 +48,11 @@
                     <div class="ad-title">
                         {{ $ad['title'] }}
                         <br>
-                        <small class="text-muted">({{ $ad['campaign_name'] }})</small>
+                        <small class="text-muted">
+                            <span class="badge bg-primary">({{ $ad['campaign_name'] }})</span>
+                        </small>
                     </div>
-                    <br>
-                    ({{ $ad['campaign_id'] }})
+                   
                 </div>
             </td>
             <td>
@@ -59,17 +60,23 @@
             </td>
             <td>
                 @if(!empty($ad['start_date']) && strtotime($ad['start_date']))
-                {{ \Carbon\Carbon::parse($ad['start_date'])->format('M d h:i:s A') }}
+                    {{ \Carbon\Carbon::parse($ad['start_date'])->format('M d, Y') }} <br>
+                    <small class="text-muted">
+                        {{ \Carbon\Carbon::parse($ad['start_date'])->format('h:i:s A') }}
+                    </small>
                 @else
-                {{ $ad['start_date'] }}
+                    {{ $ad['start_date'] }}
                 @endif
             </td>
 
-            <td>
+           <td>
                 @if(!empty($ad['end_date']) && strtotime($ad['end_date']))
-                {{ \Carbon\Carbon::parse($ad['end_date'])->format('M d h:i:s A') }}
+                    {{ \Carbon\Carbon::parse($ad['end_date'])->format('M d, Y') }} <br>
+                    <small class="text-muted">
+                        {{ \Carbon\Carbon::parse($ad['end_date'])->format('h:i:s A') }}
+                    </small>
                 @else
-                {{ $ad['end_date'] }}
+                     {!! $ad['end_date'] !!} 
                 @endif
             </td>
 
@@ -90,23 +97,13 @@
     </table>
 </div>
 
-@php
-    $showPagination = false;    
-    if (isset($pagination)) {
-        if ($pagination['is_filter_applied']) {
-            /* When filter is applied, show pagination only if filtered ads >= limit*/
-            $showPagination = ($pagination['has_previous'] || $pagination['has_next']) && 
-                             ($pagination['filtered_count'] >= $pagination['per_page']);
-        } else {
-            /* When no filter, use normal Facebook pagination*/
-            $showPagination = $pagination['has_previous'] || $pagination['has_next'];
-        }
-    }
+@php 
+     $showPagination = $pagination['has_prev'] || $pagination['has_next'];
 @endphp
 
 @if($showPagination)
 <div class="d-flex justify-content-end gap-2 mt-3 pagination">
-    @if($pagination['has_previous'])
+    @if($pagination['has_prev'])
     <button type="button" class="btn btn-outline-primary btn-sm pagination-btn"
         data-page="{{ $pagination['current_page'] - 1 }}"
         data-after="{{ $pagination['prev_cursor'] }}">

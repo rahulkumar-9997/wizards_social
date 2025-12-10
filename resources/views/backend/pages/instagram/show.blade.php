@@ -479,14 +479,31 @@
                 const originalText = button.innerHTML;
                 button.innerHTML = '<i class="bx bx-loader bx-spin"></i> Generating PDF...';
                 button.disabled = true;
+                const allVideos = document.querySelectorAll('video.video-section');
+                allVideos.forEach(video => {
+                    video.style.display = 'none';
+                    video.style.visibility = 'hidden';
+                    video.style.position = 'absolute';
+                });
+                const allPdfImgs = document.querySelectorAll('img.pdf-img');
+                allPdfImgs.forEach(img => {
+                    img.style.display = 'block';
+                    img.style.visibility = 'visible';
+                });
 
                 const element = document.querySelector('.export_pdf_report');
                 if (!element) {
                     alert('Export element not found');
                     button.innerHTML = originalText;
                     button.disabled = false;
+                    allVideos.forEach(video => {
+                        video.style.display = '';
+                        video.style.visibility = '';
+                        video.style.position = '';
+                    });
                     return;
                 }
+
                 const originalStyles = {
                     overflow: element.style.overflow,
                     position: element.style.position
@@ -494,18 +511,38 @@
 
                 element.style.overflow = 'visible';
                 element.style.position = 'relative';
+
                 html2canvas(element, {
                     scale: 2,
                     useCORS: true,
                     logging: false,
                     backgroundColor: '#ffffff',
                     allowTaint: false,
-
                     onclone: function(clonedDoc) {
                         const clonedElement = clonedDoc.querySelector('.export_pdf_report');
                         if (clonedElement) {
                             clonedElement.style.overflow = 'visible';
                             clonedElement.style.position = 'relative';
+                            const clonedVideos = clonedElement.querySelectorAll('video.video-section');
+                            clonedVideos.forEach(video => {
+                                video.remove();
+                            });
+                            /* PDF images show in Clone*/
+                            const clonedPdfImgs = clonedElement.querySelectorAll('img.pdf-img');
+                            clonedPdfImgs.forEach(img => {
+                                img.style.display = 'block';
+                                img.style.visibility = 'visible';
+                                img.style.width = '70px';
+                                img.style.height = '88px';
+                            });
+                            /* Real images hide */
+                            const realImgs = clonedElement.querySelectorAll('img.real-image');
+                            realImgs.forEach(img => {
+                                img.style.display = 'none';
+                                img.style.visibility = 'hidden';
+                            });
+                            
+                            /* Buttons hide */
                             const elementsToHide = clonedElement.querySelectorAll(
                                 '.pdf-download-btn, .btn, .btn-outline-primary, .btn-outline-secondary, .filter-box'
                             );
@@ -513,32 +550,34 @@
                                 el.style.display = 'none';
                                 el.style.visibility = 'hidden';
                             });
-                            const hiddenImgs = clonedElement.querySelectorAll('img.pdf-img');
-                            hiddenImgs.forEach(img => {
-                                img.style.display = 'block';
-                                img.style.visibility = 'visible';
+                            
+                            /* Table rows */
+                            const tableRows = clonedElement.querySelectorAll('tr.post-row');
+                            tableRows.forEach(row => {
+                                row.style.height = '77px';
+                                row.style.minHeight = '77px';
+                                row.style.maxHeight = '77px';
                             });
-
-                           const hiddenVideo = clonedElement.querySelectorAll('video.video-section');
-                            hiddenVideo.forEach(video => {
-                                const td = video.closest('td'); 
-                                video.remove();
-                                if (td) {
-                                    td.style.padding = "0";
-                                    td.style.margin = "0";
-                                    td.style.height = "auto";
-                                    td.style.minHeight = "0";
-                                    td.style.maxHeight = "auto";
-                                    td.style.lineHeight = "normal";
-                                    td.style.display = "table-cell";
-                                    td.style.verticalAlign = "middle";
-                                }
+                            
+                           /*Table cells*/
+                            const tableCells = clonedElement.querySelectorAll('tr.post-row td');
+                            tableCells.forEach(cell => {
+                                cell.style.height = '77px';
+                                cell.style.minHeight = '77px';
+                                cell.style.maxHeight = '77px';
+                                cell.style.verticalAlign = 'middle';
                             });
-                            const realImgs = clonedElement.querySelectorAll('img.real-image');
-                            realImgs.forEach(img => {
-                                img.style.display = 'none';
-                                img.style.visibility = 'hidden';
+                            
+                            /* Media cells */
+                            const mediaCells = clonedElement.querySelectorAll('tr.post-row td:nth-child(2)');
+                            mediaCells.forEach(cell => {
+                                cell.style.height = '77px';
+                                cell.style.minHeight = '77px';
+                                cell.style.maxHeight = '77px';
+                                cell.style.padding = '4px';
                             });
+                            
+                            /* Page  Break*/
                             const pageBreaks = clonedElement.querySelectorAll('.page-break');
                             pageBreaks.forEach(pb => {
                                 pb.style.display = 'block';
@@ -549,16 +588,29 @@
                             });
                         }
                     }
-
                 }).then(canvas => {
-
+                    /* Restore original styles */
                     element.style.overflow = originalStyles.overflow;
                     element.style.position = originalStyles.position;
+                    
+                    /* Restore videos*/
+                    allVideos.forEach(video => {
+                        video.style.display = '';
+                        video.style.visibility = '';
+                        video.style.position = '';
+                    });
+                    
+                    /* Hide PDF images again */
+                    allPdfImgs.forEach(img => {
+                        img.style.display = 'none';
+                        img.style.visibility = 'hidden';
+                    });
+                    
                     const imgData = canvas.toDataURL('image/jpeg', 0.95);
                     const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
                     const imgWidth = 190;
                     const imgHeight = canvas.height * imgWidth / canvas.width;
-
+                    
                     let heightLeft = imgHeight;
                     let position = 10;
                     pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
@@ -569,19 +621,33 @@
                         pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
                         heightLeft -= 300;
                     }
+                    
                     pdf.save('Instagram_Dashboard_Report.pdf');
                     button.innerHTML = originalText;
                     button.disabled = false;
-
+                    
                 }).catch(error => {
                     console.error('PDF error:', error);
                     element.style.overflow = originalStyles.overflow;
                     element.style.position = originalStyles.position;
+                    
+                    /* Restore videos on error */
+                    allVideos.forEach(video => {
+                        video.style.display = '';
+                        video.style.visibility = '';
+                        video.style.position = '';
+                    });
+                    
+                    /* Hide PDF images on error */
+                    allPdfImgs.forEach(img => {
+                        img.style.display = 'none';
+                        img.style.visibility = 'hidden';
+                    });
+                    
                     alert('Error generating PDF: ' + error.message);
                     button.innerHTML = originalText;
                     button.disabled = false;
                 });
-
             });
         });
     </script>

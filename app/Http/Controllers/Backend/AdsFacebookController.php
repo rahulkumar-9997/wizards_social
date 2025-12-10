@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -298,7 +299,7 @@ class AdsFacebookController extends Controller
                     ? date('Y-m-d H:i:s', strtotime($campaign['stop_time']))
                     : 'Active';
 
-                $adStatus = $ad['effective_status'] ?? 'UNKNOWN';
+                $adStatus = $ad['status'] ?? '-';
                 if ($endDate !== 'Active' && strtotime($endDate) < time()) {
                     $adStatus = 'ENDED';
                 }
@@ -360,37 +361,30 @@ class AdsFacebookController extends Controller
                 ->where('provider', 'facebook')
                 ->whereNull('parent_account_id')
                 ->first();
+
             if (!$mainAccount) {
                 return response()->json(['success' => false, 'message' => 'Facebook account not connected.']);
             }
 
+            /* Date Range Handling */
             $dateRange = request()->get('date_range', null);
             $page = request()->get('page', 1);
-            $limit = request()->get('limit', 300);
-            $campaignFilter = [];
-            if (request()->has('campaign_filter')) {
-                $campaignFilter = request()->get('campaign_filter');
-            } elseif (request()->has('campaign_filter[]')) {
-                $campaignFilter = request()->get('campaign_filter[]', []);
-            }
-            
-            if (is_string($campaignFilter)) {
-                if (strpos($campaignFilter, ',') !== false) {
-                    $campaignFilter = explode(',', $campaignFilter);
-                } else {
-                    $campaignFilter = [$campaignFilter];
-                }
-            }
-            
-            $campaignFilter = array_filter($campaignFilter, function($value) {
-                return !empty($value) && $value !== '';
-            });
+            $limit = request()->get('limit', 50);
 
-            Log::info('Campaign Filter received: ' . json_encode($campaignFilter));
-            Log::info('Filter applied: ' . (!empty($campaignFilter) ? 'YES' : 'NO'));
-            
+            /* Campaign Filter Handling */
+            $campaignFilter = request()->get('campaign_filter', request()->get('campaign_filter[]', []));
+
+            if (is_string($campaignFilter)) {
+                $campaignFilter = strpos($campaignFilter, ',') !== false
+                    ? explode(',', $campaignFilter)
+                    : [$campaignFilter];
+            }
+
+            $campaignFilter = array_filter($campaignFilter);
+
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
-            
+
+            /* Date Range Default */
             if ($dateRange) {
                 $dates = explode(' - ', $dateRange);
                 if (count($dates) == 2) {
@@ -400,48 +394,46 @@ class AdsFacebookController extends Controller
                     ];
                 }
             }
-            
+
             if (empty($timeRange ?? [])) {
                 $timeRange = [
                     'since' => date('Y-m-d', strtotime('-28 days')),
                     'until' => date('Y-m-d', strtotime('-1 day'))
                 ];
             }
-            
-            /* Fetch Campaigns */
-            $campaignsUrl = "https://graph.facebook.com/v24.0/{$adAccountId}/campaigns";
-            $campaignFields = 'id,account_id,name';
-            $campaigns = [];
-            $campaignParams = [
-                'fields' => $campaignFields,
-                'limit' => 50,
-                'access_token' => $token,
-            ];
 
-            $nextUrl = $campaignsUrl;
-            $isFirstRequest = true;
-            
-            do {
-                if ($isFirstRequest) {
-                    $response = Http::get($campaignsUrl, $campaignParams);
-                    $isFirstRequest = false;
-                } else {
-                    $response = Http::get($nextUrl);
+            /* Campaign List (Cached) */
+            $campaignsCacheKey = "facebook_campaigns_{$adAccountId}_{$user->id}";
+            $campaigns = Cache::get($campaignsCacheKey);
+
+            if (!$campaigns) {
+                $campaignsUrl = "https://graph.facebook.com/v24.0/{$adAccountId}/campaigns";
+                $campaignParams = [
+                    'fields'       => 'id,name',
+                    'limit'        => 150,
+                    'access_token' => $token,
+                ];
+
+                $campaigns = [];
+                $nextUrl = $campaignsUrl;
+                while ($nextUrl) {
+                    $response = ($nextUrl == $campaignsUrl)
+                        ? Http::get($campaignsUrl, $campaignParams)
+                        : Http::get($nextUrl);
+
+                    if ($response->failed()) {
+                        return response()->json(['success' => false, 'message' => 'Error fetching campaigns']);
+                    }
+
+                    $json = $response->json();
+                    $campaigns = array_merge($campaigns, $json['data'] ?? []);
+                    $nextUrl = $json['paging']['next'] ?? null;
                 }
 
-                if ($response->failed()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Error fetching campaigns: ' . $response->body(),
-                    ]);
-                }
+                Cache::put($campaignsCacheKey, $campaigns, 3600);
+            }
 
-                $data = $response->json();
-                $campaigns = array_merge($campaigns, $data['data'] ?? []);
-                $nextUrl = $data['paging']['next'] ?? null;
-            } while ($nextUrl);
-
-            /* Fetch Ads With Insights - Single Page Only */
+            /* Fetch Ads (Single Page API) */
             $adsUrl = "https://graph.facebook.com/v24.0/{$adAccountId}/ads";
 
             $fields = implode(',', [
@@ -449,145 +441,106 @@ class AdsFacebookController extends Controller
                 'name',
                 'status',
                 'effective_status',
+                'preview_shareable_link',
                 'campaign{id,name,start_time,stop_time}',
                 'creative{id,thumbnail_url,object_story_spec,asset_feed_spec}',
                 'insights{reach,impressions,inline_link_clicks,spend,cpc,clicks,frequency,ctr,cpm}'
             ]);
 
-            $ads = [];
             $adsParams = [
-                'fields' => $fields,
-                'limit' => $limit,
+                'fields'       => $fields,
+                'limit'        => $limit,
                 'access_token' => $token,
-                'time_range' => [
+                'time_range'   => [
                     'since' => $timeRange['since'],
                     'until' => $timeRange['until'],
                 ],
             ];
 
-            if ($page > 1) {
-                $after = request()->get('after');
-                if ($after) {
-                    $adsParams['after'] = $after;
-                }
+            if ($page > 1 && request()->get('after')) {
+                $adsParams['after'] = request()->get('after');
             }
 
             $response = Http::get($adsUrl, $adsParams);
-            
+
             if ($response->failed()) {
-                Log::error('Facebook Ads API Error: ' . $response->body());
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error fetching ads: ' . $response->body(),
-                ]);
+                Log::error("Facebook Ads API Error: ".$response->body());
+                return response()->json(['success' => false, 'message' => 'Error fetching ads']);
             }
-            
+
             $data = $response->json();
+            Log::info("Facebook Ads API Response:\n" . json_encode($data, JSON_PRETTY_PRINT));
             $allAds = $data['data'] ?? [];
-            $paging = $data['paging'] ?? [];            
-            $nextPageCursor = $paging['cursors']['after'] ?? null;
-            $prevPageCursor = $paging['cursors']['before'] ?? null;
-            $hasNextPage = isset($paging['next']);
-            $hasPrevPage = isset($paging['previous']);
-            /* Process Ads */
+            $paging = $data['paging'] ?? [];
+
             $processedAds = [];
-            $filteredCampaignIds = [];            
+            $filteredCampaignIds = [];
+
             foreach ($allAds as $ad) {
+
+                /* --- Campaign Filter --- */
                 $campaignId = $ad['campaign']['id'] ?? null;
-                if (!empty($campaignFilter) && is_array($campaignFilter) && $campaignId) {
-                    if (!in_array($campaignId, $campaignFilter)) {
-                        continue; 
-                    }
+
+                if (!empty($campaignFilter) && !in_array($campaignId, $campaignFilter)) {
+                    continue;
                 }
+                /* --- Insights --- */
                 $insight = $ad['insights']['data'][0] ?? [];
-                $campaign = $ad['campaign'] ?? [];                
-                $startDate = isset($campaign['start_time'])
-                    ? date('Y-m-d H:i:s', strtotime($campaign['start_time']))
-                    : '-';
-
-                $endDate = isset($campaign['stop_time'])
-                    ? date('Y-m-d H:i:s', strtotime($campaign['stop_time']))
-                    : 'Active';
-
-                $adStatus = $ad['effective_status'] ?? 'UNKNOWN';
-                if ($endDate !== 'Active' && strtotime($endDate) < time()) {
-                    $adStatus = 'ENDED';
-                }
-                
+                $campaign = $ad['campaign'] ?? [];
                 $creative = $ad['creative'] ?? [];
-                
+
                 $processedAds[] = [
-                    'campaign_id' => $campaignId,
-                    'title' => $ad['name'] ?? ($campaign['name'] ?? 'N/A'),
-                    'campaign_name' => $campaign['name'] ?? 'N/A',
-                    'status' => $adStatus,
-                    'results' => $insight['inline_link_clicks'] ?? ($insight['clicks'] ?? 0),
-                    'cost_per_result' => isset($insight['cpc']) ? '₹' . number_format($insight['cpc'], 2) : '-',
-                    'amount_spent' => isset($insight['spend']) ? '₹' . number_format($insight['spend'], 2) : '-',
-                    'views' => $insight['impressions'] ?? 0,
-                    'viewers' => $insight['reach'] ?? 0,
-                    'budget' => 'INR',
-                    'start_date' => $startDate,
-                    'end_date' => $endDate,
-                    'link_clicks' => $insight['inline_link_clicks'] ?? 0,
-                    'follows' => 0,
-                    'ad_creative_url' => $creative['object_story_spec']['link_data']['link'] ?? null,
-                    'ad_thumbnail' => $creative['thumbnail_url'] ?? null,
-                    'ctr' => isset($insight['ctr'])
-                        ? round($insight['ctr'] * 100, 2) . '%'
-                        : (isset($insight['inline_link_clicks'], $insight['impressions']) && $insight['impressions'] > 0
-                            ? round(($insight['inline_link_clicks'] / $insight['impressions']) * 100, 2) . '%'
-                            : '0%'),
-                    'date_range' => $timeRange['since'] . ' to ' . $timeRange['until']
+                    'campaign_id'      => $campaignId,
+                    'title'            => $ad['name'] ?? ($campaign['name'] ?? 'N/A'),
+                    'campaign_name'    => $campaign['name'] ?? 'N/A',
+                    'status'           => $ad['effective_status'] ?? '',
+                    'results'          => $insight['inline_link_clicks'] ?? ($insight['clicks'] ?? 0),
+                    'cost_per_result'  => isset($insight['cpc']) ? '₹'.number_format($insight['cpc'], 2) : '-',
+                    'amount_spent'     => isset($insight['spend']) ? '₹'.number_format($insight['spend'], 2) : '-',
+                    'views'            => $insight['impressions'] ?? 0,
+                    'viewers'          => $insight['reach'] ?? 0,
+                    'start_date'       => !empty($campaign['start_time']) ? date('Y-m-d H:i:s', strtotime($campaign['start_time'])) : '-',
+                    'end_date'         => !empty($campaign['stop_time']) ? date('Y-m-d H:i:s', strtotime($campaign['stop_time'])) : '<span class="badge bg-success">Active</span>',
+                    'link_clicks'      => $insight['inline_link_clicks'] ?? 0,
+                    'ad_creative_url'  => $creative['object_story_spec']['link_data']['link'] ?? $ad['preview_shareable_link'],
+                    'ad_thumbnail'     => $creative['thumbnail_url'] ?? null,
+                    'date_range'       => $timeRange['since'].' to '.$timeRange['until'],
                 ];
 
-                if ($campaignId && !in_array($campaignId, $filteredCampaignIds)) {
+                if ($campaignId) {
                     $filteredCampaignIds[] = $campaignId;
                 }
             }
-            /*Filter pagination */
-            $totalFilteredAds = count($processedAds);
-            $isFilterApplied = !empty($campaignFilter);
-            if ($isFilterApplied) {
-                if ($totalFilteredAds < $limit) {
-                    $hasNextPage = false;
-                }
-            }
-            $hasPrevPage = ($page > 1) ? $hasPrevPage : false;
-
             $pagination = [
                 'current_page' => $page,
-                'next_cursor' => $nextPageCursor,
-                'prev_cursor' => $prevPageCursor,
-                'has_next' => $hasNextPage,
-                'has_prev' => $hasPrevPage,
-                'per_page' => $limit,
-                'has_previous' => $hasPrevPage,
-                'is_filter_applied' => $isFilterApplied,
-                'filtered_count' => $totalFilteredAds
+                'next_cursor'  => $paging['cursors']['after'] ?? null,
+                'prev_cursor'  => $paging['cursors']['before'] ?? null,
+                'has_next'     => isset($paging['next']),
+                'has_prev'     => isset($paging['previous']),
+                'per_page'     => $limit
             ];
-            
             $html = view(
                 'backend.pages.facebook.ads.partials.ads-table',
                 compact('processedAds', 'campaigns', 'pagination', 'campaignFilter')
             )->render();
-            
+
             return response()->json([
-                'success' => true,
-                'html' => $html,
-                'date_range' => $timeRange,
-                'total_ads' => $totalFilteredAds,
-                'total_campaigns' => count($campaigns),
-                'filtered_campaigns' => $filteredCampaignIds,
-                'pagination' => $pagination,
-                'is_filter_applied' => $isFilterApplied
+                'success'             => true,
+                'html'                => $html,
+                'date_range'          => $timeRange,
+                'total_campaigns'     => count($campaigns),
+                'filtered_campaigns'  => array_unique($filteredCampaignIds),
+                'pagination'          => $pagination,
             ]);
+
         } catch (\Exception $e) {
-            Log::error('Facebook Ads Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
-            ]);
+            Log::error("Facebook Ads Error: ".$e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
         }
     }
+
+    
+
+
+   
 }
