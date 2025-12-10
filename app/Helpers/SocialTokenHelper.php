@@ -1,7 +1,8 @@
 <?php
 
 namespace App\Helpers;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class SocialTokenHelper
@@ -32,4 +33,26 @@ class SocialTokenHelper
             throw new Exception('Token fetch failed: ' . $e->getMessage());
         }
     }
+
+    public static function getFacebookPageToken($userToken, $pageId)
+    {
+        try {
+            $response = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$pageId}", [
+                'fields' => 'access_token',
+                'access_token' => $userToken
+            ]);
+            
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['access_token'] ?? null;
+            }            
+            Log::error('Failed to get Facebook page token: ' . $response->body());
+            return null;
+            
+        } catch (Exception $e) {
+            Log::error('Error getting Facebook page token: ' . $e->getMessage());
+            return null;
+        }
+    }
+    
 }
