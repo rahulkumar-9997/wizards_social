@@ -81,22 +81,15 @@ class FacebookController extends Controller
             if (!$mainAccount) {
                 return response()->json(['error' => 'Facebook account not connected'], 400);
             }
-
-            // Get user token
             $userToken = SocialTokenHelper::getFacebookToken($mainAccount);
-            
-            // Get page access token
-            $pageToken = SocialTokenHelper::getFacebookPageToken($userToken, $fb_page_id);
-            
+            $pageToken = SocialTokenHelper::getFacebookPageToken($userToken, $fb_page_id);            
             if (!$pageToken) {
                 return response()->json(['error' => 'Failed to get Page Access Token. Please ensure you have admin access to this page.'], 400);
             }
 
             $startDate = $request->get('start_date', now()->subDays(30)->format('Y-m-d'));
-            $endDate = $request->get('end_date', now()->format('Y-m-d'));
-            
+            $endDate = $request->get('end_date', now()->format('Y-m-d'));            
             $performanceData = $this->fetchPerformanceData($fb_page_id, $pageToken, $startDate, $endDate);
-            
             $html = $this->renderDashboardHtml($fb_page_id, $performanceData);
             
             return response()->json([
@@ -171,6 +164,8 @@ class FacebookController extends Controller
             // ==========================================================
             $result['followers'] = $this->fetchFacebookFollowers($pageId, $pageToken, $since, $until, $previousSince, $previousUntil);
 
+            $result['media_view_followers_non_followers'] = $this->fetchFacebookPageViewByFollowersOrNonFollow($pageId, $pageToken, $since, $until, $previousSince, $previousUntil);
+
             // ==========================================================
             // ENGAGEMENT DATA
             // ==========================================================
@@ -180,11 +175,6 @@ class FacebookController extends Controller
             // PAGE VIEWS
             // ==========================================================
             $result['page_views'] = $this->fetchFacebookPageViews($pageId, $pageToken, $since, $until, $previousSince, $previousUntil);
-
-            // ==========================================================
-            // CTA CLICKS
-            // ==========================================================
-            $result['cta_clicks'] = $this->fetchFacebookCTAClicks($pageId, $pageToken, $since, $until, $previousSince, $previousUntil);
 
             return $result;
             
@@ -291,195 +281,382 @@ class FacebookController extends Controller
     private function fetchFacebookFollowers($pageId, $pageToken, $since, $until, $previousSince, $previousUntil)
     {
         $result = [
-            'new_current' => 0,
-            'new_previous' => 0,
-            'lost_current' => 0,
-            'lost_previous' => 0,
-            'total_current' => 0,
-            'api_description' => '',
-            'new_percent_change' => 0,
-            'lost_percent_change' => 0
+            'api_description_followers' => '',
+            'page_follow_current'   => 0,
+            'page_follow_previous'  => 0,
+            'page_follow_percent_change' => 0,
+
+            'page_unfollow_current'   => 0,
+            'page_unfollow_previous'  => 0,
+            'page_unfollow_percent_change' => 0,
+            'api_description_unfllow' => '',
         ];
 
         try {
-            // Get current total followers (Days metric)
-            $currentFansResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_follows',
-                'period' => 'day',
-                'since' => $since,
-                'until' => $until,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($currentFansResponse['data'][0]['values'])) {
-                $result['api_description'] = $currentFansResponse['data'][0]['description'] ?? '';
-                $values = $currentFansResponse['data'][0]['values'];
-                $latest = end($values);
-                $result['total_current'] = $latest['value'] ?? 0;
+            /*  Reusable Function for Any Metric */
+            $fetchValues = function ($pageId, $token, $since, $until, $metricName) {
+                $url = "https://graph.facebook.com/v24.0/{$pageId}/insights";
+
+                $params = [
+                    'metric' => $metricName,
+                    'period' => 'day',
+                    'since' => $since,
+                    'until' => $until,
+                    'access_token' => $token,
+                ];
+
+                $allValues = [];
+                $description = null;
+                while (true) {
+                    $response = Http::timeout(20)->get($url, $params)->json();
+                    if (isset($response['data'][0]['values'])) {
+                        if ($description === null) {
+                            $description = $response['data'][0]['description'] ?? '';
+                        }
+                        $allValues = array_merge($allValues, $response['data'][0]['values']);
+                    }
+                    if (isset($response['paging']['next'])) {
+                        $url = $response['paging']['next'];
+                        $params = [];
+                    } else {
+                        break;
+                    }
+                }
+
+                usort($allValues, function ($a, $b) {
+                    return strtotime($a['end_time']) <=> strtotime($b['end_time']);
+                });
+
+                return [
+                    'description' => $description,
+                    'values' => $allValues,
+                ];
+            };
+
+            /* FOLLOWERS — Current */
+            $currentFollow = $fetchValues($pageId, $pageToken, $since, $until, 'page_daily_follows_unique');
+            if (!empty($currentFollow['values'])) {
+                $result['page_follow_current'] = array_sum(array_column($currentFollow['values'], 'value'));
+                $result['api_description_followers'] = $currentFollow['description'];
             }
 
-            // CURRENT: New followers
-            $currentAddsResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_fan_adds',
-                'period' => 'day',
-                'since' => $since,
-                'until' => $until,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($currentAddsResponse['data'][0]['values'])) {
-                $result['new_current'] = collect($currentAddsResponse['data'][0]['values'])->sum('value');
+            /* FOLLOWERS — Previous */
+            $previousFollow = $fetchValues($pageId, $pageToken, $previousSince, $previousUntil, 'page_daily_follows_unique');
+
+            if (!empty($previousFollow['values'])) {
+                $result['page_follow_previous'] = array_sum(array_column($previousFollow['values'], 'value'));
             }
 
-            // CURRENT: Lost followers
-            $currentRemovesResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_fan_removes',
-                'period' => 'day',
-                'since' => $since,
-                'until' => $until,
-                'access_token' => $pageToken,
-            ])->json();
+            /* FOLLOWERS — Percent Change */
+            $result['page_follow_percent_change'] =
+                $result['page_follow_previous'] > 0
+                    ? round((($result['page_follow_current'] - $result['page_follow_previous']) / $result['page_follow_previous']) * 100, 2)
+                    : 0;
+
             
-            if (isset($currentRemovesResponse['data'][0]['values'])) {
-                $result['lost_current'] = collect($currentRemovesResponse['data'][0]['values'])->sum('value');
+
+            /* UNFOLLOWERS — Current */
+            $currentUnfollow = $fetchValues($pageId, $pageToken, $since, $until, 'page_daily_unfollows_unique');
+            if (!empty($currentUnfollow['values'])) {
+                $result['page_unfollow_current'] = array_sum(array_column($currentUnfollow['values'], 'value'));
+                $result['api_description_unfllow'] = $currentUnfollow['description'];
             }
 
-            // PREVIOUS: New followers
-            $previousAddsResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_fan_adds',
-                'period' => 'day',
-                'since' => $previousSince,
-                'until' => $previousUntil,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($previousAddsResponse['data'][0]['values'])) {
-                $result['new_previous'] = collect($previousAddsResponse['data'][0]['values'])->sum('value');
+            /* UNFOLLOWERS — Previous */
+            $previousUnfollow = $fetchValues($pageId, $pageToken, $previousSince, $previousUntil, 'page_daily_unfollows_unique');
+
+            if (!empty($previousUnfollow['values'])) {
+                $result['page_unfollow_previous'] = array_sum(array_column($previousUnfollow['values'], 'value'));
             }
 
-            // PREVIOUS: Lost followers
-            $previousRemovesResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_fan_removes',
-                'period' => 'day',
-                'since' => $previousSince,
-                'until' => $previousUntil,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($previousRemovesResponse['data'][0]['values'])) {
-                $result['lost_previous'] = collect($previousRemovesResponse['data'][0]['values'])->sum('value');
-            }
-
-            // Calculate percentages
-            $result['new_percent_change'] = $this->calculatePercentageChange(
-                $result['new_current'],
-                $result['new_previous']
-            );
-            
-            $result['lost_percent_change'] = $this->calculatePercentageChange(
-                $result['lost_current'],
-                $result['lost_previous']
-            );
-
+            /* UNFOLLOWERS — Percent Change */
+            $result['page_unfollow_percent_change'] =
+                $result['page_unfollow_previous'] > 0
+                    ? round((($result['page_unfollow_current'] - $result['page_unfollow_previous']) / $result['page_unfollow_previous']) * 100, 2)
+                    : 0;
+            Log::info('Followers/Unfollowers Result', $result);
             return $result;
-            
+
         } catch (\Exception $e) {
-            Log::error('Error fetching Facebook followers: ' . $e->getMessage());
+            Log::error('Error fetching Facebook followers/unfollowers: ' . $e->getMessage());
             return $result;
         }
     }
 
+    private function fetchFacebookPageViewByFollowersOrNonFollow($pageId, $pageToken, $since, $until, $previousSince, $previousUntil)
+    {
+        $result = [
+            'api_description_view_media_follow'    => '',
+            'api_description_view_media_unfollow'  => '',
+
+            'view_media_follow_current'   => 0,
+            'view_media_follow_previous'  => 0,
+            'view_media_follow_percent_change' => 0,
+
+            'view_media_unfollow_current'   => 0,
+            'view_media_unfollow_previous'  => 0,
+            'view_media_unfollow_percent_change' => 0,
+        ];
+
+        try {
+
+            /* INTERNAL FETCH FUNCTION */
+            $fetchMediaView = function ($pageId, $token, $since, $until) {
+
+                $url = "https://graph.facebook.com/v24.0/{$pageId}/insights";
+
+                $params = [
+                    'metric' => 'page_media_view',
+                    'period' => 'day',
+                    'since' => $since,
+                    'until' => $until,
+                    'breakdown' => 'is_from_followers',
+                    'access_token' => $token,
+                ];
+
+                $all = [];
+                $description = null;
+
+                while (true) {
+                    $response = Http::timeout(20)->get($url, $params)->json();
+
+                    if (isset($response['data'][0]['values'])) {
+
+                        if ($description === null) {
+                            $description = $response['data'][0]['description'] ?? '';
+                        }
+
+                        $all = array_merge($all, $response['data'][0]['values']);
+                    }
+
+                    if (isset($response['paging']['next'])) {
+                        $url = $response['paging']['next'];
+                        $params = [];
+                    } else {
+                        break;
+                    }
+                }
+
+                return [
+                    'description' => $description,
+                    'values' => $all
+                ];
+            };
+
+
+            /* ------------------ CURRENT PERIOD ------------------ */
+            $current = $fetchMediaView($pageId, $pageToken, $since, $until);
+
+            $result['api_description_view_media_follow']   = $current['description'];
+            $result['api_description_view_media_unfollow'] = $current['description'];
+
+            foreach ($current['values'] as $row) {
+                if ($row['is_from_followers'] == "1") {
+                    $result['view_media_follow_current'] += $row['value'];
+                } else {
+                    $result['view_media_unfollow_current'] += $row['value'];
+                }
+            }
+
+
+            /* ------------------ PREVIOUS PERIOD ------------------ */
+            $previous = $fetchMediaView($pageId, $pageToken, $previousSince, $previousUntil);
+
+            foreach ($previous['values'] as $row) {
+                if ($row['is_from_followers'] == "1") {
+                    $result['view_media_follow_previous'] += $row['value'];
+                } else {
+                    $result['view_media_unfollow_previous'] += $row['value'];
+                }
+            }
+
+
+            /* ------------------ PERCENT CHANGE ------------------ */
+            $result['view_media_follow_percent_change'] =
+                $result['view_media_follow_previous'] > 0
+                    ? round((($result['view_media_follow_current'] - $result['view_media_follow_previous']) / $result['view_media_follow_previous']) * 100, 2)
+                    : 0;
+
+            $result['view_media_unfollow_percent_change'] =
+                $result['view_media_unfollow_previous'] > 0
+                    ? round((($result['view_media_unfollow_current'] - $result['view_media_unfollow_previous']) / $result['view_media_unfollow_previous']) * 100, 2)
+                    : 0;
+
+
+            //Log::info('View Media Followers/Non-Followers Result', $result);
+            return $result;
+
+        } catch (\Exception $e) {
+            Log::error('Error in view media followers/non-followers: ' . $e->getMessage());
+            return $result;
+        }
+    }
     /**
      * Fetch Facebook Engagement Data
      */
     private function fetchFacebookEngagement($pageId, $pageToken, $since, $until, $previousSince, $previousUntil)
     {
         $result = [
-            'current' => 0,
-            'previous' => 0,
             'post_engagements_current' => 0,
             'post_engagements_previous' => 0,
             'api_description' => '',
-            'percent_change' => 0,
             'post_engagements_percent_change' => 0
         ];
 
         try {
-            // CURRENT: Page engaged users
-            $currentEngagementResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_engaged_users',
-                'period' => 'day',
-                'since' => $since,
-                'until' => $until,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($currentEngagementResponse['data'][0]['values'])) {
-                $result['api_description'] = $currentEngagementResponse['data'][0]['description'] ?? '';
-                $result['current'] = collect($currentEngagementResponse['data'][0]['values'])->sum('value');
-            }
+            $fetchPostEngagement = function ($pageId, $token, $since, $until) {
+                $url = "https://graph.facebook.com/v24.0/{$pageId}/insights";
+                $params = [
+                    'metric' => 'page_post_engagements',
+                    'period' => 'day',
+                    'since' => $since,
+                    'until' => $until,
+                    'access_token' => $token,
+                ];
 
-            // PREVIOUS: Page engaged users
-            $previousEngagementResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_engaged_users',
-                'period' => 'day',
-                'since' => $previousSince,
-                'until' => $previousUntil,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($previousEngagementResponse['data'][0]['values'])) {
-                $result['previous'] = collect($previousEngagementResponse['data'][0]['values'])->sum('value');
-            }
+                $allValues = [];
+                $description = '';
+                while (true) {
+                    $response = Http::timeout(20)->get($url, $params)->json();
+                    if (isset($response['data'][0]['values'])) {
+                        $description = $response['data'][0]['description'] ?? $description;
+                        $allValues = array_merge($allValues, $response['data'][0]['values']);
+                    }
+                    if (isset($response['paging']['next'])) {
+                        $url = $response['paging']['next'];
+                        $params = [];
+                    } else {
+                        break;
+                    }
+                }
 
-            // CURRENT: Post engagements
-            $currentPostEngagementResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_post_engagements',
-                'period' => 'day',
-                'since' => $since,
-                'until' => $until,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($currentPostEngagementResponse['data'][0]['values'])) {
-                $result['post_engagements_current'] = collect($currentPostEngagementResponse['data'][0]['values'])->sum('value');
-            }
+                $sum = collect($allValues)->sum('value');
+                return [
+                    'sum' => $sum,
+                    'description' => $description
+                ];
+            };
 
-            // PREVIOUS: Post engagements
-            $previousPostEngagementResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_post_engagements',
-                'period' => 'day',
-                'since' => $previousSince,
-                'until' => $previousUntil,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($previousPostEngagementResponse['data'][0]['values'])) {
-                $result['post_engagements_previous'] = collect($previousPostEngagementResponse['data'][0]['values'])->sum('value');
-            }
+            /* Current period */
+            $current = $fetchPostEngagement($pageId, $pageToken, $since, $until);
+            $result['post_engagements_current'] = $current['sum'];
+            $result['api_description'] = $current['description'];
 
-            // Calculate percentages
-            $result['percent_change'] = $this->calculatePercentageChange(
-                $result['current'],
-                $result['previous']
-            );
-            
+            /* Previous period */
+            $previous = $fetchPostEngagement($pageId, $pageToken, $previousSince, $previousUntil);
+            $result['post_engagements_previous'] = $previous['sum'];
+
+            /* Percent change */
             $result['post_engagements_percent_change'] = $this->calculatePercentageChange(
                 $result['post_engagements_current'],
                 $result['post_engagements_previous']
             );
-
             return $result;
-            
+
         } catch (\Exception $e) {
             Log::error('Error fetching Facebook engagement: ' . $e->getMessage());
             return $result;
         }
     }
 
-    /**
-     * Fetch Facebook Page Views
-     */
+    private function fetchVideoData($pageId, $pageToken, $startDate, $endDate)
+    {
+        $result = [
+            'video_views' => [
+                'current' => 0,
+                'previous' => 0,
+                'complete_current' => 0,
+                'complete_previous' => 0,
+                'api_description' => '',
+                'percent_change' => 0,
+                'complete_percent_change' => 0
+            ]
+        ];
+
+        try {
+            $start = Carbon::parse($startDate)->startOfDay();
+            $end = Carbon::parse($endDate)->endOfDay();
+            $days = (int) round($start->diffInDays($end));
+            
+            if ($days < 28) {
+                $days += 1;
+            }            
+            $prevEnd = $start->copy()->subDay()->endOfDay();
+            $prevStart = $prevEnd->copy()->subDays($days - 1)->startOfDay();            
+            $since = $start->timestamp;
+            $until = $end->timestamp;
+            $previousSince = $prevStart->timestamp;
+            $previousUntil = $prevEnd->timestamp;
+            /* CURRENT: Video views (3+ seconds) */
+            $currentViewsResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
+                'metric' => 'page_video_views',
+                'period' => 'day',
+                'since' => $since,
+                'until' => $until,
+                'access_token' => $pageToken,
+            ])->json();
+            
+            if (isset($currentViewsResponse['data'][0]['values'])) {
+                $result['video_views']['api_description'] = $currentViewsResponse['data'][0]['description'] ?? '';
+                $result['video_views']['current'] = collect($currentViewsResponse['data'][0]['values'])->sum('value');
+            }
+
+            /* CURRENT: Complete video views (30+ seconds)*/
+            $currentCompleteResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
+                'metric' => 'page_video_complete_views_30s',
+                'period' => 'day',
+                'since' => $since,
+                'until' => $until,
+                'access_token' => $pageToken,
+            ])->json();
+            
+            if (isset($currentCompleteResponse['data'][0]['values'])) {
+                $result['video_views']['complete_current'] = collect($currentCompleteResponse['data'][0]['values'])->sum('value');
+            }
+
+            /* PREVIOUS: Video views (3+ seconds) */
+            $previousViewsResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
+                'metric' => 'page_video_views',
+                'period' => 'day',
+                'since' => $previousSince,
+                'until' => $previousUntil,
+                'access_token' => $pageToken,
+            ])->json();
+            
+            if (isset($previousViewsResponse['data'][0]['values'])) {
+                $result['video_views']['previous'] = collect($previousViewsResponse['data'][0]['values'])->sum('value');
+            }
+
+            /* PREVIOUS: Complete video views (30+ seconds) */
+            $previousCompleteResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
+                'metric' => 'page_video_complete_views_30s',
+                'period' => 'day',
+                'since' => $previousSince,
+                'until' => $previousUntil,
+                'access_token' => $pageToken,
+            ])->json();
+            
+            if (isset($previousCompleteResponse['data'][0]['values'])) {
+                $result['video_views']['complete_previous'] = collect($previousCompleteResponse['data'][0]['values'])->sum('value');
+            }
+            $result['video_views']['percent_change'] = $this->calculatePercentageChange(
+                $result['video_views']['current'],
+                $result['video_views']['previous']
+            );
+            
+            $result['video_views']['complete_percent_change'] = $this->calculatePercentageChange(
+                $result['video_views']['complete_current'],
+                $result['video_views']['complete_previous']
+            );
+
+            return $result;
+            
+        } catch (\Exception $e) {
+            Log::error('Error fetching Facebook video data: ' . $e->getMessage());
+            return $result;
+        }
+    }
+    
     private function fetchFacebookPageViews($pageId, $pageToken, $since, $until, $previousSince, $previousUntil)
     {
         $result = [
@@ -490,7 +667,7 @@ class FacebookController extends Controller
         ];
 
         try {
-            // CURRENT: Page views
+            /* CURRENT: Page views */
             $currentResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
                 'metric' => 'page_views_total',
                 'period' => 'day',
@@ -504,7 +681,7 @@ class FacebookController extends Controller
                 $result['current'] = collect($currentResponse['data'][0]['values'])->sum('value');
             }
 
-            // PREVIOUS: Page views
+            /* PREVIOUS: Page views */
             $previousResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
                 'metric' => 'page_views_total',
                 'period' => 'day',
@@ -516,8 +693,6 @@ class FacebookController extends Controller
             if (isset($previousResponse['data'][0]['values'])) {
                 $result['previous'] = collect($previousResponse['data'][0]['values'])->sum('value');
             }
-
-            // Calculate percentage change
             $result['percent_change'] = $this->calculatePercentageChange(
                 $result['current'],
                 $result['previous']
@@ -527,60 +702,6 @@ class FacebookController extends Controller
             
         } catch (\Exception $e) {
             Log::error('Error fetching Facebook page views: ' . $e->getMessage());
-            return $result;
-        }
-    }
-
-    /**
-     * Fetch Facebook CTA Clicks
-     */
-    private function fetchFacebookCTAClicks($pageId, $pageToken, $since, $until, $previousSince, $previousUntil)
-    {
-        $result = [
-            'current' => 0,
-            'previous' => 0,
-            'api_description' => '',
-            'percent_change' => 0
-        ];
-
-        try {
-            // CURRENT: CTA clicks
-            $currentResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_total_actions',
-                'period' => 'day',
-                'since' => $since,
-                'until' => $until,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($currentResponse['data'][0]['values'])) {
-                $result['api_description'] = $currentResponse['data'][0]['description'] ?? '';
-                $result['current'] = collect($currentResponse['data'][0]['values'])->sum('value');
-            }
-
-            // PREVIOUS: CTA clicks
-            $previousResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_total_actions',
-                'period' => 'day',
-                'since' => $previousSince,
-                'until' => $previousUntil,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($previousResponse['data'][0]['values'])) {
-                $result['previous'] = collect($previousResponse['data'][0]['values'])->sum('value');
-            }
-
-            // Calculate percentage change
-            $result['percent_change'] = $this->calculatePercentageChange(
-                $result['current'],
-                $result['previous']
-            );
-
-            return $result;
-            
-        } catch (\Exception $e) {
-            Log::error('Error fetching Facebook CTA clicks: ' . $e->getMessage());
             return $result;
         }
     }
@@ -637,9 +758,8 @@ class FacebookController extends Controller
                 'sorry' => 'page_actions_post_reactions_sorry_total',
                 'anger' => 'page_actions_post_reactions_anger_total'
             ];
-
             foreach ($reactionMetrics as $key => $metric) {
-                // Current period
+                /* Current period */
                 $currentResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
                     'metric' => $metric,
                     'period' => 'day',
@@ -656,7 +776,7 @@ class FacebookController extends Controller
                     $result['reactions']['total_current'] += $result['reactions'][$key . '_current'];
                 }
 
-                // Previous period
+                /* Previous period */
                 $previousResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
                     'metric' => $metric,
                     'period' => 'day',
@@ -671,7 +791,6 @@ class FacebookController extends Controller
                 }
             }
 
-            // Calculate total percentage change
             $result['reactions']['percent_change'] = $this->calculatePercentageChange(
                 $result['reactions']['total_current'],
                 $result['reactions']['total_previous']
@@ -683,127 +802,46 @@ class FacebookController extends Controller
             Log::error('Error fetching Facebook reactions: ' . $e->getMessage());
             return $result;
         }
-    }
-
-    /**
-     * Fetch Facebook Video Data
-     */
-    private function fetchVideoData($pageId, $pageToken, $startDate, $endDate)
-    {
-        $result = [
-            'video_views' => [
-                'current' => 0,
-                'previous' => 0,
-                'complete_current' => 0,
-                'complete_previous' => 0,
-                'api_description' => '',
-                'percent_change' => 0,
-                'complete_percent_change' => 0
-            ]
-        ];
-
-        try {
-            $start = Carbon::parse($startDate)->startOfDay();
-            $end = Carbon::parse($endDate)->endOfDay();
-            $days = (int) round($start->diffInDays($end));
-            
-            if ($days < 28) {
-                $days += 1;
-            }
-            
-            $prevEnd = $start->copy()->subDay()->endOfDay();
-            $prevStart = $prevEnd->copy()->subDays($days - 1)->startOfDay();
-            
-            $since = $start->timestamp;
-            $until = $end->timestamp;
-            $previousSince = $prevStart->timestamp;
-            $previousUntil = $prevEnd->timestamp;
-
-            // CURRENT: Video views (3+ seconds)
-            $currentViewsResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_video_views',
-                'period' => 'day',
-                'since' => $since,
-                'until' => $until,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($currentViewsResponse['data'][0]['values'])) {
-                $result['video_views']['api_description'] = $currentViewsResponse['data'][0]['description'] ?? '';
-                $result['video_views']['current'] = collect($currentViewsResponse['data'][0]['values'])->sum('value');
-            }
-
-            // CURRENT: Complete video views (30+ seconds)
-            $currentCompleteResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_video_complete_views_30s',
-                'period' => 'day',
-                'since' => $since,
-                'until' => $until,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($currentCompleteResponse['data'][0]['values'])) {
-                $result['video_views']['complete_current'] = collect($currentCompleteResponse['data'][0]['values'])->sum('value');
-            }
-
-            // PREVIOUS: Video views (3+ seconds)
-            $previousViewsResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_video_views',
-                'period' => 'day',
-                'since' => $previousSince,
-                'until' => $previousUntil,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($previousViewsResponse['data'][0]['values'])) {
-                $result['video_views']['previous'] = collect($previousViewsResponse['data'][0]['values'])->sum('value');
-            }
-
-            // PREVIOUS: Complete video views (30+ seconds)
-            $previousCompleteResponse = Http::timeout(20)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_video_complete_views_30s',
-                'period' => 'day',
-                'since' => $previousSince,
-                'until' => $previousUntil,
-                'access_token' => $pageToken,
-            ])->json();
-            
-            if (isset($previousCompleteResponse['data'][0]['values'])) {
-                $result['video_views']['complete_previous'] = collect($previousCompleteResponse['data'][0]['values'])->sum('value');
-            }
-
-            // Calculate percentage changes
-            $result['video_views']['percent_change'] = $this->calculatePercentageChange(
-                $result['video_views']['current'],
-                $result['video_views']['previous']
-            );
-            
-            $result['video_views']['complete_percent_change'] = $this->calculatePercentageChange(
-                $result['video_views']['complete_current'],
-                $result['video_views']['complete_previous']
-            );
-
-            return $result;
-            
-        } catch (\Exception $e) {
-            Log::error('Error fetching Facebook video data: ' . $e->getMessage());
-            return $result;
-        }
-    }
-
-    /**
-     * Render Dashboard HTML
-     */
+    }    
+    
     private function renderDashboardHtml($pageId, $performanceData)
     {
         if (isset($performanceData['error'])) {
             return "<div class='alert alert-danger'>Error: {$performanceData['error']}</div>";
         }
-        
+        Log::info('Facebook performance data', $performanceData);        
         $dateRange = $performanceData['date_range']['display'] ?? '';
         
         $reach = $performanceData['reach'] ?? [];
         $followers = $performanceData['followers'] ?? [];
+
+        $page_followers_current = (int)($followers['page_follow_current'] ?? 0);
+        $page_followers_previous = (int)($followers['page_follow_previous'] ?? 0);
+        $page_followers_percent = $followers['page_follow_percent_change'] ?? 0;
+        $page_followers_api_description = $followers['api_description_followers'] ?? '';
+
+        $page_unfollowers_current = (int)($followers['page_unfollow_current'] ?? 0);
+        $page_unfollowers_previous = (int)($followers['page_unfollow_previous'] ?? 0);
+        $page_unfollowers_percent = $followers['page_unfollow_percent_change'] ?? 0;
+        $page_unfollowers_api_description = $followers['api_description_unfllow'] ?? '';
+
+        $mediaView = $performanceData['media_view_followers_non_followers'] ?? [];
+
+        /* Followers Media View */
+        $view_media_follow_current  = (int)($mediaView['view_media_follow_current'] ?? 0);
+        $view_media_follow_previous = (int)($mediaView['view_media_follow_previous'] ?? 0);
+        $view_media_follow_percent  = $mediaView['view_media_follow_percent_change'] ?? 0;
+
+        /* Non-Followers Media View */
+        $view_media_unfollow_current  = (int)($mediaView['view_media_unfollow_current'] ?? 0);
+        $view_media_unfollow_previous = (int)($mediaView['view_media_unfollow_previous'] ?? 0);
+        $view_media_unfollow_percent  = $mediaView['view_media_unfollow_percent_change'] ?? 0;
+
+        /* API Description */
+        $api_description_view_media_follow   = $mediaView['api_description_view_media_follow'] ?? '';
+        $api_description_view_media_unfollow = $mediaView['api_description_view_media_unfollow'] ?? '';
+
+
         $engagement = $performanceData['engagement'] ?? [];
         $pageViews = $performanceData['page_views'] ?? [];
         $ctaClicks = $performanceData['cta_clicks'] ?? [];
@@ -822,7 +860,7 @@ class FacebookController extends Controller
                 <div class="reach-section mb-4">
                     <div class="row g-4">
                         <!-- Reach Section -->
-                        <div class="col-md-6 reach col-sm-6 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-0 pe-xl-0 ps-xl-2">
+                        <div class="col-md-4 reach col-sm-4 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-0 pe-xl-0 ps-xl-2">
                             <div class="metric-card">
                                 <div class="metric-header">
                                     <h4>
@@ -875,59 +913,125 @@ class FacebookController extends Controller
                         </div>
 
                         <!-- Followers Section -->
-                        <div class="col-md-6 followers col-sm-6 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-0 pe-xl-0 ps-xl-2">
+                        <div class="col-md-4 followers col-sm-4 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-0 pe-xl-0 ps-xl-2">
                             <div class="metric-card">
                                 <div class="metric-header">
                                     <h4>
-                                        Followers
-                                        <i class="bx bx-question-mark text-primary" 
-                                           style="cursor: pointer; font-size: 18px;" 
-                                           data-bs-toggle="tooltip" data-bs-placement="top" 
-                                           data-bs-custom-class="success-tooltip"
-                                           data-bs-title="' . e($followers['api_description'] ?? '') . '">
-                                        </i>
+                                        Followers                                        
                                     </h4>
                                 </div>
                                 <div class="metric-body">
                                     <div class="row">
-                                        <div class="col-md-6 col-sm-6 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2">
+                                        <div class="col-md-12 col-sm-12 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2">
                                             <div class="metric-card">
                                                 <div class="metric-header">
-                                                    <h5>New Followers</h5>
+                                                    <h5>
+                                                        Followers
+                                                        <i class="bx bx-question-mark text-primary" 
+                                                            style="cursor: pointer; font-size: 18px;" 
+                                                            data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                            data-bs-custom-class="success-tooltip"
+                                                            data-bs-title="'. $page_followers_api_description .'">
+                                                        </i>
+                                                    </h5>
                                                 </div>
                                                 <div class="metric-body">
                                                     <table class="table table-sm mb-2 align-middle text-center">
                                                         <tr>
-                                                            <th><h3 class="mb-0">' . $this->formatNumber($followers['new_previous'] ?? 0) . '</h3></th>
-                                                            <th><h3 class="mb-0">' . $this->formatNumber($followers['new_current'] ?? 0) . '</h3></th>
+                                                            <th><h3 class="mb-0">' . $this->formatNumber($page_followers_previous ?? 0) . '</h3></th>
+                                                            <th><h3 class="mb-0">' . $this->formatNumber($page_followers_current ?? 0) . '</h3></th>
                                                         </tr>
                                                         <tr>
                                                             <td class="bg-black text-light">Previous</td>
                                                             <td class="bg-black text-light">Current</td>
                                                         </tr>
                                                         <tr>
-                                                            <td colspan="2" class="' . ($followers['new_percent_change'] > 0 ? 'positive' : ($followers['new_percent_change'] < 0 ? 'negative' : 'neutral')) . '">
-                                                                <h4 class="mb-0">' . ($followers['new_percent_change'] > 0 ? "▲ +" : ($followers['new_percent_change'] < 0 ? "▼ " : "➖ ")) . abs($followers['new_percent_change']) . '%</h4>
+                                                            <td colspan="2" class="' . ($page_followers_percent > 0 ? 'positive' : ($page_followers_percent < 0 ? 'negative' : 'neutral')) . '">
+                                                                <h4 class="mb-0">' . ($page_followers_percent > 0 ? "▲ +" : ($page_followers_percent < 0 ? "▼ " : "➖ ")) . ($page_followers_percent) . '%</h4>
                                                             </td>
                                                         </tr>
                                                     </table>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-6 col-sm-6 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2">
+                                        <div class="col-md-12 col-sm-12 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2">
                                             <div class="metric-card">
                                                 <div class="metric-header">
-                                                    <h5>Total Followers</h5>
+                                                    <h5>
+                                                        Unfollowers
+                                                        <i class="bx bx-question-mark text-primary" 
+                                                            style="cursor: pointer; font-size: 18px;" 
+                                                            data-bs-toggle="tooltip" data-bs-placement="top" 
+                                                            data-bs-custom-class="success-tooltip"
+                                                            data-bs-title="' . $page_unfollowers_api_description .'">
+                                                        </i>
+                                                    </h5>
                                                 </div>
                                                 <div class="metric-body">
-                                                    <div class="text-center">
-                                                        <h1 class="text-primary">' . $this->formatNumber($followers['total_current'] ?? 0) . '</h1>
-                                                        <small class="text-muted">Current Total</small>
-                                                    </div>
+                                                    <table class="table table-sm mb-2 align-middle text-center">
+                                                        <tr>
+                                                            <th><h3 class="mb-0">' . $this->formatNumber($page_unfollowers_previous ?? 0) . '</h3></th>
+                                                            <th><h3 class="mb-0">' . $this->formatNumber($page_unfollowers_current ?? 0) . '</h3></th>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="bg-black text-light">Previous</td>
+                                                            <td class="bg-black text-light">Current</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td colspan="2" class="' . ($page_unfollowers_percent > 0 ? 'positive' : ($page_unfollowers_percent < 0 ? 'negative' : 'neutral')) . '">
+                                                                <h4 class="mb-0">' . ($page_unfollowers_percent > 0 ? "▲ +" : ($page_unfollowers_percent < 0 ? "▼ " : "➖ ")) . ($page_unfollowers_percent) . '%</h4>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--View by Followers and nonfollowers-->
+                        <div class="col-md-4 view col-sm-4 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-1 pe-xl-0 ps-xl-2 mb-1">
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <h4>
+                                        View By Followers & Non Followers
+                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="'.$api_description_view_media_follow.'">
+                                        </i> 
+                                    </h4>
+                                </div>
+                                <div class="metric-body">
+                                    <table class="table table-sm mb-2 align-middle text-center">
+                                        <tr>
+                                            <td colspan="2" class="bg-black text-light">Current Month</td>                                        
+                                        </tr>
+                                        <tr>
+                                            <td><h4 class="mb-0">'.$this->formatNumber($view_media_follow_current).'</h4></td>
+                                            <td><h4 class="mb-0">'.$this->formatNumber($view_media_unfollow_current).'</h4></td>
+                                        </tr>
+                                        
+                                        <tr>
+                                            <td class="bg-success text-light">Followers</td>
+                                            <td class="bg-success text-light">Non-Followers</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="bg-black text-light">Previous Month</td>                                        
+                                        </tr>
+                                        <tr>
+                                            <td class="bg-success text-light">Followers</td>
+                                            <td class="bg-success text-light">Non-Followers</td>
+                                        </tr>
+
+                                        <tr>
+                                            <td><h4 class="mb-0">'.$this->formatNumber($view_media_follow_previous).'</h4></td>
+                                            <td><h4 class="mb-0">'.$this->formatNumber($view_media_unfollow_previous).'</h4></td>
+                                        </tr>
+                                        <!--<tr>
+                                            <td colspan="2" class="negative">
+                                                <h4 class="mb-0">Followers: '.$view_media_follow_percent.'% | Non-Followers: '.$view_media_unfollow_percent.'%</h4>
+                                            </td>
+                                        </tr>-->  
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -936,40 +1040,7 @@ class FacebookController extends Controller
 
                 <!-- Engagement & Post Engagements -->
                 <div class="row g-4">
-                    <div class="col-md-6 col-sm-6">
-                        <div class="metric-card">
-                            <div class="metric-header">
-                                <h4>
-                                    Engagement
-                                    <i class="bx bx-question-mark text-primary" 
-                                       style="cursor: pointer; font-size: 18px;" 
-                                       data-bs-toggle="tooltip" data-bs-placement="top" 
-                                       data-bs-custom-class="success-tooltip"
-                                       data-bs-title="' . e($engagement['api_description'] ?? '') . '">
-                                    </i>
-                                </h4>
-                            </div>
-                            <div class="metric-body">
-                                <table class="table table-sm mb-2 align-middle text-center">
-                                    <tr>
-                                        <th><h3 class="mb-0">' . $this->formatNumber($engagement['previous'] ?? 0) . '</h3></th>
-                                        <th><h3 class="mb-0">' . $this->formatNumber($engagement['current'] ?? 0) . '</h3></th>
-                                    </tr>
-                                    <tr>
-                                        <td class="bg-black text-light">Previous</td>
-                                        <td class="bg-black text-light">Current</td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="2" class="' . ($engagement['percent_change'] > 0 ? 'positive' : ($engagement['percent_change'] < 0 ? 'negative' : 'neutral')) . '">
-                                            <h4 class="mb-0">' . ($engagement['percent_change'] > 0 ? "▲ +" : ($engagement['percent_change'] < 0 ? "▼ " : "➖ ")) . abs($engagement['percent_change']) . '%</h4>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6 col-sm-6">
+                    <div class="col-md-12 col-sm-12">
                         <div class="metric-card">
                             <div class="metric-header">
                                 <h4>
@@ -978,7 +1049,7 @@ class FacebookController extends Controller
                                        style="cursor: pointer; font-size: 18px;" 
                                        data-bs-toggle="tooltip" data-bs-placement="top" 
                                        data-bs-custom-class="success-tooltip"
-                                       data-bs-title="Total engagements on posts">
+                                       data-bs-title="'.$engagement['api_description'].'">
                                     </i>
                                 </h4>
                             </div>
@@ -1095,7 +1166,7 @@ class FacebookController extends Controller
 
                 <!-- Video Views, Page Views & CTA -->
                 <div class="row mt-4">
-                    <div class="col-md-4 col-sm-6">
+                    <div class="col-md-6 col-sm-6">
                         <div class="metric-card">
                             <div class="metric-header">
                                 <h4>
@@ -1132,8 +1203,7 @@ class FacebookController extends Controller
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-md-4 col-sm-6">
+                    <div class="col-md-6 col-sm-6">
                         <div class="metric-card">
                             <div class="metric-header">
                                 <h4>
@@ -1164,40 +1234,7 @@ class FacebookController extends Controller
                                 </table>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="col-md-4 col-sm-6">
-                        <div class="metric-card">
-                            <div class="metric-header">
-                                <h4>
-                                    CTA Clicks
-                                    <i class="bx bx-question-mark text-primary" 
-                                       style="cursor: pointer; font-size: 18px;" 
-                                       data-bs-toggle="tooltip" data-bs-placement="top" 
-                                       data-bs-custom-class="success-tooltip"
-                                       data-bs-title="' . e($ctaClicks['api_description'] ?? '') . '">
-                                    </i>
-                                </h4>
-                            </div>
-                            <div class="metric-body">
-                                <table class="table table-sm mb-2 align-middle text-center">
-                                    <tr>
-                                        <th><h3 class="mb-0">' . $this->formatNumber($ctaClicks['previous'] ?? 0) . '</h3></th>
-                                        <th><h3 class="mb-0">' . $this->formatNumber($ctaClicks['current'] ?? 0) . '</h3></th>
-                                    </tr>
-                                    <tr>
-                                        <td class="bg-black text-light">Previous</td>
-                                        <td class="bg-black text-light">Current</td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="2" class="' . ($ctaClicks['percent_change'] > 0 ? 'positive' : ($ctaClicks['percent_change'] < 0 ? 'negative' : 'neutral')) . '">
-                                            <h4 class="mb-0">' . ($ctaClicks['percent_change'] > 0 ? "▲ +" : ($ctaClicks['percent_change'] < 0 ? "▼ " : "➖ ")) . abs($ctaClicks['percent_change']) . '%</h4>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                    </div>                    
                 </div>
             </div>
         </div>';
@@ -1205,9 +1242,6 @@ class FacebookController extends Controller
         return $html;
     }
 
-    /**
-     * Helper Methods
-     */
     private function calculatePercentageChange($current, $previous)
     {
         if ($previous == 0) {
@@ -1246,12 +1280,9 @@ class FacebookController extends Controller
         return 'text-muted';
     }
 
-    /**
-     * Additional Methods (similar to Instagram controller)
-     */
-    public function getAudienceTopLocations(Request $request, $pageId)
+    
+    public function getFacebookFollowersTopLocations(Request $request, $pageId)
     {
-        // Similar to Instagram method but for Facebook
         try {
             $user = Auth::user();
             $mainAccount = SocialAccount::where('user_id', $user->id)
@@ -1265,18 +1296,21 @@ class FacebookController extends Controller
             
             $userToken = SocialTokenHelper::getFacebookToken($mainAccount);
             $pageToken = SocialTokenHelper::getFacebookPageToken($userToken, $pageId);
-            
-            $timeframe = $request->get('timeframe', 'this_month');
-            
+            $since_date = $request->input('since', strtotime('-28 days'));
+            $until_date = $request->input('until', strtotime('yesterday'));
+            $start = Carbon::parse($since_date)->startOfDay();
+            $end = Carbon::parse($until_date)->endOfDay();            
+            $since = $start->timestamp;
+            $until = $end->timestamp;
             $response = Http::timeout(30)->get("https://graph.facebook.com/v24.0/{$pageId}/insights", [
-                'metric' => 'page_fans_city',
-                'period' => 'lifetime',
+                'metric' => 'page_follows_city',
+                'period' => 'day',
+                'since' => $since,
+                'until' => $until,
                 'access_token' => $pageToken,
             ])->json();
-            
-            // Process response similar to Instagram method
-            // ...
-            
+                
+                        
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()]);
         }
@@ -1324,6 +1358,4 @@ class FacebookController extends Controller
             return response()->json(['success' => false, 'error' => $e->getMessage()]);
         }
     }
-
-    // Add other methods as needed (post insights, charts, etc.)
 }

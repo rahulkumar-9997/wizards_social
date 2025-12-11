@@ -82,6 +82,7 @@ Route::middleware(['auth', 'menu.access'])->group(function () {
     Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');            
 
     Route::get('facebook-summary/{id}', [FacebookController::class, 'facebookMainIndex'])->name('facebook.report');
+    Route::get('facebook/{pageId}/follower-audience-top-loacation', [FacebookController::class, 'getFacebookFollowersTopLocations'])->name('facebook.audience.locations');
     Route::get('facebook-html/{id}', [FacebookController::class, 'facebookHtmlAjax'])->name('facebook.fetch.html');
     Route::get('face-ads', [AdsFacebookController::class, 'mainIndex'])->name('face.ads');
     Route::get('/facebook/ads-summary/{adAccountId}', [AdsFacebookController::class, 'getAdsSummary'])->name('facebook.ads.summary');
