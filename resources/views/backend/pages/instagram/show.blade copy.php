@@ -513,43 +513,8 @@
             });
         }
     </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const downloadBtn = document.getElementById('downloadPdf');            
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', async function(e) {
-                    e.preventDefault();                    
-                    const button = this;
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '<i class="bx bx-loader bx-spin"></i> Generating PDF...';
-                    button.disabled = true;
-                    
-                    try {
-                        const currentRange = $('.daterange').val();
-                        let startDate, endDate;                        
-                        if (currentRange) {
-                            [startDate, endDate] = currentRange.split(' - ');
-                        } else {
-                            startDate = moment().subtract(28, 'days').format('YYYY-MM-DD');
-                            endDate = moment().subtract(1, 'days').format('YYYY-MM-DD');
-                        }
-                        const instagramId = window.instagram_id;
-                        const pdfUrl = `${INSTAGRAM_BASE_URL}/${instagramId}/generate-pdf?start_date=${startDate}&end_date=${endDate}`;
-                        window.open(pdfUrl, '_blank');
-                        
-                    } catch (error) {
-                        console.error('PDF generation error:', error);
-                        alert('Error generating PDF. Please try again.');
-                    } finally {
-                        button.innerHTML = originalText;
-                        button.disabled = false;
-                    }
-                });
-            }
-        });
-    </script>
     <!--generate a pdf file-->
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <script>
@@ -731,6 +696,6 @@
                 });
             });
         });
-    </script> -->
+    </script>
 
     @endpush

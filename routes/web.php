@@ -16,6 +16,7 @@ use App\Http\Controllers\Backend\AdsFacebookController;
 use App\Http\Controllers\Backend\FacebookLoginController;
 use App\Http\Controllers\Backend\FacebookController;
 use App\Http\Controllers\Backend\InstagramController;
+use App\Http\Controllers\Backend\InstagramPdfController;
 use App\Http\Controllers\Backend\YoutubeController;
 use Illuminate\Http\Request;
 
@@ -80,6 +81,7 @@ Route::middleware(['auth', 'menu.access'])->group(function () {
 
     Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])->name('instagram.post.insights.page');    
     Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');            
+    Route::get('/instagram/{id}/generate-pdf', [InstagramPdfController::class, 'generatePdfReport'])->name('instagram.generate.pdf');
 
     Route::get('facebook-summary/{id}', [FacebookController::class, 'facebookMainIndex'])->name('facebook.report');
     Route::get('facebook/{pageId}/follower-audience-top-loacation', [FacebookController::class, 'getFacebookFollowersTopLocations'])->name('facebook.audience.locations');
