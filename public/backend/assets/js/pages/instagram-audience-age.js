@@ -26,7 +26,7 @@ $(document).ready(function () {
                     return;
                 }
 
-                $('#audienceAgeGroupContainer').html('<canvas id="audienceAgeGroupChart" height="450"></canvas>');
+                $('#audienceAgeGroupContainer').html('<canvas id="audienceAgeGroupChart" height="500"></canvas>');
                 const ctx = document.getElementById('audienceAgeGroupChart').getContext('2d');
 
                 if (audienceAgeChart) audienceAgeChart.destroy();
@@ -47,7 +47,7 @@ $(document).ready(function () {
                             {
                                 label: 'Male',
                                 data: res.male,
-                                backgroundColor: '#007bff',
+                                backgroundColor: '#003976ff',
                             },
                             {
                                 label: 'Unknown',
@@ -62,7 +62,7 @@ $(document).ready(function () {
                         plugins: {
                             legend: {
                                 position: 'top',
-                                labels: { boxWidth: 20, padding: 10 },
+                                labels: { boxWidth: 25, padding: 10 },
                             },
                             title: {
                                 display: false,
@@ -71,7 +71,7 @@ $(document).ready(function () {
                                 anchor: 'end',
                                 align: 'top',
                                 formatter: (val) => (val > 0 ? val : ''),
-                                font: { size: 11, weight: 'bold' },
+                                font: { size: 15, weight: 'bold', color: 'black' },
                             },
                         },
                         scales: {

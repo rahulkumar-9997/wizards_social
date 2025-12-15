@@ -74,9 +74,9 @@ $(document).ready(function () {
                             }
                         },
                         style: {
-                            fontSize: '12px',
+                            fontSize: '15px',
                             fontWeight: '600',
-                            colors: ['#fff']
+                            colors: ['#000000ff']
                         },
                         background: {
                             enabled: false
@@ -95,8 +95,8 @@ $(document).ready(function () {
                         position: 'bottom',
                         horizontalAlign: 'center',
                         floating: false,
-                        fontSize: '13px',
-                        labels: { colors: '#333' },
+                        fontSize: '15px',
+                        labels: { colors: '#000000ff' },
                         itemMargin: { horizontal: 10, vertical: 4 },
                         formatter: function (seriesName, opts) {
                             const val = seriesData[opts.seriesIndex];
@@ -114,10 +114,10 @@ $(document).ready(function () {
                         }
                     },
                     title: {
-                        text: `Total Views: ${totalViews.toLocaleString()} (${startText} → ${endText})`,
+                        text: `Total Views: ${totalViews.toLocaleString()}`,
                         align: 'center',
                         style: {
-                            fontSize: '16px',
+                            fontSize: '15px',
                             fontWeight: 'bold',
                             color: '#099901ff'
                         }

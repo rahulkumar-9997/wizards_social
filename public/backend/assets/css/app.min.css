@@ -40431,13 +40431,8 @@ button.gridjs-sort-desc {
 
 
 .apexcharts-legend-text {
-
-  color: var(--bs-body-color) !important;
-
   font-family: var(--bs-font-sans-serif) !important;
-
-  font-size: 13px !important;
-
+  font-size: 15px !important;
 }
 
 
@@ -45357,7 +45352,21 @@ text-dark {
   background-color: white;
 
 }
-.export_pdf_report {
-  
+.export_pdf_report p,
+.export_pdf_report th,
+.export_pdf_report th{
+  font-size: 18px;
+  font-weight: 500;
+}
+.export_pdf_report h3,
+.export_pdf_report h5
+{
+  font-weight: 900;
+}
+.export_pdf_report .card{
+  margin-bottom: 5px;
+}
+.export_pdf_report span{
+  font-size: 14px;
 }
 /*rahul css*/

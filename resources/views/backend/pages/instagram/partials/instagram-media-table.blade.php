@@ -1,5 +1,5 @@
 @if(!empty($startDate) && !empty($endDate))
-<div class="mb-2">
+<div class="mb-2 showing-post">
     <strong>Showing posts from {{ $startDate }} to {{ $endDate }}</strong>
 </div>
 @endif

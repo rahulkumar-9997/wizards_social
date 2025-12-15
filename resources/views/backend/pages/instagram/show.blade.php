@@ -4,6 +4,10 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
 
 <style>
+    .pdf-only {
+        display: none;
+    }
+
     .metric-card {
         background: #fff;
         border-radius: 16px;
@@ -42,7 +46,7 @@
 
     .metric-body table td,
     .metric-body table th {
-        padding: 8px;
+        padding: 4px;
     }
 
 
@@ -56,7 +60,7 @@
 
     .account-enga {
         flex: 1;
-        padding: 8px;
+        padding: 4px;
     }
 
     .account-enga h4 {
@@ -108,8 +112,8 @@
 
     .metrics-table td {
         vertical-align: middle;
-        font-size: 14px;
-        padding: 10px;
+        font-size: 16px;
+        padding: 4px;
     }
 
     .metrics-table tr:nth-child(even) {
@@ -120,7 +124,7 @@
         background: #222;
         color: #fff;
         text-align: center;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 500;
         letter-spacing: .5px;
     }
@@ -136,6 +140,10 @@
         height: 40px;
         background: transparent !important;
     }
+
+    .location-table td {
+        padding: 4px;
+    }
 </style>
 
 @endpush
@@ -146,14 +154,14 @@
         'selectedInstagramId' => $instagram['id'] ?? null
         ])
         <div class="col-xl-9 export_pdf_report">
-            <div class="pdf-header" style="display: none;">
+            <div class="pdf-header pdf-only" style="display: none;">
                 <div class="header-content" style="padding: 10px; border-bottom: 5px solid #fd7e03; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <h1 style="font-size: 30px; color: #000000; margin: 0; font-weight: bold;">Instagram Report</h1>
-                            <p style="font-size: 18px; color: #000000; margin: 5px 0 0 0;">For the Date Range of: 
+                            <p style="font-size: 18px; color: #000000; margin: 5px 0 0 0;">For the Date Range of:
                                 <span id="report-date">
-                                    14-Nov-25 to 11-Dec-25 
+                                   
                                 </span>
                             </p>
                         </div>
@@ -161,9 +169,9 @@
                             <img src="{{ asset('backend/assets/logo.png') }}" style="width:177px; height:45px;" class="logo-lg" alt="logo light" loading="lazy">
                         </div>
                     </div>
-                </div>                
+                </div>
             </div>
-            <div class="pdf-footer" style="display: none;">
+            <div class="pdf-footer pdf-only" style="display: none;">
                 <div class="header-content" style="padding: 10px; border-top: 5px solid #fd7e03; margin-top: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -175,7 +183,7 @@
                                     +91-7339474554
                                 </h4>
                             </div>
-                            
+
                         </div>
                         <div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -191,13 +199,13 @@
                             </div>
                         </div>
                     </div>
-                </div>                
+                </div>
             </div>
             <div class="row mb-2 pdf-content">
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center gap-1">
-                            <h4 class="card-title mb-0">Instagram Integration - Connected</h4>
+                            <h4 class="card-title mb-0 instagram_connected">Instagram Integration - Connected</h4>
                             <button id="downloadPdf" class="btn btn-outline-primary pdf-download-btn no-print">
                                 <i class="bx bx-download"></i> Download PDF Report
                             </button>
@@ -384,7 +392,7 @@
     @endsection
 
     @push('scripts')
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <script>
@@ -513,224 +521,183 @@
             });
         }
     </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const downloadBtn = document.getElementById('downloadPdf');            
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', async function(e) {
-                    e.preventDefault();                    
-                    const button = this;
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '<i class="bx bx-loader bx-spin"></i> Generating PDF...';
-                    button.disabled = true;
-                    
-                    try {
-                        const currentRange = $('.daterange').val();
-                        let startDate, endDate;                        
-                        if (currentRange) {
-                            [startDate, endDate] = currentRange.split(' - ');
-                        } else {
-                            startDate = moment().subtract(28, 'days').format('YYYY-MM-DD');
-                            endDate = moment().subtract(1, 'days').format('YYYY-MM-DD');
-                        }
-                        const instagramId = window.instagram_id;
-                        const pdfUrl = `${INSTAGRAM_BASE_URL}/${instagramId}/generate-pdf?start_date=${startDate}&end_date=${endDate}`;
-                        window.open(pdfUrl, '_blank');
-                        
-                    } catch (error) {
-                        console.error('PDF generation error:', error);
-                        alert('Error generating PDF. Please try again.');
-                    } finally {
-                        button.innerHTML = originalText;
-                        button.disabled = false;
-                    }
-                });
-            }
-        });
-    </script>
+
     <!--generate a pdf file-->
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const downloadBtn = document.getElementById('downloadPdf');
-            downloadBtn.addEventListener('click', async function() {
-                const button = this;
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="bx bx-loader bx-spin"></i> Generating PDF...';
-                button.disabled = true;
-                const allVideos = document.querySelectorAll('video.video-section');
-                allVideos.forEach(video => {
-                    video.style.display = 'none';
-                    video.style.visibility = 'hidden';
-                    video.style.position = 'absolute';
-                });
-                const allPdfImgs = document.querySelectorAll('img.pdf-img');
-                allPdfImgs.forEach(img => {
-                    img.style.display = 'block';
-                    img.style.visibility = 'visible';
-                });
+/* ================= FOOTER IMAGE HELPER ================= */
+async function getFooterImage() {
+    const footer = document.querySelector('.pdf-footer');
+    if (!footer) return null;
+    footer.style.display = 'block';
+    const canvas = await html2canvas(footer, {
+        scale: window.devicePixelRatio * 2,
+        backgroundColor: '#ffffff',
+        useCORS: true
+    });
+    footer.style.display = 'none';
+    return canvas.toDataURL('image/png');
+}
 
-                const element = document.querySelector('.export_pdf_report');
-                if (!element) {
-                    alert('Export element not found');
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                    allVideos.forEach(video => {
-                        video.style.display = '';
-                        video.style.visibility = '';
-                        video.style.position = '';
-                    });
-                    return;
-                }
+/* ================= DATE FORMAT HELPER ================= */
+function formatDateRange(range) {
+    if (!range) return 'N/A';
+    const parts = range.split('-').map(p => p.trim());
+    if (parts.length < 4) return range;
+    const startDate = `${parts[0]}-${parts[1]}-${parts[2]}`;
+    const endDate   = `${parts[3]}-${parts[4]}-${parts[5]}`;
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const start = new Date(startDate);
+    const end   = new Date(endDate);
+    const startStr = `${start.getDate().toString().padStart(2,'0')}-${months[start.getMonth()]}-${start.getFullYear().toString().slice(2)}`;
+    const endStr   = `${end.getDate().toString().padStart(2,'0')}-${months[end.getMonth()]}-${end.getFullYear().toString().slice(2)}`;
+    return `${startStr} to ${endStr}`;
+}
 
-                const originalStyles = {
-                    overflow: element.style.overflow,
-                    position: element.style.position
-                };
 
-                element.style.overflow = 'visible';
-                element.style.position = 'relative';
-
-                html2canvas(element, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    allowTaint: false,
-                    onclone: function(clonedDoc) {
-                        const clonedElement = clonedDoc.querySelector('.export_pdf_report');
-                        if (clonedElement) {
-                            clonedElement.style.overflow = 'visible';
-                            clonedElement.style.position = 'relative';
-                            const clonedVideos = clonedElement.querySelectorAll('video.video-section');
-                            clonedVideos.forEach(video => {
-                                video.remove();
-                            });
-                            /* PDF images show in Clone*/
-                            const clonedPdfImgs = clonedElement.querySelectorAll('img.pdf-img');
-                            clonedPdfImgs.forEach(img => {
-                                img.style.display = 'block';
-                                img.style.visibility = 'visible';
-                                img.style.width = '70px';
-                                img.style.height = '88px';
-                            });
-                            /* Real images hide */
-                            const realImgs = clonedElement.querySelectorAll('img.real-image');
-                            realImgs.forEach(img => {
-                                img.style.display = 'none';
-                                img.style.visibility = 'hidden';
-                            });
-                            
-                            /* Buttons hide */
-                            const elementsToHide = clonedElement.querySelectorAll(
-                                '.pdf-download-btn, .btn, .btn-outline-primary, .btn-outline-secondary, .filter-box'
-                            );
-                            elementsToHide.forEach(el => {
-                                el.style.display = 'none';
-                                el.style.visibility = 'hidden';
-                            });
-                            
-                            /* Table rows */
-                            const tableRows = clonedElement.querySelectorAll('tr.post-row');
-                            tableRows.forEach(row => {
-                                row.style.height = '77px';
-                                row.style.minHeight = '77px';
-                                row.style.maxHeight = '77px';
-                            });
-                            
-                           /*Table cells*/
-                            const tableCells = clonedElement.querySelectorAll('tr.post-row td');
-                            tableCells.forEach(cell => {
-                                cell.style.height = '77px';
-                                cell.style.minHeight = '77px';
-                                cell.style.maxHeight = '77px';
-                                cell.style.verticalAlign = 'middle';
-                            });
-                            
-                            /* Media cells */
-                            const mediaCells = clonedElement.querySelectorAll('tr.post-row td:nth-child(2)');
-                            mediaCells.forEach(cell => {
-                                cell.style.height = '77px';
-                                cell.style.minHeight = '77px';
-                                cell.style.maxHeight = '77px';
-                                cell.style.padding = '4px';
-                            });
-                            
-                            /* Page  Break*/
-                            const pageBreaks = clonedElement.querySelectorAll('.page-break');
-                            pageBreaks.forEach(pb => {
-                                pb.style.display = 'block';
-                                pb.style.height = '500px';
-                                pb.style.margin = '0';
-                                pb.style.padding = '0';
-                                pb.style.background = 'transparent';
-                            });
-                        }
-                    }
-                }).then(canvas => {
-                    /* Restore original styles */
-                    element.style.overflow = originalStyles.overflow;
-                    element.style.position = originalStyles.position;
-                    
-                    /* Restore videos*/
-                    allVideos.forEach(video => {
-                        video.style.display = '';
-                        video.style.visibility = '';
-                        video.style.position = '';
-                    });
-                    
-                    /* Hide PDF images again */
-                    allPdfImgs.forEach(img => {
-                        img.style.display = 'none';
-                        img.style.visibility = 'hidden';
-                    });
-                    
-                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                    const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-                    const imgWidth = 190;
-                    const imgHeight = canvas.height * imgWidth / canvas.width;
-                    
-                    let heightLeft = imgHeight;
-                    let position = 10;
-                    pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-                    heightLeft -= (300 - position);
-                    while (heightLeft >= 0) {
-                        position = heightLeft - imgHeight;
-                        pdf.addPage();
-                        pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-                        heightLeft -= 300;
-                    }
-                    
-                    pdf.save('Instagram_Dashboard_Report.pdf');
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                    
-                }).catch(error => {
-                    console.error('PDF error:', error);
-                    element.style.overflow = originalStyles.overflow;
-                    element.style.position = originalStyles.position;
-                    
-                    /* Restore videos on error */
-                    allVideos.forEach(video => {
-                        video.style.display = '';
-                        video.style.visibility = '';
-                        video.style.position = '';
-                    });
-                    
-                    /* Hide PDF images on error */
-                    allPdfImgs.forEach(img => {
-                        img.style.display = 'none';
-                        img.style.visibility = 'hidden';
-                    });
-                    
-                    alert('Error generating PDF: ' + error.message);
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                });
-            });
+/* ================= MAIN PDF SCRIPT ================= */
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadBtn = document.getElementById('downloadPdf');
+    const dateInput = document.querySelector('.daterange');
+    const reportDateSpan = document.getElementById('report-date');
+    downloadBtn.addEventListener('click', async function() {
+        const button = this;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="bx bx-loader bx-spin"></i> Generating PDF...';
+        button.disabled = true;
+        const element = document.querySelector('.export_pdf_report');
+        const pdfHeader = document.querySelector('.pdf-header');
+        if (pdfHeader && dateInput && reportDateSpan) {
+            reportDateSpan.textContent = formatDateRange(dateInput.value);
+        }
+        if (pdfHeader) pdfHeader.style.display = 'block';
+        const allVideos = document.querySelectorAll('video.video-section');
+        allVideos.forEach(video => {
+            video.style.display = 'none';
+            video.style.visibility = 'hidden';
+            video.style.position = 'absolute';
         });
-    </script> -->
+        const allPdfImgs = document.querySelectorAll('img.pdf-img');
+        allPdfImgs.forEach(img => {
+            img.style.display = 'block';
+            img.style.visibility = 'visible';
+        });
+
+        if (!element) {
+            alert('Export element not found');
+            button.innerHTML = originalText;
+            button.disabled = false;
+            return;
+        }
+
+        const originalStyles = {
+            overflow: element.style.overflow,
+            position: element.style.position
+        };
+
+        element.style.overflow = 'visible';
+        element.style.position = 'relative';
+
+        try {
+            const footerImg = await getFooterImage();
+            const canvas = await html2canvas(element, {
+                scale: window.devicePixelRatio * 3,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                letterRendering: true,
+                imageTimeout: 0,
+                allowTaint: false,
+                logging: false,
+                onclone: function(clonedDoc) {
+                    const clonedElement = clonedDoc.querySelector('.export_pdf_report');
+                    const clonedHeader = clonedDoc.querySelector('.pdf-header');
+                    if (clonedHeader) clonedHeader.style.display = 'block';
+                    const clonedReportDate = clonedDoc.querySelector('#report-date');
+                    if (clonedReportDate && dateInput) {
+                        clonedReportDate.textContent = formatDateRange(dateInput.value);
+                    }
+                    clonedElement.querySelectorAll('video.video-section').forEach(v => v.remove());
+                    clonedElement.querySelectorAll('img.pdf-img').forEach(img => {
+                        img.style.display = 'block';
+                        img.style.visibility = 'visible';
+                        img.style.width = '50px';
+                        img.style.height = '50px';
+                    });
+                    clonedElement.querySelectorAll('img.real-image').forEach(img => {
+                        img.style.display = 'none';
+                    });
+                    clonedElement.querySelectorAll(
+                        '.pdf-download-btn, .btn, .btn-outline-primary, .btn-outline-secondary, .filter-box, .performance_data, .instagram_connected, #viewDateRange, #timeframe, #ageTimeframe, #reachDateRange, .showing-post'
+                    ).forEach(el => el.style.display = 'none');
+                    clonedElement.querySelectorAll('tr.post-row').forEach(row => {
+                        row.style.height = '50px';
+                    });
+                    clonedElement.querySelectorAll('tr.post-row td').forEach(cell => {
+                        cell.style.height = '50px';
+                        cell.style.verticalAlign = 'middle';
+                    });
+                    clonedElement.querySelectorAll('tr.post-row td:nth-child(2)').forEach(cell => {
+                        cell.style.padding = '3px';
+                    });
+                    clonedElement.querySelectorAll('.page-break').forEach(pb => {
+                        pb.style.display = 'block';
+                        pb.style.height = '430px';
+                        pb.style.background = 'transparent';
+                    });
+                }
+            });
+            element.style.overflow = originalStyles.overflow;
+            element.style.position = originalStyles.position;
+            /* ================= CREATE PDF ================= */
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const margin = 10;
+            const footerHeight = 15;
+            const imgWidth = pageWidth - margin * 2;
+            const imgHeight = canvas.height * imgWidth / canvas.width;
+            let heightLeft = imgHeight;
+            let position = margin;
+            pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+            if (footerImg) {
+                pdf.addImage(footerImg, 'PNG', margin, pageHeight - footerHeight, imgWidth, footerHeight);
+            }
+            heightLeft -= (pageHeight - footerHeight);
+            while (heightLeft > 0) {
+                pdf.addPage();
+                position = heightLeft - imgHeight + margin;
+                pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+                if (footerImg) {
+                    pdf.addImage(footerImg, 'PNG', margin, pageHeight - footerHeight, imgWidth, footerHeight);
+                }
+                heightLeft -= (pageHeight - footerHeight);
+            }
+            pdf.save('Instagram_Dashboard_Report_HD.pdf');
+        } catch (error) {
+            console.error('PDF error:', error);
+            alert('Error generating PDF');
+        }
+        /* ================= RESTORE UI ================= */
+        if (pdfHeader) pdfHeader.style.display = 'none';
+        allVideos.forEach(video => {
+            video.style.display = '';
+            video.style.visibility = '';
+            video.style.position = '';
+        });
+        allPdfImgs.forEach(img => {
+            img.style.display = 'none';
+            img.style.visibility = 'hidden';
+        });
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+});
+</script>
+
+
+
 
     @endpush

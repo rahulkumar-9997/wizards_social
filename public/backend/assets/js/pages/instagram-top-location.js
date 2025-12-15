@@ -280,7 +280,7 @@ $(document).ready(function () {
     function createLocationsTable(locations) {
         return `
             <div class="table-responsive">
-                <table class="table table-sm table-hover table-bordered">
+                <table class="table table-sm table-hover table-bordered location-table">
                     <thead class="table-light">
                         <tr>
                             <th width="5%">#</th>
@@ -386,7 +386,7 @@ $(document).ready(function () {
                                 </button>
                             </div>
                             <div class="card-body p-0">
-                                <div id="worldMap" style="height: 400px; border-radius: 0 0 8px 8px;"></div>
+                                <div id="worldMap" style="height: 350px; border-radius: 0 0 8px 8px;"></div>
                             </div>
                         </div>
                     </div>
@@ -569,10 +569,7 @@ style.textContent = `
         font-weight: 600;
         font-size: 0.85rem;
     }
-    .table td {
-        font-size: 0.85rem;
-        vertical-align: middle;
-    }
+    
     .location-row:hover {
         background-color: #f8f9fa !important;
     }

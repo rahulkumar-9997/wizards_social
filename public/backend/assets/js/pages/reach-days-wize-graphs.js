@@ -32,7 +32,7 @@ $(document).ready(function () {
                     return;
                 }
 
-                $('#reachDaysContainer').html('<canvas id="reachDaysChart" height="400"></canvas>');
+                $('#reachDaysContainer').html('<canvas id="reachDaysChart" height="500"></canvas>');
                 const ctx = document.getElementById('reachDaysChart').getContext('2d');
 
                 const labels = chartData.map(item => moment(item.date).format("MMM DD"));
@@ -88,19 +88,35 @@ $(document).ready(function () {
                                 title: {
                                     display: true,
                                     text: 'Date',
-                                    font: { weight: 'bold' }
+                                    color: '#000000ff',
+                                    font: {
+                                        size: 15,
+                                        weight: 'bold'
+                                    }
                                 },
-                                grid: { display: false }
+                                grid: {
+                                    display: false
+                                }
                             },
                             y: {
                                 beginAtZero: true,
                                 title: {
                                     display: true,
                                     text: 'Reach Count',
-                                    font: { weight: 'bold' }
+                                    color: '#333', 
+                                    font: {
+                                        size: 15,
+                                        weight: 'bold'
+                                    }
                                 },
-                                grid: { color: '#f0f0f0' }
+                                ticks: {
+                                    color: '#555' 
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
                             }
+
                         },
                         interaction: {
                             mode: 'nearest',

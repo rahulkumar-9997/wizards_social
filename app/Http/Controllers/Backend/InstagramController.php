@@ -944,12 +944,12 @@ class InstagramController extends Controller
         $html = '
         <div class="card">
             <div class="card-header text-white">
-               <h4 class="card-title mb-0">
+               <h4 class="card-title mb-0 performance_data">
                     Performance (<span class="text-info">' . $dateRange . '</span>)                   
                </h4>
             </div>
             <div class="card-body">
-                <div class="reach-section mb-4">
+                <div class="reach-section mb-2">
                     <div class="row g-4">
                         <div class="col-md-4 reach col-sm-4 mb-sm-1 mb-md-1 mb-lg-1 mb-xl-0 pe-xl-0 ps-xl-2">
                             <div class="metric-card">
