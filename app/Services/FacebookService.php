@@ -25,7 +25,7 @@ class FacebookService
         try {
             $response = Http::timeout(10)
                 ->get($this->fbConfig['base_url'] . $this->fbConfig['graph_version'] . '/me/accounts', [
-                    'fields' => 'id,name,category,access_token,instagram_business_account{id,name,username,profile_picture_url,followers_count}',
+                    'fields' => 'id,name,category,access_token,instagram_business_account{id,name,username,profile_picture_url,followers_count},business',
                     'limit' => 60,
                     'access_token' => $token,
                 ]);
@@ -40,7 +40,6 @@ class FacebookService
                         'category' => $page['category'] ?? 'N/A',
                         'access_token' => $page['access_token'] ?? null,
                     ];
-
                     if (isset($page['instagram_business_account']['id'])) {
                         $igData = $page['instagram_business_account'];
                         $instagramAccounts->push([

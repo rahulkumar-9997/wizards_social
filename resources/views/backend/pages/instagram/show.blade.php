@@ -7,7 +7,6 @@
     .pdf-only {
         display: none;
     }
-
     .metric-card {
         background: #fff;
         border-radius: 16px;

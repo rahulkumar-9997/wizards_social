@@ -57,7 +57,7 @@
     @if($mainAccount && $checkRefreshToken)
     <div class="row">
         @include('backend.pages.layouts.second-sidebar')
-        <div class="col-xl-9">
+        <div class="col-xl-9" id="mainContent">
             <div class="load-data-using-ajax">
                 <div id="fb-dashboard-loader" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status"></div>
