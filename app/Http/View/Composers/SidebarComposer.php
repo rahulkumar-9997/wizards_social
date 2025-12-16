@@ -60,8 +60,7 @@ class SidebarComposer
             });
             
             $fbPages = collect($data['pages'] ?? []);
-            $fbInstagram = collect($data['instagram_accounts'] ?? []);
-            
+            $fbInstagram = collect($data['instagram_accounts'] ?? []);            
         } catch (\Throwable $e) {
             Log::error('SidebarComposer: Unexpected error — ' . $e->getMessage());
             $fbPages = [];
