@@ -281,7 +281,7 @@ class FacebookLoginController extends Controller
                     'limit' => 20,
                     'access_token' => $token,
                 ]);
-             Log::info('Get adds account details: ' . print_r($response, true));           
+            //Log::info('Get adds account details: ' . print_r($response, true));           
             if ($response->successful()) {
                 $analytics['ad_accounts'] = $response->json()['data'] ?? [];
             } else {

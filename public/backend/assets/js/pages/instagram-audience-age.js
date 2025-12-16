@@ -1,58 +1,71 @@
 $(document).ready(function () {
     let audienceAgeChart;
 
-    function loadAudienceAgeGroup(timeframe = 'this_month') {
-        const ctx = document.getElementById('audienceAgeGroupChart').getContext('2d');
-        $('#audienceAgeGroupContainer').html('<canvas id="audienceAgeGroupChart" height="450"></canvas>');
+    function loadAudienceAgeGroup(timeframe = "this_month") {
+        const ctx = document
+            .getElementById("audienceAgeGroupChart")
+            .getContext("2d");
+        $("#audienceAgeGroupContainer").html(
+            '<canvas id="audienceAgeGroupChart" height="450"></canvas>'
+        );
 
         $.ajax({
             url: window.instagramAudienceAgeUrl,
             data: { timeframe },
             beforeSend: function () {
-                $('#audienceAgeGroupContainer').html(`
+                $("#audienceAgeGroupContainer").html(`
                     <div class="text-center py-5">
                         <div class="spinner-border text-primary"></div>
-                        <p class="mt-2">Loading audience age data...</p>
+                        <p class="mt-2" style="color: #101010;">Loading audience age data...</p>
                     </div>
                 `);
             },
             success: function (res) {
-                const description = res.api_description || '';
+                const description = res.api_description || "";
                 initTooltipAgeGroup(description);
                 if (!res.success) {
-                    $('#audienceAgeGroupContainer').html(
-                        `<div class="alert alert-danger">${res.message || 'Unable to load data.'}</div>`
+                    $("#audienceAgeGroupContainer").html(
+                        `<div class="alert alert-danger" style="color: #101010;">${
+                            res.message || "Unable to load data."
+                        }</div>`
                     );
                     return;
                 }
 
-                $('#audienceAgeGroupContainer').html('<canvas id="audienceAgeGroupChart" height="500"></canvas>');
-                const ctx = document.getElementById('audienceAgeGroupChart').getContext('2d');
+                $("#audienceAgeGroupContainer").html(
+                    '<canvas id="audienceAgeGroupChart" height="500"></canvas>'
+                );
+                const ctx = document
+                    .getElementById("audienceAgeGroupChart")
+                    .getContext("2d");
 
                 if (audienceAgeChart) audienceAgeChart.destroy();
-                if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+                if (
+                    typeof Chart !== "undefined" &&
+                    typeof ChartDataLabels !== "undefined"
+                ) {
                     Chart.register(ChartDataLabels);
                 }
 
                 audienceAgeChart = new Chart(ctx, {
-                    type: 'bar',
+                    type: "bar",
                     data: {
                         labels: res.labels,
                         datasets: [
                             {
-                                label: 'Female',
+                                label: "Female",
                                 data: res.female,
-                                backgroundColor: '#e83e8c',
+                                backgroundColor: "#e83e8c",
                             },
                             {
-                                label: 'Male',
+                                label: "Male",
                                 data: res.male,
-                                backgroundColor: '#003976ff',
+                                backgroundColor: "#003976ff",
                             },
                             {
-                                label: 'Unknown',
+                                label: "Unknown",
                                 data: res.unknown,
-                                backgroundColor: '#6c757d',
+                                backgroundColor: "#6c757d",
                             },
                         ],
                     },
@@ -61,55 +74,89 @@ $(document).ready(function () {
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
-                                position: 'top',
-                                labels: { boxWidth: 25, padding: 10 },
+                                position: "top",
+                                labels: {
+                                    boxWidth: 25,
+                                    padding: 10,
+                                    color: "#101010",
+                                    font: {
+                                        color: "#101010",
+                                    },
+                                },
                             },
                             title: {
                                 display: false,
                             },
                             datalabels: {
-                                anchor: 'end',
-                                align: 'top',
-                                formatter: (val) => (val > 0 ? val : ''),
-                                font: { size: 15, weight: 'bold', color: 'black' },
+                                anchor: "end",
+                                align: "top",
+                                formatter: (val) => (val > 0 ? val : ""),
+                                font: {
+                                    size: 15,
+                                    weight: "bold",
+                                    color: "#101010",
+                                },
                             },
                         },
                         scales: {
                             x: {
                                 grid: { display: false },
-                                title: { display: true, text: 'Age Group', font: { weight: 'bold' } },
+                                title: {
+                                    display: true,
+                                    text: "Age Group",
+                                    font: {
+                                        weight: "900",
+                                        color: "#101010",
+                                    },
+                                    color: "#101010",
+                                },
+                                ticks: {
+                                    color: "#101010",
+                                },
                             },
                             y: {
                                 beginAtZero: true,
-                                grid: { color: '#f0f0f0' },
-                                title: { display: true, text: 'Audience Count', font: { weight: 'bold' } },
+                                grid: { color: "#f0f0f0" },
+                                title: {
+                                    display: true,
+                                    text: "Audience Count",
+                                    font: {
+                                        weight: "bold",
+                                        color: "#101010",
+                                    },
+                                    color: "#101010",
+                                },
+                                ticks: {
+                                    color: "#101010",
+                                },
                             },
                         },
                     },
                 });
             },
             error: function () {
-                $('#audienceAgeGroupContainer').html(
-                    `<div class="alert alert-danger">Error loading data. Please try again.</div>`
+                $("#audienceAgeGroupContainer").html(
+                    `<div class="alert alert-danger" style="color: #101010;">Error loading data. Please try again.</div>`
                 );
             },
         });
     }
     loadAudienceAgeGroup();
-    $('#ageTimeframe').on('change', function () {
+    $("#ageTimeframe").on("change", function () {
         loadAudienceAgeGroup($(this).val());
     });
 });
 
 function initTooltipAgeGroup(description) {
-    const icon = $('#audienceByAgeGroup');
-     if (icon.length === 0) return;
+    const icon = $("#audienceByAgeGroup");
+    if (icon.length === 0) return;
 
-    const safeDescription = description && description.trim() !== '' 
-        ? description 
-        : 'No description available';
+    const safeDescription =
+        description && description.trim() !== ""
+            ? description
+            : "No description available";
 
-    icon.attr('data-bs-title', safeDescription);
-    icon.attr('data-bs-toggle', 'tooltip');
+    icon.attr("data-bs-title", safeDescription);
+    icon.attr("data-bs-toggle", "tooltip");
     new bootstrap.Tooltip(icon[0]);
 }

@@ -92,19 +92,14 @@ class SocialAccount extends Model
 
      public function disconnect()
     {
-        // Clear all related caches
         Cache::forget('fb_dashboard_' . $this->id);
         Cache::forget('social_account_' . $this->user_id . '_' . $this->provider);
-
-        // Remove token data but keep the record
         $this->update([
             'access_token' => null,
             'refresh_token' => null,
             'token_expires_at' => null,
             'updated_at' => now(),
         ]);
-
-        // Also disconnect any child accounts (Instagram accounts)
         SocialAccount::where('parent_account_id', $this->id)
             ->update([
                 'access_token' => null,
@@ -113,9 +108,6 @@ class SocialAccount extends Model
             ]);
     }
 
-    /**
-     * Check if account is connected (has valid token)
-     */
     public function isConnected()
     {
         return !empty($this->access_token) && !$this->isTokenExpired();

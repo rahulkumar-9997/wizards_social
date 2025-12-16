@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('social_accounts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('provider'); // facebook, instagram, google
-            $table->string('account_id')->nullable(); // page id, ig business id, youtube channel id
+            $table->string('provider');
+            $table->string('account_id')->nullable();
             $table->string('account_name')->nullable();
             $table->text('access_token');
             $table->text('refresh_token')->nullable();

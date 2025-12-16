@@ -74,7 +74,7 @@
         @include('backend.pages.layouts.second-sidebar', [
         'selectedInstagramId' => $instagram['id'] ?? null
         ])
-        <div class="col-xl-9">
+        <div class="col-xl-9"  id="mainContent">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center gap-1">
                     <h4 class="card-title flex-grow-1">

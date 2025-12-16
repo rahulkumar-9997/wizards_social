@@ -34,3 +34,11 @@ $(document).ready(function () {
         }
     });
 });
+
+document.getElementById('search_post_smpa').addEventListener('keyup', function () {
+    let value = this.value.toLowerCase();
+    document.querySelectorAll('.account-item').forEach(function (item) {
+        let text = item.innerText.toLowerCase();
+        item.style.display = text.includes(value) ? '' : 'none';
+    });
+});

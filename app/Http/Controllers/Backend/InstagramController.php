@@ -1234,7 +1234,7 @@ class InstagramController extends Controller
                                 </h4>
                             </div>
                             <div class="metric-body">
-                                <table class="table table-sm mb-3 align-middle text-center">
+                                <table class="table table-sm mb-3 align-middle text-center interactions-table">
                                     
                                     <tr>
                                         <td><h4 class="mb-0">' . $this->formatNumber($totalInteractionsPrevious) . '</h4></td>
@@ -1255,7 +1255,7 @@ class InstagramController extends Controller
                                         <div class="col-lg-12 mb-2">
                                             <h5 class="card-title mb-0">Total Interactions by Likes, Comments, Saves, Shares, Reposts </h5>
                                         </div>
-                                        <table class="table table-bordered table-sm mb-2 ">                                            
+                                        <table class="table table-bordered table-sm mb-2 interactions-table">
                                             <tr>
                                                 <td class="bg-black text-light">Previous Month</td>
                                                 <td class="bg-black text-light">Current Month</td>
@@ -1455,7 +1455,7 @@ class InstagramController extends Controller
                                         <div class="col-lg-12 mb-2">
                                             <h5 class="card-title mb-0">Total Interactions by Media Type</h5>
                                         </div>
-                                        <table class="table table-bordered table-sm mb-2">
+                                        <table class="table table-bordered table-sm mb-2 interactions-table">
                                             <tr>
                                                 <td class="bg-black text-light">Previous Month</td>
                                                 <td class="bg-black text-light">Current Month</td>

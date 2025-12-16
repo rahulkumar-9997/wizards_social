@@ -11,8 +11,8 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('social_account_id')->constrained('social_accounts')->onDelete('cascade');
-            $table->string('provider'); // facebook (instagram ads via Meta)
-            $table->string('ad_account_id'); // act_123... or numeric id
+            $table->string('provider');
+            $table->string('ad_account_id');
             $table->string('ad_account_name')->nullable();
             $table->timestamps();
         });

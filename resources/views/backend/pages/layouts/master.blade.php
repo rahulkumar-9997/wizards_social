@@ -15,6 +15,6 @@
         </div>
         @include('backend.pages.layouts.footer-js')        
         @stack('scripts')
-        <script src="{{asset('backend/assets/js/common-ajax.js')}}" type="text/javascript"></script>
+        <script src="{{asset('backend/assets/js/common-ajax.js')}}?v={{ time() }}" type="text/javascript"></script>
     </body>
 </html>

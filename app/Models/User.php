@@ -59,4 +59,22 @@ class User extends Authenticatable
     {
         return $this->getRoleNames();
     }
+
+    /* User Facebook Pages*/
+    public function facebookPages()
+    {
+        return $this->hasMany(UserFacebookPage::class, 'user_id');
+    }
+
+    /* User Instagram Pages*/
+    public function instagramPages()
+    {
+        return $this->hasMany(UserInstagramPage::class, 'user_id');
+    }
+
+    /* User Social Accounts */
+    public function socialAccounts()
+    {
+        return $this->hasMany(SocialAccount::class, 'user_id');
+    }
 }

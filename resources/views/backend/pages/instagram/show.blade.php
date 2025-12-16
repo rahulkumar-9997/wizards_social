@@ -152,7 +152,7 @@
         @include('backend.pages.layouts.second-sidebar', [
         'selectedInstagramId' => $instagram['id'] ?? null
         ])
-        <div class="col-xl-9 export_pdf_report">
+        <div class="col-xl-9 export_pdf_report"  id="mainContent">
             <div class="pdf-header pdf-only" style="display: none;">
                 <div class="header-content" style="padding: 10px; border-bottom: 5px solid #fd7e03; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -406,11 +406,11 @@
         window.facebook_base_url = "{{ url('facebook-summary') }}";
     </script>
 
-    <script src="{{ asset('backend/assets/js/pages/instagram-top-location.js') }}"></script>
-    <script src="{{ asset('backend/assets/js/pages/instagram-audience-age.js') }}"></script>
-    <script src="{{ asset('backend/assets/js/pages/instagram-post.js') }}"></script>
-    <script src="{{ asset('backend/assets/js/pages/reach-days-wize-graphs.js') }}"></script>
-    <script src="{{ asset('backend/assets/js/pages/instagram-view-days-wise.js') }}"></script>
+    <script src="{{ asset('backend/assets/js/pages/instagram-top-location.js') }}?v={{ time() }}"></script>
+    <script src="{{ asset('backend/assets/js/pages/instagram-audience-age.js') }}?v={{ time() }}"></script>
+    <script src="{{ asset('backend/assets/js/pages/instagram-post.js') }}?v={{ time() }}"></script>
+    <script src="{{ asset('backend/assets/js/pages/reach-days-wize-graphs.js') }}?v={{ time() }}"></script>
+    <script src="{{ asset('backend/assets/js/pages/instagram-view-days-wise.js') }}?v={{ time() }}"></script>
     <script>
         $(document).ready(function() {
             const id = "{{ $instagram['id'] }}";
@@ -642,7 +642,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     clonedElement.querySelectorAll('.page-break').forEach(pb => {
                         pb.style.display = 'block';
-                        pb.style.height = '430px';
+                        pb.style.height = '450px';
                         pb.style.background = 'transparent';
                     });
                 }

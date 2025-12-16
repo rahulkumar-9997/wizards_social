@@ -224,7 +224,7 @@
      --bs-danger-border-subtle: #8f3939;
      --bs-light-border-subtle: #424e5a;
      --bs-dark-border-subtle: #8486a7;
-     --bs-heading-color: #aab8c5;
+     --bs-heading-color: #101010;
      --bs-link-color: #ffa782;
      --bs-link-hover-color: #ffb495;
      --bs-link-color-rgb: 255, 167, 130;
@@ -2594,8 +2594,8 @@
  .form-control {
      display: block;
      width: 100%;
-     padding: 0.5rem 1rem;
-     font-size: 0.875rem;
+     padding:10px 15px;
+     font-size: 14px;
      font-weight: 400;
      line-height: 1.5;
      color: var(--bs-body-color);
@@ -18118,13 +18118,13 @@
  .apex-charts text {
      font-family: var(--bs-font-sans-serif) !important;
      font-weight: 500;
-     fill: var(--bs-headings-color);
+     fill: #101010;
 }
  .apex-charts .apexcharts-canvas {
      margin: 0 auto;
 }
  .apex-charts .apexcharts-title-text {
-     fill: var(--bs-headings-color);
+     fill: #101010;
 }
  .apexcharts-bar-series path {
      stroke: #eaedf1;
@@ -18137,7 +18137,7 @@
      stroke: var(--bs-light);
 }
  .apexcharts-legend-text {
-     color: var(--bs-secondary-color) !important;
+     color: #101010 !important;
 }
  .apexcharts-grid-row {
      fill: var(--bs-secondary-bg);
@@ -18183,11 +18183,11 @@
      fill: #ffffff !important;
 }
  .apexcharts-title-text, .apexcharts-subtitle-text {
-     fill: var(--bs-link-color);
+     fill: #101010;
 }
  .apexcharts-yaxis text, .apexcharts-xaxis text {
      font-family: var(--bs-font-sans-serif) !important;
-     fill: var(--bs-link-color);
+     fill: #101010;
 }
  .apexcharts-yaxis-title {
      font-weight: 500;
@@ -20345,14 +20345,23 @@
      top: 70px;
      position: sticky;
      z-index: 1;
-     background-color: white;
+}
+.interactions-table .text-danger,
+.interactions-table .text-success{
+    font-size: 16px;
 }
  .export_pdf_report p, .export_pdf_report th, .export_pdf_report th {
      font-size: 18px;
      font-weight: 500;
 }
- .export_pdf_report h3, .export_pdf_report h5 {
+.export_pdf_report h1,
+.export_pdf_report h2,
+.export_pdf_report h3,
+.export_pdf_report h4,
+.export_pdf_report h5,
+.export_pdf_report h6 {
      font-weight: 900;
+     color: #101010;
 }
  .export_pdf_report .card {
      margin-bottom: 5px;
@@ -20400,15 +20409,18 @@
     height: 100%;
     object-position: center;
 }
+
 .select-accounts .user-info p, .select-library .library-schedule-box p {
     text-overflow: ellipsis;
     overflow: hidden;
     white-space: nowrap;
 }
-.select-accounts .user-info p, .select-library .library-schedule-box p {
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
+.selected .user-info .account-name{
+    color: #F28E00;
+}
+.user-info .account-name{
+     color: #e74c3c;
+    font-weight: 500;
 }
 .user-info .b6 {
     color: #585858;
@@ -20431,8 +20443,114 @@
 #mainContent {
     transition: all 0.3s ease;
 }
-.overflow-y{
-  overflow: hidden auto;
+.account-list .social-account.selected {
+    border-color: #F28E00 !important;
+    color: #F28E00;
 }
+.user-check {
+    display: none;
+    line-height: normal;
+    background: #ffffff;
+    top: -5px;
+    right: -5px;
+    font-size: 28px;
+}
+.selected .user-check {
+    display: flex;
+}
+.small-sidebar-small .title,
+.small-sidebar-small .search-sticky,
+.small-sidebar-small .user-info
+{
+    display: none;
+}
+/* .overflow-y{
+  overflow: hidden auto;
+} */
+ 
+.main-scroll{
+    height: 500px;
+    overflow-y: auto;
+}
+.main-scroll {
+    height: 500px;
+    overflow-y: auto;
+    scrollbar-width: thin;  
+    scrollbar-color: #b5b5b5 transparent;
+}
+.main-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+
+.main-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.main-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #d6d6d6, #a9a9a9);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.main-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #c0c0c0, #8f8f8f);
+}
+.instagram-list-container,
+.facebook-list-container {
+    flex-shrink: 0;
+}
+
+.instagram-list,
+.facebook-list {
+    overflow-y: auto;
+    padding-right: 6px;
+}
+.instagram-list {
+    max-height: 260px;
+}
+
+.facebook-list {
+    max-height: 260px;
+}
+
+.instagram-list::-webkit-scrollbar,
+.facebook-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.instagram-list::-webkit-scrollbar-thumb,
+.facebook-list::-webkit-scrollbar-thumb {
+    background-color: #e0e0e0;
+    border-radius: 8px;
+}
+
+.list-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    padding: 8px 0;
+    z-index: 5;
+}
+.rp-reports .card-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 10px 5px;
+}
+
+.sidebar-header {
+    flex-shrink: 0;
+}
+
+.social-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 /* sidebar second menu */
 /*rahul css*/

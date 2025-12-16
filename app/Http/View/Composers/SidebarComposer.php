@@ -31,8 +31,7 @@ class SidebarComposer
                 $view->with(compact('fbPages', 'fbInstagram'));
                 return;
             }
-
-            // Find the main linked Facebook account for this user
+            $user_id = $user->id;
             $mainAccount = SocialAccount::where('user_id', $user->id)
                 ->where('provider', 'facebook')
                 ->whereNull('parent_account_id')
@@ -43,37 +42,31 @@ class SidebarComposer
                 $view->with(compact('fbPages', 'fbInstagram'));
                 return;
             }
-
-            // Get token from helper
             $token = SocialTokenHelper::getFacebookToken($mainAccount);
             if (empty($token)) {
                 Log::warning("SidebarComposer: Facebook token not found for user ID {$user->id}");
                 $view->with(compact('fbPages', 'fbInstagram'));
                 return;
             }
-
-            // Cache response to avoid multiple API calls
             $cacheKey = "fb_pages_for_user_{$user->id}_" . md5($token);
 
-            $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($token) {
+            $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($token, $user_id) {
                 try {
-                    return $this->facebookService->getPagesWithInstagram($token);
+                    return $this->facebookService->getPagesWithInstagram($token, $user_id);
                 } catch (\Throwable $e) {
                     Log::error('SidebarComposer: FacebookService failed — ' . $e->getMessage());
                     return ['pages' => [], 'instagram_accounts' => collect()];
                 }
             });
-
-            $fbPages = $data['pages'] ?? [];
-            $fbInstagram = $data['instagram_accounts'] ?? collect();
+            
+            $fbPages = collect($data['pages'] ?? []);
+            $fbInstagram = collect($data['instagram_accounts'] ?? []);
             
         } catch (\Throwable $e) {
             Log::error('SidebarComposer: Unexpected error — ' . $e->getMessage());
             $fbPages = [];
             $fbInstagram = collect();
         }
-
-        // Share data with all sidebar views
         $view->with(compact('fbPages', 'fbInstagram'));
     }
 }

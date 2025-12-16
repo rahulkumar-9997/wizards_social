@@ -12,7 +12,7 @@
 <link rel="shortcut icon" href="{{asset('backend/assets/fav-icon.png')}}">
 <link href="{{asset('backend/assets/css/vendor.min.css')}}" rel="stylesheet" type="text/css" />
 <link href="{{asset('backend/assets/css/icons.min.css')}}" rel="stylesheet" type="text/css" />
-<link href="{{asset('backend/assets/css/app.min.css')}}" rel="stylesheet" type="text/css" />
+<link href="{{asset('backend/assets/css/app.min.css')}}?v={{ time() }}" rel="stylesheet" type="text/css" />
 <script src="{{asset('backend/assets/js/config.js')}}"></script>
 <link href="{{asset('backend/assets/plugins/select2/select2.css')}}" rel="stylesheet" type="text/css" media="screen"/>
 <link href="{{asset('backend/assets/plugins/multi-select/css/multi-select.css')}}" rel="stylesheet" type="text/css" media="screen"/> 
