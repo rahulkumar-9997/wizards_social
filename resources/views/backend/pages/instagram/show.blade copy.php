@@ -145,7 +145,7 @@
         @include('backend.pages.layouts.second-sidebar', [
         'selectedInstagramId' => $instagram['id'] ?? null
         ])
-        <div class="col-xl-9 export_pdf_report">
+        <div class="col-md-9 export_pdf_report"  id="mainContent">
             <div class="pdf-header" style="display: none;">
                 <div class="header-content" style="padding: 10px; border-bottom: 5px solid #fd7e03; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">

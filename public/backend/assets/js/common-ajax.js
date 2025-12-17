@@ -20,17 +20,17 @@ $(document).ready(function () {
     $("#toggleSidebar").on("click", function () {
         const $sidebar = $("#leftSidebar");
         const $content = $("#mainContent");
-        if ($sidebar.hasClass("col-xxl-3")) {
+        if ($sidebar.hasClass("col-md-3")) {
             $sidebar
-                .removeClass("col-xxl-3 col-xl-3 big-sidebar-big")
-                .addClass("col-xxl-1 col-xl-1 small-sidebar-small");
+                .removeClass("col-md-3 big-sidebar-big")
+                .addClass("col-md-1 small-sidebar-small");
 
-            $content.removeClass("col-xl-9").addClass("col-xl-11");
+            $content.removeClass("col-md-9").addClass("col-md-11");
         } else {
             $sidebar
-                .removeClass("col-xxl-1 col-xl-1 small-sidebar-small")
-                .addClass("col-xxl-3 col-xl-3 big-sidebar-big");
-            $content.removeClass("col-xl-11").addClass("col-xl-9");
+                .removeClass("col-md-1 small-sidebar-small")
+                .addClass("col-md-3 big-sidebar-big");
+            $content.removeClass("col-md-11").addClass("col-md-9");
         }
     });
 });

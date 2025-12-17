@@ -8,7 +8,7 @@
     <div class="row">
         @include('backend.pages.layouts.second-sidebar')
 
-        <div class="col-xl-9">
+        <div class="col-md-9 export_pdf_report"  id="mainContent">
             <div class="ads-section">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center gap-1">

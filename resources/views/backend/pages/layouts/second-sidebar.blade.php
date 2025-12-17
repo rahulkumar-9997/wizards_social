@@ -1,4 +1,4 @@
-<div class="col-xxl-3" id="leftSidebar">
+<div class="col-md-3" id="leftSidebar">
     <div class="sidebar-menu-second rp-reports select-accounts">
         <div class="card h-100 mb-0">
             <div class="card-body d-flex flex-column">

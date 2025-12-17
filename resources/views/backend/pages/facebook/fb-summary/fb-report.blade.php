@@ -85,7 +85,7 @@
         'selectedInstagramId' => $instagram['id'] ?? null,
         'selectedFbId' => $facebookBusinessOrProfile['id'] ?? null
         ])
-        <div class="col-xl-9 export_pdf_report"  id="mainContent">
+        <div class="col-md-9 export_pdf_report"  id="mainContent">
             <div class="row mb-2">
                 <div class="col-12">
                     <div class="card">
