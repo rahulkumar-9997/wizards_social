@@ -12,7 +12,7 @@ use Carbon\Carbon;
 use App\Models\SocialAccount;
 use Exception;
 
-class InstagramController extends Controller
+class InstagramControllerPDF extends Controller
 {
     /**
      * Instagram Integration Page

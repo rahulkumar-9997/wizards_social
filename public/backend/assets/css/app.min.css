@@ -137,7 +137,7 @@
      --bs-body-font-size: 0.875rem;
      --bs-body-font-weight: 400;
      --bs-body-line-height: 1.5;
-     --bs-body-color: #5d7186;
+     --bs-body-color:#000000;
      --bs-body-color-rgb: 93, 113, 134;
      --bs-body-bg: #f9f7f7;
      --bs-body-bg-rgb: 249, 247, 247;
@@ -20346,22 +20346,89 @@
      position: sticky;
      z-index: 1;
 }
+.single-content .text-justify{
+    text-align: justify;
+}
 .interactions-table .text-danger,
 .interactions-table .text-success{
     font-size: 16px;
 }
+.export_pdf_report .card-body {
+     padding: 0px;
+}
+.instagram-profile-section,
+.mandate-section,
+.mandate-item-body,
+.single-content {
+    padding: 0px 10px;
+}
+.mandate-item-body{
+    padding: 10px 10px;
+}
+.mandate-item{
+    border: 2px solid #000;
+    border-radius: 20px;
+}
+.col-custom-2{
+    flex: 0 0 49.66667%;
+    max-width: 49.66667%;
+}
+.col-custom-3{
+    flex: 0 0 33.99%;
+    max-width: 33.99%;
+}
+.mandate-followers-body .follow-font{
+    font-size: 30px;
+}
+.mandate-arrow-icon {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+}
+.mandate-arrow-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s;
+    mix-blend-mode: multiply;
+}
+.mandate-item-arrow {
+    text-align: center;
+}
+
  .export_pdf_report p, .export_pdf_report th, .export_pdf_report th {
-     font-size: 18px;
-     font-weight: 500;
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 25px;
+}
+.interactions-table .interface-table td,
+.interactions-table td{
+    padding: 5px 5px;
+}
+.interactions-table .interface-table,
+.interactions-table{
+    margin-bottom: 0px;
+}
+.total-interaction-by-table .total-interaction-by-table-box h4{
+    font-weight: 600;
 }
 .export_pdf_report h1,
 .export_pdf_report h2,
 .export_pdf_report h3,
 .export_pdf_report h4,
-.export_pdf_report h5,
 .export_pdf_report h6 {
      font-weight: 900;
      color: #101010;
+}
+.export_pdf_report h5{
+    font-weight: 500;
+    color: #101010;
 }
  .export_pdf_report .card {
      margin-bottom: 5px;
