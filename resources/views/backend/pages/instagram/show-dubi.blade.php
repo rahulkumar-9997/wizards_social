@@ -84,981 +84,66 @@
                                         <div class="reach-views-section">
                                             <div class="row">
                                                 <div class="col-md-6 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-0 col-6 pe-xl-0 ps-xl-0">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-header-top">
-                                                            <h3 class="mandate-title">
-                                                                REACH
-                                                                <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="">
-                                                                </i>
-                                                            </h3>
-                                                            <p style="text-align: justify;">
-                                                                It shows how many different people discovered
-                                                                your profile, not how many times it was viewed.
-                                                                Profile reach helps you understand your brand
-                                                                visibility and audience interest. Higher profile
-                                                                reach often means your content is attracting
-                                                                new users to your page.
-                                                            </p>
-                                                        </div>
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="d-flex justify-content-between align-items-center gap-1">
-                                                                    <div class="mandate-item-title">
-                                                                        <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">51K</h2>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div class="mandate-item-title">
-                                                                        <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                        <div class="mandate-item-text">
-                                                                            <h1 class="mb-0">35.8K</h1>
-                                                                        </div>
-                                                                    </div>
-
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="d-flex justify-content-between align-items-center gap-1">
-                                                                    <div class="mandate-item-title d-flex flex-wrap">
-                                                                        <div class="col-custom-2">
-                                                                            <h5 style="margin-bottom: 0px;">Paid</h5>
-                                                                            <h3>
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-2">
-                                                                            <h5 style="margin-bottom: 0px;">Organic</h5>
-                                                                            <h3>
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-2">
-                                                                            <h5 style="margin-bottom: 0px;">Follower</h5>
-                                                                            <h3>
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-2">
-                                                                            <h5 style="margin-bottom: 0px;">Non - Follower</h5>
-                                                                            <h3>
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="mandate-item-arrow">
-                                                                        <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                            28.9%
-                                                                        </h4>
-                                                                        <div class="mandate-arrow-icon">
-                                                                            <img src="{{ asset('backend/assets/red-arrow-down.png') }}" alt="Down Arrow" width="24" height="24">
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                    <div id="reach-component">
+                                                        @php
+                                                            $reachData = $instagram['reach_data'] ?? null;
+                                                        @endphp
+                                                        @include('backend.pages.instagram.component.reach', ['reach' => $reachData])
                                                     </div>
                                                 </div>
                                                 <!-----VIEWS---->
                                                 <div class="col-md-6 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-0 col-6 pe-xl-0 ps-xl-0">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-header-top">
-                                                            <h3 class="mandate-title">
-                                                                VIEWS
-                                                                <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="">
-                                                                </i>
-                                                            </h3>
-                                                            <p style="text-align: justify;">
-                                                                It shows how many different people discovered
-                                                                your profile, not how many times it was viewed.
-                                                                Profile reach helps you understand your brand
-                                                                visibility and audience interest. Higher profile
-                                                                reach often means your content is attracting
-                                                                new users to your page.
-                                                            </p>
-                                                        </div>
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="d-flex justify-content-between align-items-center gap-1">
-                                                                    <div class="mandate-item-title">
-                                                                        <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">51K</h2>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div class="mandate-item-title">
-                                                                        <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                        <div class="mandate-item-text">
-                                                                            <h1 class="mb-0">35.8K</h1>
-                                                                        </div>
-                                                                    </div>
-
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="d-flex justify-content-between align-items-center gap-1">
-                                                                    <div class="mandate-item-title d-flex flex-wrap">
-                                                                        <div class="col-custom-2">
-                                                                            <h5 style="margin-bottom: 0px;">Paid</h5>
-                                                                            <h3>
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-2">
-                                                                            <h5 style="margin-bottom: 0px;">Organic</h5>
-                                                                            <h3>
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-2">
-                                                                            <h5 style="margin-bottom: 0px;">Follower</h5>
-                                                                            <h3>
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-2">
-                                                                            <h5 style="margin-bottom: 0px;">Non - Follower</h5>
-                                                                            <h3>
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="mandate-item-arrow">
-                                                                        <h4 style="margin-bottom: 5px; color: #05ff16ff; font-size: 24px;">
-                                                                            28.9%
-                                                                        </h4>
-                                                                        <div class="mandate-arrow-icon">
-                                                                            <img src="{{ asset('backend/assets/green-arrow-up.png') }}" alt="Down Arrow" width="24" height="24">
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                    <div id="view-component">
+                                                        @php
+                                                            $viewData = $instagram['reach_data'] ?? null;
+                                                        @endphp
+                                                        @include('backend.pages.instagram.component.view', ['view' => $viewData])
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="reach-per-day-graph-section">
-                                            <div id="reachDaysContainer" class="mt-4">
-                                                <img src="{{ asset('backend/assets/reach-per-day.png') }}" alt="Reach Per Day Graph" style="width: 100%; height: auto;">
-                                            </div>
-                                            <div class="pdf-other-title mt-1">
-                                                <h3 class="mandate-title">
-                                                    PER DAY REACH OF THE PROFILE
-                                                    <i id="profileReachTitle" class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="danger-tooltip" data-bs-title="">
-                                                    </i>
-                                                </h3>
-                                            </div>
+                                            @include('backend.pages.instagram.component.profile-reach-perday-graph')
                                         </div>
                                         <div class="followers-section">
-                                            <div class="row">
-                                                <div class="col-12">
-                                                    <h3 class="mandate-title">
-                                                        FOLLOWERS
-                                                    </h3>
-                                                    <p>
-                                                        It shows how many different people discovered your profile, not how many times it was
-                                                        viewed. Profile reach helps you understand your brand visibility and audience interest. Higher
-                                                        profile reach often means your content is attracting new users to your page.
-                                                    </p>
-                                                </div>
-                                                <div class="col-md-6 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-0 col-6 pe-xl-0 ps-xl-0">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="text-center">
-                                                                    <div class="mandate-item-title">
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">
-                                                                                FOLLOWERS
-                                                                                <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="">
-                                                                                </i>
-                                                                            </h2>
-                                                                        </div>
-                                                                    </div>
-
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="mandate-followers-body">
-                                                                    <div class="mandate-item-title d-flex justify-content-between align-items-center gap-1">
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <div class="mandate-item-arrow">
-                                                                                <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                                    28.9%
-                                                                                </h4>
-                                                                                <div class="mandate-arrow-icon">
-                                                                                    <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-0 col-6 pe-xl-0 ps-xl-0">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="text-center">
-                                                                    <div class="mandate-item-title">
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">
-                                                                                UNFOLLOWERS
-                                                                                <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="" aria-describedby="tooltip549868">
-                                                                                </i>
-                                                                            </h2>
-                                                                        </div>
-                                                                    </div>
-
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="mandate-followers-body">
-                                                                    <div class="mandate-item-title d-flex justify-content-between align-items-center gap-1">
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <div class="mandate-item-arrow">
-                                                                                <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                                    28.9%
-                                                                                </h4>
-                                                                                <div class="mandate-arrow-icon">
-                                                                                    <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                            <div id="profile-followers-component">
+                                                @php
+                                                    $followersData = $instagram['followers_data']  ?? null;
+                                                @endphp
+                                                @include('backend.pages.instagram.component.profile-followers', ['followersData' => $followersData])
                                             </div>
                                         </div>
                                         <div class="total-views-section-graphs mt-2">
-                                            <h3 class="text-center">
-                                                TOTAL VIEWS
-                                                <i id="viewDateRangeTitle" class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="">
-                                                </i>
-                                            </h3>
-                                            <div id="viewDaysContainer" class="mt-2">
-                                                <img src="{{ asset('backend/assets/views-by-content-type.png') }}" alt="Views by Content Type Graph" style="width: 100%; height: auto;">
-                                            </div>
+                                            @include('backend.pages.instagram.component.total-view-graph')
                                         </div>
                                         <div class="view-by-followers-type mt-2">
-                                            <div class="pdf-se-title">
-                                                <h3 class="text-center">
-                                                    VIEW BY FOLLOWERS & NON FOLLOWERS
-                                                    <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="">
-                                                    </i>
-                                                </h3>
-                                            </div>
+                                            @include('backend.pages.instagram.component.view-by-followers-and-non-follower')
+                                        </div>
+                                        <div class="post-reels-section mt-2">
                                             <div class="row">
-                                                <div class="col-md-6 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="text-center">
-                                                                    <div class="mandate-item-title">
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">FOLLOWS</h2>
-                                                                        </div>
-                                                                    </div>
-
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="mandate-followers-body">
-                                                                    <div class="mandate-item-title d-flex justify-content-between align-items-center gap-1">
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <div class="mandate-item-arrow">
-                                                                                <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                                    28.9%
-                                                                                </h4>
-                                                                                <div class="mandate-arrow-icon">
-                                                                                    <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="text-center">
-                                                                    <div class="mandate-item-title">
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">UNFOLLOWS</h2>
-                                                                        </div>
-                                                                    </div>
-
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="mandate-followers-body">
-                                                                    <div class="mandate-item-title d-flex justify-content-between align-items-center gap-1">
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <div class="mandate-item-arrow">
-                                                                                <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                                    28.9%
-                                                                                </h4>
-                                                                                <div class="mandate-arrow-icon">
-                                                                                    <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="text-center">
-                                                                    <div class="mandate-item-title">
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">NO.OF POST</h2>
-                                                                        </div>
-                                                                    </div>
-
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="mandate-followers-body">
-                                                                    <div class="mandate-item-title d-flex justify-content-between align-items-center gap-1">
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <div class="mandate-item-arrow">
-                                                                                <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                                    28.9%
-                                                                                </h4>
-                                                                                <div class="mandate-arrow-icon">
-                                                                                    <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="text-center">
-                                                                    <div class="mandate-item-title">
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">NO. OF REELS</h2>
-                                                                        </div>
-                                                                    </div>
-
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="mandate-followers-body">
-                                                                    <div class="mandate-item-title d-flex justify-content-between align-items-center gap-1">
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <div class="mandate-item-arrow">
-                                                                                <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                                    28.9%
-                                                                                </h4>
-                                                                                <div class="mandate-arrow-icon">
-                                                                                    <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                @include('backend.pages.instagram.component.post-reels')
                                             </div>
                                         </div>
                                         <div class="content-interaction mt-2">
-                                            <div class="row align-items-center">
-                                                <div class="col-md-7 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="text-center">
-                                                                    <div class="mandate-item-title">
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">
-                                                                                TOTAL INTERACTIONS 
-                                                                                <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="">
-                                                                                </i>
-                                                                            </h2>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="mandate-followers-body">
-                                                                    <div class="mandate-item-title d-flex justify-content-between align-items-center gap-1">
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <div class="mandate-item-arrow">
-                                                                                <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                                    28.9%
-                                                                                </h4>
-                                                                                <div class="mandate-arrow-icon">
-                                                                                    <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-5 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="single-content">
-                                                        <p class="text-justify">
-                                                            It shows how many different
-                                                            people discovered your
-                                                            profile, not how many times it
-                                                            was viewed. Profile reach
-                                                            helps you understand your
-                                                            brand visibility and audience
-                                                            interest. Higher profile reach
-                                                            often means your content is
-                                                            attracting new users to your
-                                                            page.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            @include('backend.pages.instagram.component.total-interactions')
                                         </div>
                                         <div class="total-interaction-by-table mt-2">
                                             <div class="row total-interaction-by-table-box">
-                                                <div class="col-lg-6">
-                                                    <div class="col-lg-12 mb-2">
-                                                        <h5 class="card-title mb-0">Total Interactions by Likes, Comments, Saves, Shares, Reposts </h5>
-                                                    </div>
-                                                    <table class="table table-bordered table-sm interactions-table">
-                                                        <tbody>
-                                                            <tr>
-                                                                <td class="bg-black text-light">Previous Month</td>
-                                                                <td class="bg-black text-light">Current Month</td>
-                                                            </tr>
-                                                            <tr>
-                                                                <!-- Previous Month -->
-                                                                <td>
-                                                                    <table class="table table-sm interface-table">
-                                                                        <tbody>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        Likes
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The number of likes on your posts, reels and videos.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">11.3K</h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        Comments
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The number of comments on your posts, reels, videos and live videos.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">124</h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        Saves
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The number of saves of your posts, reels and videos.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">1.3K</h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        Shares
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The number of shares of your posts, stories, reels, videos and live videos.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">1.8K</h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                        </tbody>
-                                                                    </table>
-                                                                </td>
-                                                                <!-- Current Month -->
-                                                                <td>
-                                                                    <table class="table table-sm interface-table">
-                                                                        <tbody>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        Likes
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The number of likes on your posts, reels and videos.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        5.3K
-                                                                                        <small class="text-danger">
-                                                                                            ▼ 53.36%</small>
-                                                                                    </h4>
-
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        Comments
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The number of comments on your posts, reels, videos and live videos.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        63
-                                                                                        <small class="text-danger">
-                                                                                            ▼ 49.19%</small>
-                                                                                    </h4>
-
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        Saves
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The number of saves of your posts, reels and videos.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        779
-                                                                                        <small class="text-danger">
-                                                                                            ▼ 38.42%</small>
-                                                                                    </h4>
-
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        Shares
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The number of shares of your posts, stories, reels, videos and live videos.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        690
-                                                                                        <small class="text-danger">
-                                                                                            ▼ 61.34%</small>
-                                                                                    </h4>
-
-                                                                                </td>
-                                                                            </tr>
-                                                                            
-                                                                        </tbody>
-                                                                    </table>
-                                                                </td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                                <div class="col-lg-6">
-                                                    <div class="col-lg-12 mb-2">
-                                                        <h5 class="card-title mb-0">Total Interactions by Media Type</h5>
-                                                    </div>
-                                                    <table class="table table-bordered table-sm mb-2 interactions-table">
-                                                        <tbody>
-                                                            <tr>
-                                                                <td class="bg-black text-light">Previous Month</td>
-                                                                <td class="bg-black text-light">Current Month</td>
-                                                            </tr>
-                                                            <tr>
-                                                                <!-- Previous Month -->
-                                                                <td>
-                                                                    <table class="table table-sm interface-table">
-                                                                        <tbody>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">Post
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The total number of post interactions, story interactions, reels interactions, video interactions and live video interactions, including any interactions on boosted content.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">372</h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">Ad
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The total number of post interactions, story interactions, reels interactions, video interactions and live video interactions, including any interactions on boosted content.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">8.7K</h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">Reel
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The total number of post interactions, story interactions, reels interactions, video interactions and live video interactions, including any interactions on boosted content.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">7.4K</h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">Story
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The total number of post interactions, story interactions, reels interactions, video interactions and live video interactions, including any interactions on boosted content.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">49</h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                        </tbody>
-                                                                    </table>
-                                                                </td>
-
-                                                                <!-- Current Month -->
-                                                                <td>
-                                                                    <table class="table table-sm interface-table">
-                                                                        <tbody>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">Post
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The total number of post interactions, story interactions, reels interactions, video interactions and live video interactions, including any interactions on boosted content.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        295
-                                                                                        <small class="text-danger">▼ 20.7%</small>
-                                                                                    </h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">Ad
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The total number of post interactions, story interactions, reels interactions, video interactions and live video interactions, including any interactions on boosted content.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        3.3K
-                                                                                        <small class="text-danger">▼ 61.92%</small>
-                                                                                    </h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">Reel
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The total number of post interactions, story interactions, reels interactions, video interactions and live video interactions, including any interactions on boosted content.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        4K
-                                                                                        <small class="text-danger">▼ 46.05%</small>
-                                                                                    </h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">Story
-                                                                                        <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="The total number of post interactions, story interactions, reels interactions, video interactions and live video interactions, including any interactions on boosted content.">
-                                                                                        </i>
-                                                                                    </h4>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <h4 class="mb-0">
-                                                                                        46
-                                                                                        <small class="text-danger">▼ 6.12%</small>
-                                                                                    </h4>
-                                                                                </td>
-                                                                            </tr>
-                                                                        </tbody>
-                                                                    </table>
-                                                                </td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                @include('backend.pages.instagram.component.total-interactions-by-l-c-save-share-reposts')
+                                                @include('backend.pages.instagram.component.total-interactions-by-media-type')
                                             </div>
                                         </div>
                                         <div class="profile-visit mt-2">
-                                            <div class="row align-items-center">
-                                                <div class="col-md-7 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="text-center">
-                                                                    <div class="mandate-item-title">
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">
-                                                                                PROFILE VISITS
-                                                                                <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="" aria-describedby="tooltip511529">
-                                                                                </i>
-                                                                            </h2>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="mandate-followers-body">
-                                                                    <div class="mandate-item-title d-flex justify-content-between align-items-center gap-1">
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <div class="mandate-item-arrow">
-                                                                                <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                                    28.9%
-                                                                                </h4>
-                                                                                <div class="mandate-arrow-icon">
-                                                                                    <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-5 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="single-content">
-                                                        <p class="text-justify">
-                                                            It shows how many different
-                                                            people discovered your
-                                                            profile, not how many times it
-                                                            was viewed. Profile reach
-                                                            helps you understand your
-                                                            brand visibility and audience
-                                                            interest. Higher profile reach
-                                                            often means your content is
-                                                            attracting new users to your
-                                                            page.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            @include('backend.pages.instagram.component.profile-visits')
                                         </div>
                                         <div class="engagement-section mt-2">
-                                            <div class="row align-items-center">
-                                                <div class="col-md-5 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="single-content">
-                                                        <p class="text-justify">
-                                                            It shows how many different
-                                                            people discovered your
-                                                            profile, not how many times it
-                                                            was viewed. Profile reach
-                                                            helps you understand your
-                                                            brand visibility and audience
-                                                            interest. Higher profile reach
-                                                            often means your content is
-                                                            attracting new users to your
-                                                            page.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-7 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-                                                    <div class="mandate-section">
-                                                        <div class="mandate-item">
-                                                            <div class="mandate-item-header" style="box-shadow:  0 15px 13px -7px rgba(0, 0, 0, 0.2); padding: 10px; margin-bottom: 10px;">
-                                                                <div class="text-center">
-                                                                    <div class="mandate-item-title">
-                                                                        <div class="mandate-item-text">
-                                                                            <h2 class="mb-0">
-                                                                                ENGAGEMENT
-                                                                                <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="">
-                                                                            </i>
-                                                                            </h2>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="mandate-item-body">
-                                                                <div class="mandate-followers-body">
-                                                                    <div class="mandate-item-title d-flex justify-content-between align-items-center gap-1">
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Previous Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <h5 style="margin-bottom: 0px;">Current Month</h5>
-                                                                            <h3 class="follow-font">
-                                                                                51K
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div class="col-custom-3">
-                                                                            <div class="mandate-item-arrow">
-                                                                                <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                                                                    28.9%
-                                                                                </h4>
-                                                                                <div class="mandate-arrow-icon">
-                                                                                    <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            @include('backend.pages.instagram.component.profile-engagement')
                                         </div>
                                         <div class="top-ten-city-audience mt-2">
-                                            <h3 class="text-center">
-                                               TOP 10 CITIES AUDIENCE
-                                               <i id="audienceByCitiesTitle" class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="warning-tooltip" data-bs-title="">
-                                            </i>
-                                            </h3>
-                                            <div id="geolocationContainer" class="mt-2">
-                                                <img src="{{ asset('backend/assets/views-by-content-type.png') }}" alt="Views by Content Type Graph" style="width: 100%; height: auto;">
-                                            </div>
+                                            @include('backend.pages.instagram.component.top-cities-audience-graphs')
                                         </div>
-                                        <div class="top-ten-city-audience mt-2">
-                                            <h3 class="text-center">
-                                               AUDIENCE BY AGE GROUP
-                                               <i id="audienceByAgeGroup" class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="info-tooltip" data-bs-title="" aria-describedby="tooltip610478">
-                                                </i>
-                                            </h3>
-                                            <div id="audienceAgeGroupContainer" class="mt-2">
-                                                <img src="{{ asset('backend/assets/views-by-content-type.png') }}" alt="Views by Content Type Graph" style="width: 100%; height: auto;">
-                                            </div>
+                                        <div class="audience-by-age-group mt-2">
+                                            @include('backend.pages.instagram.component.audience-by-age-group')
                                         </div>
                                     </div>
                                 </div>
@@ -1073,5 +158,96 @@
 @endsection
 
 @push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script>
+    window.insta_reach_pdf_url = "{{ route('instagram.reach.pdf', $instagram['id']) }}";
+    window.insta_view_pdf_url = "{{ route('instagram.view.pdf', $instagram['id']) }}";
+    window.insta_profile_reach_graphs_pdf_url = "{{ route('instagram.profile-reach-graphs.pdf', $instagram['id']) }}";
+    window.insta_profile_follow_unfollow_pdf_url = "{{ route('insta.profile-follow-unfollow.pdf', $instagram['id']) }}";
+    window.insta_view_graphs_media_type_pdf_url = "{{ route('insta.view-graphs-media-type.pdf', $instagram['id']) }}";
+
+
+</script>
+<script src="{{ asset('backend/assets/js/pages/insta-pdf/insta-reach.js') }}?v={{ time() }}"></script>
+<script src="{{ asset('backend/assets/js/pages/insta-pdf/insta-view.js') }}?v={{ time() }}"></script>
+<script src="{{ asset('backend/assets/js/pages/insta-pdf/insta-profile-reach-graphs.js') }}?v={{ time() }}"></script>
+<script src="{{ asset('backend/assets/js/pages/insta-pdf/insta-profile-follow-unfollow.js') }}?v={{ time() }}"></script>
+<script src="{{ asset('backend/assets/js/pages/insta-pdf/insta-view-graphs-media-type.js') }}?v={{ time() }}"></script>
+<script>    
+    $(document).ready(function() {
+        const id = "{{ $instagram['id'] }}";
+        const defaultStart = moment().subtract(28, 'days');
+        const defaultEnd = moment().subtract(1, 'days');
+        $('.daterange').daterangepicker({
+            opens: 'right',
+            startDate: defaultStart,
+            endDate: defaultEnd,
+            maxDate: moment().subtract(1, 'days'),
+            dateLimit: {
+                days: 27
+            },
+            ranges: {
+                'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                'Last 7 Days': [moment().subtract(7, 'days'), moment().subtract(1, 'days')],
+                'Last 15 Days': [moment().subtract(15, 'days'), moment().subtract(1, 'days')],
+                'Last 28 Days': [moment().subtract(28, 'days'), moment().subtract(1, 'days')],
+            },
+            autoUpdateInput: true,
+            locale: {
+                format: 'YYYY-MM-DD',
+                cancelLabel: 'Clear',
+            },
+            alwaysShowCalendars: true,
+            showDropdowns: true,
+        }, function(start, end) {
+            $('.daterange').val(`${start.format('YYYY-MM-DD')} - ${end.format('YYYY-MM-DD')}`);
+        });
+
+        $('.daterange').on('apply.daterangepicker', function(ev, picker) {
+            const startDate = picker.startDate;
+            const endDate = picker.endDate;
+            const totalDays = endDate.diff(startDate, 'days') + 1;
+            if (totalDays > 28) {
+                alert('You can only select up to 28 days (inclusive). Please reduce the range.');
+                picker.setEndDate(startDate.clone().add(28, 'days'));
+                return;
+            }
+
+            const start = startDate.format('YYYY-MM-DD');
+            const end = endDate.format('YYYY-MM-DD');
+
+            $(this).val(`${start} - ${end}`);
+            generateInstaReachPDF(id, start, end);
+            generateInstaViewPDF(id, start, end);
+            profileReachGraph(id, start, end);
+            instaProfileFollowUnfollowPDF(id, start, end);
+            instaViewGraph(id, start, end);
+
+        });
+
+        $('.daterange').on('cancel.daterangepicker', function() {
+            $(this).val('');
+            const defaultStart = moment().subtract(28, 'days').format('YYYY-MM-DD');
+            const defaultEnd = moment().subtract(1, 'days').format('YYYY-MM-DD');
+            generateInstaReachPDF(id, defaultStart, defaultEnd);
+            generateInstaViewPDF(id, defaultStart, defaultEnd);
+            profileReachGraph(id, defaultStart, defaultEnd);
+            instaProfileFollowUnfollowPDF(id, defaultStart, defaultEnd);
+            instaViewGraph(id, defaultStart, defaultEnd);
+
+        });
+
+        $('.daterange').val(`${defaultStart.format('YYYY-MM-DD')} - ${defaultEnd.format('YYYY-MM-DD')}`);
+        generateInstaReachPDF(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+        generateInstaViewPDF(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+        profileReachGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+        instaProfileFollowUnfollowPDF(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+        instaViewGraph(id, defaultStart.format('YYYY-MM-DD'), defaultEnd.format('YYYY-MM-DD'));
+        
+
+    });
+</script>
 
 @endpush

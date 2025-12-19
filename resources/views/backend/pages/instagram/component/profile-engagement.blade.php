@@ -1,4 +1,20 @@
 <div class="row align-items-center">
+    <div class="col-md-5 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
+        <div class="single-content">
+            <p class="text-justify">
+                It shows how many different
+                people discovered your
+                profile, not how many times it
+                was viewed. Profile reach
+                helps you understand your
+                brand visibility and audience
+                interest. Higher profile reach
+                often means your content is
+                attracting new users to your
+                page.
+            </p>
+        </div>
+    </div>
     <div class="col-md-7 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
         <div class="mandate-section">
             <div class="mandate-item">
@@ -7,8 +23,8 @@
                         <div class="mandate-item-title">
                             <div class="mandate-item-text">
                                 <h2 class="mb-0">
-                                    PROFILE VISITS
-                                    <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="" aria-describedby="tooltip511529">
+                                    ENGAGEMENT
+                                    <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="">
                                     </i>
                                 </h2>
                             </div>
@@ -44,22 +60,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="col-md-5 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
-        <div class="single-content">
-            <p class="text-justify">
-                It shows how many different
-                people discovered your
-                profile, not how many times it
-                was viewed. Profile reach
-                helps you understand your
-                brand visibility and audience
-                interest. Higher profile reach
-                often means your content is
-                attracting new users to your
-                page.
-            </p>
         </div>
     </div>
 </div>

@@ -83,6 +83,12 @@ Route::middleware(['auth', 'menu.access'])->group(function () {
     Route::get('/instagram/{id}/post/{postId}/insights-page', [InstagramController::class, 'postInsightsPage'])->name('instagram.post.insights.page');    
     Route::get('/instagram/{mediaId}/comments/html', [InstagramController::class, 'fetchCommentsHtml'])->name('instagram.comments.html');          
     
+    Route::get('insta-reach-pdf/{id}', [InstagramControllerPDF::class, 'instaReachPDF'])->name('instagram.reach.pdf');
+    Route::get('insta-view-pdf/{id}', [InstagramControllerPDF::class, 'instaViewPDF'])->name('instagram.view.pdf');
+    Route::get('insta-profile-reach-graphs-pdf/{id}', [InstagramControllerPDF::class, 'instaProfileReachGraphsPDF'])->name('instagram.profile-reach-graphs.pdf');
+    Route::get('insta-profile-follow-unfollow-pdf/{id}',[InstagramControllerPDF::class, 'instaProfileFollowUnfollowPDF'])->name('insta.profile-follow-unfollow.pdf');
+    Route::get('insta-view-graphs-media-type-pdf/{id}',[InstagramControllerPDF::class, 'instaViewGraphsMediyaTypePDF'])->name('insta.view-graphs-media-type.pdf');
+
 
     Route::get('facebook-summary/{id}', [FacebookController::class, 'facebookMainIndex'])->name('facebook.report');
     Route::get('facebook/{pageId}/follower-audience-top-loacation', [FacebookController::class, 'getFacebookFollowersTopLocations'])->name('facebook.audience.locations');
