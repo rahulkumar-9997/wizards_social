@@ -4,7 +4,7 @@
                 $tooltipText = trim($view['api_description'] ?? '');
             @endphp
         <h3 class="mandate-title">
-            VIEWS
+            VIEW BY FOLLOWERS & NON FOLLOWERS
             <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;"
                 data-bs-toggle="tooltip" data-bs-placement="top"
                 data-bs-custom-class="success-tooltip"

@@ -20449,18 +20449,32 @@
     z-index: 1000;
     border-radius: 8px;
 }
+#post-reels-component,
+#total-interactions-component,
+#profile-visit-component,
+#engagement-component,
+#total-interaction-like-comment,
+#total-interaction-media-type {
+    position: relative;
+}
 
 #reach-component,
 #view-component,
-#profile-followers-component {
+#profile-followers-component{
     position: relative;
     min-height: 300px;
 }
 
 #reach-component.loading,
 #view-component.loading,
-#profile-followers-component.loading {
-    opacity: 0.7;
+#profile-followers-component.loading,
+#post-reels-component.loading,
+#total-interactions-component.loading,
+#profile-visit-component.loading,
+#engagement-component.loading,
+#total-interaction-like-comment.loading,
+#total-interaction-media-type.loading {
+    opacity: 0.1;
 }
 
 .spinner-border.text-primary {

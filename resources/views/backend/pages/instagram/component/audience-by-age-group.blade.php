@@ -5,6 +5,6 @@
         </i>
     </h3>
     <div id="audienceAgeGroupContainer" class="mt-2">
-        <img src="{{ asset('backend/assets/views-by-content-type.png') }}" alt="Views by Content Type Graph" style="width: 100%; height: auto;">
+        <canvas id="audienceAgeGroupChart" height="400"></canvas>
     </div>
 </div>

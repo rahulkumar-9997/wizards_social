@@ -88,6 +88,15 @@ Route::middleware(['auth', 'menu.access'])->group(function () {
     Route::get('insta-profile-reach-graphs-pdf/{id}', [InstagramControllerPDF::class, 'instaProfileReachGraphsPDF'])->name('instagram.profile-reach-graphs.pdf');
     Route::get('insta-profile-follow-unfollow-pdf/{id}',[InstagramControllerPDF::class, 'instaProfileFollowUnfollowPDF'])->name('insta.profile-follow-unfollow.pdf');
     Route::get('insta-view-graphs-media-type-pdf/{id}',[InstagramControllerPDF::class, 'instaViewGraphsMediyaTypePDF'])->name('insta.view-graphs-media-type.pdf');
+    Route::get('post-reel-pdf/{id}',[InstagramControllerPDF::class, 'instaPostReelPDF'])->name('insta.post-reel.pdf');
+    Route::get('total-interactions-pdf/{id}',[InstagramControllerPDF::class, 'instaTotalInteractionsPDF'])->name('insta.total-interactions.pdf');
+    Route::get('total-interactions-like-comment-pdf/{id}',[InstagramControllerPDF::class, 'instaTotalInteractionsLikeCommentsPDF'])->name('insta.total-interactions-like-comment.pdf');
+    Route::get('total-interactions-media-type-pdf/{id}',[InstagramControllerPDF::class, 'instaTotalInteractionsMediaTypePDF'])->name('insta.total-interactions-media-type.pdf');
+    Route::get('profile-visit-pdf/{id}',[InstagramControllerPDF::class, 'instaProfileVisitPDF'])->name('insta.profile-visit.pdf');
+    Route::get('engagement-pdf/{id}',[InstagramControllerPDF::class, 'instaEngagementPDF'])->name('insta.engagement.pdf');
+    Route::get('city-audience-pdf/{id}',[InstagramControllerPDF::class, 'instaCityAudiencePDF'])->name('insta.city-audience.pdf');
+    Route::get('audience-by-age-group-pdf/{id}',[InstagramControllerPDF::class, 'instaAudienceByAgeGroupPDF'])->name('insta.audience-by-age-group.pdf');
+    Route::get('insta-post-data-pdf/{id}',[InstagramControllerPDF::class, 'instaPostDataPDF'])->name('insta.post-data.pdf');
 
 
     Route::get('facebook-summary/{id}', [FacebookController::class, 'facebookMainIndex'])->name('facebook.report');

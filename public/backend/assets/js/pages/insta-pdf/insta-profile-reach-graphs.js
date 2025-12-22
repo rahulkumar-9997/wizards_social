@@ -52,10 +52,7 @@ $(document).ready(function () {
                     moment(item.date).format("MMM DD")
                 );
                 const values = chartData.map((item) => item.value);
-                const totalReach = values.reduce((a, b) => a + b, 0);
-                const avgReach = Math.round(totalReach / values.length);
-                const maxReach = Math.max(...values);
-                const minReach = Math.min(...values);
+
                 if (reachDaysChart) {
                     reachDaysChart.destroy();
                 }
@@ -123,6 +120,10 @@ $(document).ready(function () {
                                     },
                                 },
                             },
+                            datalabels: {
+                                display: false,
+                                color: "black",
+                            },
                         },
                         scales: {
                             x: {
@@ -177,7 +178,19 @@ $(document).ready(function () {
                             intersect: false,
                         },
                     },
-                });                
+                    plugins: [
+                        {
+                            id: "datalabels",
+                            beforeDraw: function (chart) {
+                                chart.data.datasets.forEach(function (dataset) {
+                                    if (dataset.datalabels) {
+                                        dataset.datalabels.display = false;
+                                    }
+                                });
+                            },
+                        },
+                    ],
+                });
             },
             error: function (xhr) {
                 console.error("Reach graph error:", xhr);
@@ -217,7 +230,7 @@ $(document).ready(function () {
             existingTooltip.dispose();
         }
         icon.attr("data-bs-title", safeDescription);
-        icon.attr("title", safeDescription); 
+        icon.attr("title", safeDescription);
         new bootstrap.Tooltip(icon[0], {
             placement: "top",
             customClass: "success-tooltip",
@@ -225,6 +238,3 @@ $(document).ready(function () {
     }
     window.profileReachGraph = profileReachGraph;
 });
-
-
-

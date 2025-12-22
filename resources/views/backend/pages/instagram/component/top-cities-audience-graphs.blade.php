@@ -5,6 +5,6 @@
         </i>
     </h3>
     <div id="geolocationContainer" class="mt-2">
-        <img src="{{ asset('backend/assets/views-by-content-type.png') }}" alt="Views by Content Type Graph" style="width: 100%; height: auto;">
+        
     </div>
 </div>

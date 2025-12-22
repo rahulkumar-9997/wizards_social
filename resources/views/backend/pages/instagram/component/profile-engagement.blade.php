@@ -1,3 +1,22 @@
+@php
+    $engagement = $data['accounts_engaged'] ?? [
+        'previous' => 0,
+        'current' => 0,
+        'change' => 0,
+        'change_type' => 'down',
+        'description' => 'The number of accounts that have interacted with your content, including in ads. Content includes posts, stories, reels, videos and live videos. Interactions can include actions such as likes, saves, comments, shares or replies.'
+    ];
+       
+    $engagementPrevious = compact_number($engagement['previous']);
+    $engagementCurrent = compact_number($engagement['current']);
+    $arrow = $engagement['change_type'] === 'up' ? 'green-arrow-up.png' : 'red-arrow-down.png';
+    $color = $engagement['change_type'] === 'up' ? '#00ff00' : '#e70000';
+    $tooltipDescription = $engagement['description'] ?? 
+        'The number of accounts that have interacted with your content, including in ads. Content includes posts, stories, reels, videos and live videos. Interactions can include actions such as likes, saves, comments, shares or replies.';   
+    
+@endphp
+
+
 <div class="row align-items-center">
     <div class="col-md-5 mb-sm-1 mb-md-1 mb-lg-5 mb-xl-1 col-6 pe-xl-0 ps-xl-0 mb-2">
         <div class="single-content">
@@ -24,7 +43,7 @@
                             <div class="mandate-item-text">
                                 <h2 class="mb-0">
                                     ENGAGEMENT
-                                    <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="">
+                                    <i class="bx bx-question-mark text-primary" style="cursor: pointer; font-size: 18px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="success-tooltip" data-bs-title="{{ htmlspecialchars($tooltipDescription, ENT_QUOTES) }}">
                                     </i>
                                 </h2>
                             </div>
@@ -37,22 +56,24 @@
                             <div class="col-custom-3">
                                 <h5 style="margin-bottom: 0px;">Previous Month</h5>
                                 <h3 class="follow-font">
-                                    51K
+                                    {{ $engagementPrevious }}
                                 </h3>
                             </div>
                             <div class="col-custom-3">
                                 <h5 style="margin-bottom: 0px;">Current Month</h5>
                                 <h3 class="follow-font">
-                                    51K
+                                    {{ $engagementCurrent }}
                                 </h3>
                             </div>
                             <div class="col-custom-3">
                                 <div class="mandate-item-arrow">
-                                    <h4 style="margin-bottom: 5px; color: #e70000ff; font-size: 24px;">
-                                        28.9%
+                                    <h4 style="margin-bottom: 5px; color: {{ $color }}; font-size: 24px;">
+                                        {{ $engagement['change'] }}%
                                     </h4>
                                     <div class="mandate-arrow-icon">
-                                        <img src="http://localhost:8000/backend/assets/red-arrow-down.png" alt="Down Arrow" width="24" height="24">
+                                         <img src="{{ asset('backend/assets/' . $arrow) }}" 
+                                            alt="{{ $engagement['change_type'] === 'up' ? 'Up Arrow' : 'Down Arrow' }}" 
+                                            width="24" height="24">
                                     </div>
                                 </div>
                             </div>
